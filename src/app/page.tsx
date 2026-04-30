@@ -1,3 +1,328 @@
-export default function Home() {
-  return <></>;
+"use client";
+
+import React, { useState } from 'react';
+import { 
+  SidebarProvider, 
+  Sidebar, 
+  SidebarContent, 
+  SidebarHeader, 
+  SidebarMenu, 
+  SidebarMenuItem, 
+  SidebarMenuButton, 
+  SidebarInset,
+  SidebarTrigger,
+  SidebarFooter
+} from "@/components/ui/sidebar";
+import { 
+  LayoutDashboard, 
+  Users, 
+  CreditCard, 
+  PlusCircle, 
+  Smartphone, 
+  ArrowUpRight, 
+  AlertCircle,
+  TrendingUp,
+  Search,
+  ChevronRight,
+  LogOut,
+  Bell
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { MOCK_CREDITS, MOCK_CUSTOMERS } from '@/lib/mock-data';
+import Link from 'next/link';
+
+export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const stats = [
+    { title: "Créditos Activos", value: "24", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
+    { title: "Próximos Pagos", value: "12", icon: Bell, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Cuentas Atrasadas", value: "3", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
+    { title: "Recaudación Mes", value: "$4,520", icon: TrendingUp, color: "text-green-600", bg: "bg-green-100" },
+  ];
+
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <Sidebar className="border-r border-sidebar-border">
+          <SidebarHeader className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-accent rounded-xl">
+                <Smartphone className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>
+                <p className="text-xs text-sidebar-foreground/70">Gestión de Créditos</p>
+              </div>
+            </div>
+          </SidebarHeader>
+          <SidebarContent className="px-3">
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-lg h-11">
+                  <LayoutDashboard className="w-5 h-5 mr-3" />
+                  <span>Panel de Control</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-lg h-11">
+                  <Users className="w-5 h-5 mr-3" />
+                  <span>Clientes</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-lg h-11">
+                  <CreditCard className="w-5 h-5 mr-3" />
+                  <span>Créditos</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-4">
+            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent rounded-lg h-11">
+              <LogOut className="w-5 h-5 mr-3" />
+              <span>Cerrar Sesión</span>
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
+
+        <SidebarInset className="flex-1 overflow-auto">
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-md px-8">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="text-muted-foreground" />
+              <div className="h-6 w-px bg-border mx-2" />
+              <h2 className="text-lg font-semibold capitalize">
+                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'customers' ? 'Listado de Clientes' : 'Gestión de Créditos'}
+              </h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative hidden sm:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input placeholder="Buscar cliente o crédito..." className="pl-10 w-64 bg-slate-50 border-none ring-offset-background" />
+              </div>
+              <Button size="icon" variant="ghost" className="rounded-full relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
+              </Button>
+            </div>
+          </header>
+
+          <main className="p-8 space-y-8 animate-in fade-in duration-500">
+            {activeTab === 'dashboard' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {stats.map((stat, idx) => (
+                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} transition-colors`}>
+                            <stat.icon className="w-6 h-6" />
+                          </div>
+                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
+                        </div>
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                          <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <Card className="lg:col-span-2 border-none shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Créditos Recientes</CardTitle>
+                        <CardDescription>Ultimos movimientos de la semana</CardDescription>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/credits">Ver todos</Link>
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent">
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Equipo</TableHead>
+                            <TableHead>Saldo</TableHead>
+                            <TableHead>Progreso</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {MOCK_CREDITS.map((credit) => {
+                            const customer = MOCK_CUSTOMERS.find(c => c.id === credit.customerId);
+                            const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
+                            return (
+                              <TableRow key={credit.id} className="cursor-pointer group">
+                                <TableCell className="font-medium">{customer?.name}</TableCell>
+                                <TableCell className="text-muted-foreground">{credit.deviceModel}</TableCell>
+                                <TableCell className="font-semibold">${credit.remainingBalance}</TableCell>
+                                <TableCell className="w-32">
+                                  <Progress value={progress} className="h-2" />
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'} className="rounded-full px-3">
+                                    {credit.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="group-hover:text-primary">
+                                    <ChevronRight className="w-4 h-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
+                      <CardDescription>Accesos directos comunes</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Button className="w-full justify-start h-12 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20" asChild>
+                        <Link href="/credits/new">
+                          <PlusCircle className="w-5 h-5 mr-3" />
+                          Nuevo Crédito
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start h-12 border-slate-200 hover:bg-slate-50 rounded-xl" asChild>
+                        <Link href="/customers/new">
+                          <Users className="w-5 h-5 mr-3 text-primary" />
+                          Registrar Cliente
+                        </Link>
+                      </Button>
+                      <div className="pt-6 mt-6 border-t">
+                        <h4 className="text-sm font-semibold mb-4">Próximos Vencimientos</h4>
+                        <div className="space-y-4">
+                          {[1, 2].map((i) => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-primary font-bold text-xs">JP</div>
+                                <div>
+                                  <p className="text-sm font-medium">Juan Pérez</p>
+                                  <p className="text-xs text-muted-foreground">Vence: 15 Oct</p>
+                                </div>
+                              </div>
+                              <p className="text-sm font-bold">$200</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'customers' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                   <h3 className="text-2xl font-bold">Clientes</h3>
+                   <Button asChild className="rounded-xl shadow-md">
+                     <Link href="/customers/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo Cliente</Link>
+                   </Button>
+                </div>
+                <Card className="border-none shadow-sm">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Teléfono</TableHead>
+                          <TableHead>Dirección</TableHead>
+                          <TableHead>Fecha Registro</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {MOCK_CUSTOMERS.map(c => (
+                          <TableRow key={c.id}>
+                            <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell>{c.email}</TableCell>
+                            <TableCell>{c.phone}</TableCell>
+                            <TableCell className="max-w-xs truncate">{c.address}</TableCell>
+                            <TableCell>{c.createdAt}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm">Editar</Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'credits' && (
+               <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-bold">Gestión de Créditos</h3>
+                    <Button asChild className="rounded-xl shadow-md">
+                      <Link href="/credits/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo Crédito</Link>
+                    </Button>
+                  </div>
+                  <Card className="border-none shadow-sm">
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead>Equipo</TableHead>
+                            <TableHead>Plan</TableHead>
+                            <TableHead>Cuota</TableHead>
+                            <TableHead>Saldo Restante</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {MOCK_CREDITS.map(credit => {
+                            const customer = MOCK_CUSTOMERS.find(c => c.id === credit.customerId);
+                            return (
+                              <TableRow key={credit.id}>
+                                <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id}</TableCell>
+                                <TableCell className="font-medium">{customer?.name}</TableCell>
+                                <TableCell>{credit.deviceModel}</TableCell>
+                                <TableCell>{credit.planType} Quincenas</TableCell>
+                                <TableCell className="font-semibold">${credit.installmentAmount}</TableCell>
+                                <TableCell className="font-bold text-primary">${credit.remainingBalance}</TableCell>
+                                <TableCell>
+                                   <Badge className="rounded-full px-3">{credit.status}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/credits/${credit.id}`}>Detalles</Link>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+               </div>
+            )}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
 }
