@@ -6,12 +6,13 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Smartphone, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Smartphone, User, ArrowRight, ShieldCheck, Hash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { MOCK_CUSTOMERS } from '@/lib/mock-data';
+import { MOCK_CUSTOMERS, MOCK_CREDITS } from '@/lib/mock-data';
 
 export default function PortalLoginPage() {
-  const [customerId, setCustomerId] = useState('');
+  const [cedula, setCedula] = useState('');
+  const [imei, setImei] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -20,25 +21,37 @@ export default function PortalLoginPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Simulamos una validación de cliente
-    const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
+    // Buscar cliente por cédula
+    const customer = MOCK_CUSTOMERS.find(c => c.cedula === cedula);
     
     setTimeout(() => {
       if (customer) {
-        toast({
-          title: "¡Bienvenido!",
-          description: `Hola ${customer.name}, estamos cargando tu información.`,
-        });
-        router.push(`/portal/${customerId}`);
+        // Verificar si existe un crédito para este cliente con ese IMEI
+        const credit = MOCK_CREDITS.find(c => c.customerId === customer.id && c.imei === imei);
+        
+        if (credit) {
+          toast({
+            title: "¡Acceso exitoso!",
+            description: `Hola ${customer.name}, bienvenido a tu portal de pagos.`,
+          });
+          router.push(`/portal/${customer.id}`);
+        } else {
+          toast({
+            title: "Error de validación",
+            description: "El IMEI no coincide con ningún equipo registrado a tu nombre.",
+            variant: "destructive"
+          });
+          setLoading(false);
+        }
       } else {
         toast({
-          title: "Error de acceso",
-          description: "No encontramos ningún cliente con ese ID. Prueba con '1'.",
+          title: "Cliente no encontrado",
+          description: "No encontramos registros con el número de cédula ingresado.",
           variant: "destructive"
         });
         setLoading(false);
       }
-    }, 800);
+    }, 1000);
   };
 
   return (
@@ -58,23 +71,41 @@ export default function PortalLoginPage() {
               <ShieldCheck className="w-5 h-5 text-primary" />
               Acceso Seguro
             </CardTitle>
-            <CardDescription>Ingresa tu número de cliente para continuar</CardDescription>
+            <CardDescription>Valida tu identidad para ver tu plan de pagos</CardDescription>
           </CardHeader>
           <CardContent className="pt-8">
             <form onSubmit={handleAccess} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="customerId">ID de Cliente</Label>
+                <Label htmlFor="cedula">Número de Cédula</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
-                    id="customerId" 
-                    placeholder="Ej: 1" 
+                    id="cedula" 
+                    placeholder="0000-0000-00000" 
                     className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all"
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
+                    value={cedula}
+                    onChange={(e) => setCedula(e.target.value)}
                     required
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="imei">IMEI del Teléfono</Label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Input 
+                    id="imei" 
+                    placeholder="15 dígitos" 
+                    className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all"
+                    value={imei}
+                    onChange={(e) => setImei(e.target.value)}
+                    required
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground px-1">
+                  Marca *#06# en tu equipo para obtener el IMEI.
+                </p>
               </div>
 
               <Button 
@@ -82,7 +113,7 @@ export default function PortalLoginPage() {
                 disabled={loading}
                 className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-lg shadow-primary/20"
               >
-                {loading ? 'Validando...' : (
+                {loading ? 'Verificando...' : (
                   <span className="flex items-center gap-2">
                     Ingresar a mi cuenta <ArrowRight className="w-5 h-5" />
                   </span>
@@ -91,9 +122,13 @@ export default function PortalLoginPage() {
             </form>
           </CardContent>
           <CardFooter className="bg-slate-50/50 p-6 text-center border-t">
-            <p className="text-xs text-slate-500 w-full">
-              ¿No conoces tu ID? Por favor contacta a soporte técnico en tienda.
-            </p>
+            <div className="text-xs text-slate-500 w-full space-y-1">
+              <p>¿Problemas para acceder? Contacta a soporte.</p>
+              <div className="pt-2 flex justify-center gap-2 text-[10px] font-mono opacity-50">
+                <span>Demo Cédula: 0801-1990-12345</span>
+                <span>Demo IMEI: 358901234567890</span>
+              </div>
+            </div>
           </CardFooter>
         </Card>
       </div>

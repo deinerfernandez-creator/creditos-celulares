@@ -4,6 +4,7 @@ export type Customer = {
   email: string;
   phone: string;
   address: string;
+  cedula: string;
   createdAt: string;
 };
 
@@ -20,6 +21,7 @@ export type Credit = {
   id: string;
   customerId: string;
   deviceModel: string;
+  imei: string;
   initialAmount: number;
   totalAmount: number;
   planType: 6 | 12;
@@ -38,8 +40,24 @@ export type Payment = {
 };
 
 export const MOCK_CUSTOMERS: Customer[] = [
-  { id: '1', name: 'Juan Pérez', email: 'juan@example.com', phone: '555-0101', address: 'Calle Principal 123', createdAt: '2024-01-15' },
-  { id: '2', name: 'María García', email: 'maria@example.com', phone: '555-0202', address: 'Avenida Central 456', createdAt: '2024-02-01' },
+  { 
+    id: '1', 
+    name: 'Juan Pérez', 
+    email: 'juan@example.com', 
+    phone: '555-0101', 
+    address: 'Calle Principal 123', 
+    cedula: '0801-1990-12345',
+    createdAt: '2024-01-15' 
+  },
+  { 
+    id: '2', 
+    name: 'María García', 
+    email: 'maria@example.com', 
+    phone: '555-0202', 
+    address: 'Avenida Central 456', 
+    cedula: '0501-1985-54321',
+    createdAt: '2024-02-01' 
+  },
 ];
 
 export const MOCK_CREDITS: Credit[] = [
@@ -47,6 +65,7 @@ export const MOCK_CREDITS: Credit[] = [
     id: 'c1',
     customerId: '1',
     deviceModel: 'Samsung Galaxy S23',
+    imei: '358901234567890',
     initialAmount: 800,
     totalAmount: 1200, // 50% extra for 6 installments
     planType: 6,
