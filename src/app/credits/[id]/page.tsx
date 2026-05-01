@@ -74,18 +74,18 @@ export default function CreditDetailPage() {
   }, []);
 
   // Fetch Credit Data
-  const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id) : null, [db, id]);
+  const creditRef = useMemoFirebase(() => id && mounted ? doc(db, 'credits', id) : null, [db, id, mounted]);
   const { data: credit, isLoading: loadingCredit } = useDoc(creditRef);
 
   // Fetch Customer Data
-  const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
+  const customerRef = useMemoFirebase(() => credit?.customerId && mounted ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId, mounted]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
   // Fetch Payments History
   const paymentsQuery = useMemoFirebase(() => {
-    if (!id || !db) return null;
+    if (!id || !db || !mounted) return null;
     return query(collection(db, 'payments'), where("creditId", "==", id), orderBy("date", "desc"));
-  }, [db, id]);
+  }, [db, id, mounted]);
   const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -99,8 +99,8 @@ export default function CreditDetailPage() {
       });
     } catch (err: any) {
       toast({
-        title: "Error",
-        description: "No se pudo actualizar el estado: " + err.message,
+        title: "Error de permisos",
+        description: "Solo el administrador maestro puede realizar cambios.",
         variant: "destructive"
       });
     } finally {
@@ -115,14 +115,18 @@ export default function CreditDetailPage() {
   }, [credit]);
 
   if (!mounted) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
   }
 
   if (loadingCredit || loadingCustomer) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-medium">Cargando detalles...</p>
+        <p className="text-slate-500 font-medium">Cargando detalles financieros...</p>
       </div>
     );
   }
@@ -132,7 +136,7 @@ export default function CreditDetailPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no encontrado</h2>
-        <p className="text-slate-500 mt-2">No se encontró el registro o no tienes permisos suficientes.</p>
+        <p className="text-slate-500 mt-2">No se encontró el registro o los datos aún están cargando.</p>
         <Button asChild className="mt-8 rounded-xl px-8">
           <Link href="/">Volver al Dashboard</Link>
         </Button>
@@ -172,7 +176,7 @@ export default function CreditDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Información del Cliente */}
+          {/* Perfil del Cliente */}
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="bg-primary text-white pb-6">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -196,19 +200,10 @@ export default function CreditDetailPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-2 pt-2">
-                <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Dirección</p>
-                  <p className="text-sm font-medium text-slate-600 leading-snug">
-                    {customer?.address || 'Sin dirección registrada'}
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
 
-          {/* Información del Equipo */}
+          {/* Datos del Equipo */}
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="bg-slate-900 text-white pb-6">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -222,8 +217,8 @@ export default function CreditDetailPage() {
                   <p className="font-black text-2xl text-primary">{credit.deviceModel}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Identificador IMEI</p>
-                  <p className="font-mono text-sm bg-slate-100 px-2 py-1 rounded-lg text-slate-600">{credit.imei}</p>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">IMEI</p>
+                  <p className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-600">{credit.imei}</p>
                 </div>
               </div>
               
@@ -237,30 +232,16 @@ export default function CreditDetailPage() {
                   <p className="text-xl font-black text-primary">{Math.round(progress)}%</p>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm font-bold text-slate-600">Plan de {credit.planType} Cuotas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm font-bold text-slate-600">Cuota: {formatCurrency(credit.installmentAmount)}</span>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Historial de Pagos */}
         <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <History className="w-5 h-5 text-primary" /> Historial de Abonos
-              </CardTitle>
-              <CardDescription>Registro completo de entradas de dinero</CardDescription>
-            </div>
+          <CardHeader className="border-b border-slate-50">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <History className="w-5 h-5 text-primary" /> Historial de Abonos
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {loadingPayments ? (
@@ -268,30 +249,28 @@ export default function CreditDetailPage() {
             ) : payments && payments.length > 0 ? (
               <div className="divide-y divide-slate-50">
                 {payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors">
+                  <div key={p.id} className="flex items-center justify-between p-6">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-green-100 text-green-600 rounded-2xl">
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                       <div>
                         <p className="font-black text-slate-900 text-lg">{formatCurrency(p.amount)}</p>
-                        <p className="text-xs text-slate-400 font-medium">
-                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { 
-                            day: 'numeric', month: 'long', year: 'numeric'
-                          }) : 'Fecha no disponible'}
+                        <p className="text-xs text-slate-400">
+                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO') : 'Fecha no disponible'}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="rounded-full border-green-200 text-green-600 bg-green-50 px-4 py-1">
+                    <Badge variant="outline" className="rounded-full border-green-200 text-green-600 bg-green-50">
                       Procesado
                     </Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20">
+              <div className="text-center py-16">
                 <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-400 font-medium">No se han registrado abonos para este crédito aún.</p>
+                <p className="text-slate-400 font-medium">No hay abonos registrados para este crédito.</p>
               </div>
             )}
           </CardContent>
