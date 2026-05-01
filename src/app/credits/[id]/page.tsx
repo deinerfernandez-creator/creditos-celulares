@@ -24,7 +24,9 @@ import {
   History,
   TrendingUp,
   Receipt,
-  Trash2
+  Trash2,
+  CalendarDays,
+  Clock
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -101,22 +103,18 @@ export default function CreditDetailPage() {
     setMounted(true);
   }, []);
 
-  // Fetch Credit Data
   const creditRef = useMemoFirebase(() => id && mounted ? doc(db, 'credits', id) : null, [db, id, mounted]);
   const { data: credit, isLoading: loadingCredit } = useDoc(creditRef);
 
-  // Fetch Customer Data
   const customerRef = useMemoFirebase(() => credit?.customerId && mounted ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId, mounted]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
-  // Fetch Payments History (Sin orderBy para evitar error de índice compuesto)
   const paymentsQuery = useMemoFirebase(() => {
     if (!id || !db || !mounted) return null;
     return query(collection(db, 'payments'), where("creditId", "==", id));
   }, [db, id, mounted]);
   const { data: paymentsData, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
-  // Ordenar en memoria
   const payments = useMemo(() => {
     if (!paymentsData) return null;
     return [...paymentsData].sort((a, b) => {
@@ -125,6 +123,30 @@ export default function CreditDetailPage() {
       return dateB - dateA;
     });
   }, [paymentsData]);
+
+  const schedule = useMemo(() => {
+    if (!credit?.createdAt || !credit?.planType || !credit?.installmentAmount) return [];
+    
+    const startDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
+    const totalPaymentsMade = paymentsData ? paymentsData.reduce((sum, p) => sum + p.amount, 0) : 0;
+    
+    const items = [];
+    for (let i = 1; i <= credit.planType; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (i * 15));
+      
+      const threshold = i * credit.installmentAmount;
+      const isPaid = totalPaymentsMade >= threshold;
+
+      items.push({
+        index: i,
+        date: dueDate,
+        amount: credit.installmentAmount,
+        isPaid
+      });
+    }
+    return items;
+  }, [credit, paymentsData]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id || !db) return;
@@ -206,7 +228,7 @@ export default function CreditDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-body">
-      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" asChild className="rounded-xl bg-white shadow-sm">
@@ -349,45 +371,69 @@ export default function CreditDetailPage() {
           </Card>
         </div>
 
-        <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
-          <CardHeader className="border-b border-slate-50 p-8">
-            <CardTitle className="flex items-center gap-2 text-lg font-black">
-              <History className="w-6 h-6 text-primary" /> Historial de Abonos Recibidos
-            </CardTitle>
-            <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Control de flujo de caja</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loadingPayments ? (
-              <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-slate-200" /></div>
-            ) : payments && payments.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-50 p-8">
+              <CardTitle className="flex items-center gap-2 text-lg font-black">
+                <CalendarDays className="w-6 h-6 text-primary" /> Cronograma de Pagos
+              </CardTitle>
+              <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Cuotas quincenales proyectadas</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
               <div className="divide-y divide-slate-50">
-                {payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-8 hover:bg-slate-50/50 transition-colors group">
-                    <div className="flex items-center gap-6">
-                      <div className="p-4 bg-green-100 text-green-600 rounded-2xl group-hover:bg-green-500 group-hover:text-white transition-all">
-                        <CheckCircle2 className="w-6 h-6" />
+                {schedule.map((item) => (
+                  <div key={item.index} className="flex items-center justify-between p-6 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-xl ${item.isPaid ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                        {item.isPaid ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                       </div>
                       <div>
-                        <p className="font-black text-slate-900 text-xl tracking-tight">{formatCurrency(p.amount)}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
+                        <p className={`font-black tracking-tight ${item.isPaid ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                          Cuota #{item.index}: {formatCurrency(item.amount)}
+                        </p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          {item.date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="rounded-full border-green-200 text-green-600 bg-green-50 font-black text-[9px] px-4 py-1">
-                      VERIFICADO
+                    <Badge variant={item.isPaid ? "default" : "outline"} className={`rounded-full px-4 py-1 text-[9px] font-black tracking-widest ${item.isPaid ? 'bg-green-500' : 'text-slate-400 border-slate-200'}`}>
+                      {item.isPaid ? 'PAGADO' : 'PENDIENTE'}
                     </Badge>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-20">
-                <History className="w-16 h-16 text-slate-100 mx-auto mb-4" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Sin abonos registrados en este crédito.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-50 p-8">
+              <CardTitle className="flex items-center gap-2 text-lg font-black">
+                <History className="w-6 h-6 text-primary" /> Recibos Recientes
+              </CardTitle>
+              <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Control de abonos</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {loadingPayments ? (
+                <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-slate-200" /></div>
+              ) : payments && payments.length > 0 ? (
+                <div className="divide-y divide-slate-50">
+                  {payments.slice(0, 5).map((p) => (
+                    <div key={p.id} className="p-6 hover:bg-slate-50/50 transition-colors">
+                      <p className="font-black text-slate-900 text-lg">{formatCurrency(p.amount)}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                        {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) : '---'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-20">
+                  <p className="text-slate-300 font-bold uppercase tracking-widest text-[9px]">Sin abonos registrados.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

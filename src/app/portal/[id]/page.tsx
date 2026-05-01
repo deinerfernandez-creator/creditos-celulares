@@ -23,7 +23,9 @@ import {
   History,
   TrendingUp,
   CheckCircle2,
-  Receipt
+  Receipt,
+  CalendarDays,
+  Clock
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
@@ -52,18 +54,15 @@ export default function CustomerPortalDashboard() {
     setMounted(true);
   }, []);
 
-  // 1. Obtener Datos del Cliente
   const customerRef = useMemoFirebase(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
-  // 2. Obtener Créditos del Cliente (Sin orderBy para evitar error de índice)
   const creditsQuery = useMemoFirebase(() => {
     if (!id || !db) return null;
     return query(collection(db, 'credits'), where("customerId", "==", id));
   }, [db, id]);
   const { data: creditsData, isLoading: loadingCredits } = useCollection(creditsQuery);
   
-  // Ordenar en memoria
   const credit = useMemo(() => {
     if (!creditsData || creditsData.length === 0) return null;
     return [...creditsData].sort((a, b) => {
@@ -73,14 +72,12 @@ export default function CustomerPortalDashboard() {
     })[0];
   }, [creditsData]);
 
-  // 3. Obtener Historial de Pagos (Sin orderBy para evitar error de índice)
   const paymentsQuery = useMemoFirebase(() => {
     if (!credit?.id || !db) return null;
     return query(collection(db, 'payments'), where("creditId", "==", credit.id));
   }, [db, credit?.id]);
   const { data: paymentsData, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
-  // Ordenar en memoria
   const payments = useMemo(() => {
     if (!paymentsData) return null;
     return [...paymentsData].sort((a, b) => {
@@ -90,9 +87,32 @@ export default function CustomerPortalDashboard() {
     });
   }, [paymentsData]);
 
+  const schedule = useMemo(() => {
+    if (!credit?.createdAt || !credit?.planType || !credit?.installmentAmount) return [];
+    
+    const startDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
+    const totalPaymentsMade = paymentsData ? paymentsData.reduce((sum, p) => sum + p.amount, 0) : 0;
+    
+    const items = [];
+    for (let i = 1; i <= credit.planType; i++) {
+      const dueDate = new Date(startDate);
+      dueDate.setDate(dueDate.getDate() + (i * 15));
+      
+      const threshold = i * credit.installmentAmount;
+      const isPaid = totalPaymentsMade >= threshold;
+
+      items.push({
+        index: i,
+        date: dueDate,
+        amount: credit.installmentAmount,
+        isPaid
+      });
+    }
+    return items;
+  }, [credit, paymentsData]);
+
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
-  // 4. Generar Resumen IA
   useEffect(() => {
     async function getAiSummary() {
       if (customer && credit && payments && !aiSummary && mounted) {
@@ -173,7 +193,7 @@ export default function CustomerPortalDashboard() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      <main className="max-w-6xl mx-auto p-4 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">Hola, {customer.name.split(' ')[0]}</h1>
@@ -187,7 +207,6 @@ export default function CustomerPortalDashboard() {
           </Badge>
         </div>
 
-        {/* AI SUMMARY */}
         <Card className="border-none shadow-xl bg-primary text-white overflow-hidden relative rounded-[2rem]">
           <div className="absolute top-0 right-0 p-6 opacity-10">
             <BrainCircuit className="w-32 h-32" />
@@ -213,7 +232,6 @@ export default function CustomerPortalDashboard() {
           </CardContent>
         </Card>
 
-        {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100 group hover:shadow-lg transition-all">
             <div className="flex justify-between items-start mb-6">
@@ -272,44 +290,72 @@ export default function CustomerPortalDashboard() {
           </Card>
         </div>
 
-        {/* PAYMENTS HISTORY */}
-        <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100">
-          <CardTitle className="flex items-center gap-3 text-xl font-black text-slate-900 mb-8">
-            <History className="w-5 h-5 text-primary" /> Historial de Abonos
-          </CardTitle>
-          <div className="space-y-4">
-            {loadingPayments ? (
-              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-200" /></div>
-            ) : payments && payments.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-green-100 text-green-600 p-2.5 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors">
-                        <CheckCircle2 className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-lg font-black text-slate-900">{formatCurrency(p.amount)}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
-                        </p>
-                      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100">
+            <CardTitle className="flex items-center gap-3 text-xl font-black text-slate-900 mb-8">
+              <CalendarDays className="w-5 h-5 text-primary" /> Cronograma de Cuotas
+            </CardTitle>
+            <div className="space-y-4">
+              {schedule.map((item) => (
+                <div key={item.index} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2.5 rounded-xl ${item.isPaid ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-400'}`}>
+                      {item.isPaid ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                     </div>
-                    <Badge variant="outline" className="rounded-full text-[8px] font-black tracking-widest border-green-200 text-green-600 bg-green-50">ABONADO</Badge>
+                    <div>
+                      <p className={`text-sm font-black ${item.isPaid ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                        Cuota #{item.index}: {formatCurrency(item.amount)}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        {item.date.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200">
-                 <Receipt className="w-10 h-10 text-slate-200 mx-auto mb-4" />
-                <h3 className="text-slate-900 font-black text-sm">Sin abonos registrados</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Tus pagos aparecerán aquí una vez sean procesados en tienda.</p>
-              </div>
-            )}
-          </div>
-        </Card>
+                  <Badge variant={item.isPaid ? "default" : "outline"} className={`rounded-full text-[8px] font-black tracking-widest ${item.isPaid ? 'bg-green-500' : 'text-slate-400'}`}>
+                    {item.isPaid ? 'PAGADA' : 'PENDIENTE'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </Card>
 
-        {/* FOOTER AD */}
+          <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100">
+            <CardTitle className="flex items-center gap-3 text-xl font-black text-slate-900 mb-8">
+              <History className="w-5 h-5 text-primary" /> Historial de Abonos
+            </CardTitle>
+            <div className="space-y-4">
+              {loadingPayments ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-slate-200" /></div>
+              ) : payments && payments.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {payments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="bg-green-100 text-green-600 p-2.5 rounded-xl group-hover:bg-green-500 group-hover:text-white transition-colors">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-slate-900">{formatCurrency(p.amount)}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                            {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="rounded-full text-[8px] font-black tracking-widest border-green-200 text-green-600 bg-green-50">ABONADO</Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                   <Receipt className="w-10 h-10 text-slate-200 mx-auto mb-4" />
+                  <h3 className="text-slate-900 font-black text-sm">Sin abonos registrados</h3>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Tus pagos aparecerán aquí una vez sean procesados en tienda.</p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
         <div className="p-6 bg-amber-50 rounded-[2rem] border border-amber-100 flex items-start gap-5">
           <div className="bg-amber-100 p-3 rounded-xl text-amber-600">
             <AlertCircle className="w-6 h-6" />
