@@ -18,7 +18,7 @@ import {
   Check, 
   Search,
   User as UserIcon,
-  Circle
+  X
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -111,8 +111,11 @@ export default function NewCreditPage() {
 
   const startCamera = async () => {
     setShowCamera(true);
+    setCapturedPhoto(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setHasCameraPermission(true);
@@ -120,31 +123,50 @@ export default function NewCreditPage() {
     } catch (error) {
       console.error('Error accessing camera:', error);
       setHasCameraPermission(false);
+      setShowCamera(false);
       toast({
         variant: 'destructive',
-        title: 'Acceso a Cámara Denegado',
-        description: 'Por favor permite el acceso a la cámara para tomar la foto del cliente.',
+        title: 'Error de Cámara',
+        description: 'No se pudo acceder a la cámara. Revisa los permisos de tu navegador.',
       });
     }
   };
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
-        const photoData = canvasRef.current.toDataURL('image/jpeg');
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (context && video.videoWidth > 0) {
+        // Ajustar canvas al tamaño del video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Dibujar frame actual del video en el canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convertir a Base64
+        const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoData);
         
-        // Stop stream
-        const stream = videoRef.current.srcObject as MediaStream;
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
+        // Detener la cámara
+        stopCamera();
         setShowCamera(false);
+        
+        toast({
+          title: "Foto Capturada",
+          description: "La imagen se ha guardado correctamente.",
+        });
       }
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
   };
 
@@ -203,8 +225,16 @@ export default function NewCreditPage() {
       });
   };
 
+  // Limpiar cámara si se desmonta el componente
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 flex items-center justify-center">
+      {/* Canvas oculto necesario para la captura - SIEMPRE EN EL DOM */}
+      <canvas ref={canvasRef} className="hidden" />
+
       <div className="w-full max-w-5xl space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="rounded-full">
@@ -348,7 +378,7 @@ export default function NewCreditPage() {
                       onClick={startCamera} 
                       className="w-full h-24 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 font-black gap-3 text-lg"
                     >
-                      <Camera className="w-8 h-8" /> Tomar Foto del Cliente
+                      <Camera className="w-8 h-8" /> Iniciar Cámara
                     </Button>
                   )}
 
@@ -371,13 +401,22 @@ export default function NewCreditPage() {
                           >
                              <div className="w-12 h-12 rounded-full bg-primary" />
                           </Button>
+                          <Button 
+                            type="button" 
+                            variant="secondary"
+                            size="icon"
+                            onClick={() => { stopCamera(); setShowCamera(false); }}
+                            className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md border border-white/30"
+                          >
+                             <X className="w-6 h-6" />
+                          </Button>
                         </div>
                       </div>
                       
                       {!hasCameraPermission && (
                         <Alert variant="destructive" className="rounded-2xl">
                           <AlertTitle className="font-black">Cámara no detectada</AlertTitle>
-                          <AlertDescription>Por favor, haz clic en el botón de captura o revisa los permisos de tu navegador.</AlertDescription>
+                          <AlertDescription>Por favor, haz clic en "Iniciar Cámara" o revisa los permisos de tu navegador.</AlertDescription>
                         </Alert>
                       )}
                       
@@ -397,13 +436,12 @@ export default function NewCreditPage() {
                         <Button 
                           type="button" 
                           variant="secondary" 
-                          onClick={() => { setCapturedPhoto(null); startCamera(); }} 
+                          onClick={startCamera} 
                           className="rounded-2xl font-black uppercase text-xs tracking-widest h-12 px-8 bg-white text-slate-900"
                         >
-                          <RefreshCw className="w-4 h-4 mr-3" /> Repetir Fotografía
+                          <RefreshCw className="w-4 h-4 mr-3" /> Tomar Otra Foto
                         </Button>
                       </div>
-                      <canvas ref={canvasRef} className="hidden" />
                     </div>
                   )}
                 </div>
