@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -33,6 +34,8 @@ import {
 } from '@/lib/mock-data';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function CustomerPortalPage() {
   const { id } = useParams();
@@ -48,6 +51,8 @@ export default function CustomerPortalPage() {
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   // Generar resumen automáticamente al entrar
   useEffect(() => {
@@ -96,8 +101,15 @@ export default function CustomerPortalPage() {
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-20 px-4 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-primary rounded-lg text-white">
-            <Smartphone className="w-5 h-5" />
+          <div className="relative w-10 h-10 overflow-hidden rounded-lg bg-white border border-slate-100 p-1 flex items-center justify-center">
+             <Image 
+              src={logo?.imageUrl || ''} 
+              alt="Tecnicell Logo" 
+              width={32} 
+              height={32}
+              className="object-contain"
+              data-ai-hint={logo?.imageHint}
+            />
           </div>
           <span className="font-black text-xl tracking-tight text-primary">Tecnicell</span>
         </div>

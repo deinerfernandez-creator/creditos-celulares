@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -9,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Smartphone, User, ArrowRight, ShieldCheck, Hash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_CUSTOMERS, MOCK_CREDITS } from '@/lib/mock-data';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function PortalLoginPage() {
   const [cedula, setCedula] = useState('');
@@ -16,6 +19,8 @@ export default function PortalLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   const handleAccess = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +63,15 @@ export default function PortalLoginPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-primary rounded-2xl text-white mb-2 shadow-lg shadow-primary/20">
-            <Smartphone className="w-8 h-8" />
+          <div className="inline-flex p-1 bg-white rounded-3xl mb-2 shadow-xl shadow-primary/10 overflow-hidden w-24 h-24 items-center justify-center border-4 border-primary/5">
+            <Image 
+              src={logo?.imageUrl || ''} 
+              alt="Tecnicell Logo" 
+              width={80} 
+              height={80}
+              className="object-contain"
+              data-ai-hint={logo?.imageHint}
+            />
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Tecnicell Portal</h1>
           <p className="text-slate-500">Consulta el estado de tu crédito en segundos</p>

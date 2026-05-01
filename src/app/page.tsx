@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -35,9 +36,12 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { MOCK_CREDITS, MOCK_CUSTOMERS } from '@/lib/mock-data';
 import Link from 'next/link';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   const stats = [
     { title: "Créditos Activos", value: "24", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
@@ -52,8 +56,15 @@ export default function DashboardPage() {
         <Sidebar className="border-r border-sidebar-border">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-accent rounded-xl">
-                <Smartphone className="w-6 h-6 text-primary" />
+              <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-white p-1">
+                <Image 
+                  src={logo?.imageUrl || ''} 
+                  alt="Tecnicell Logo" 
+                  width={40} 
+                  height={40}
+                  className="object-contain"
+                  data-ai-hint={logo?.imageHint}
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>

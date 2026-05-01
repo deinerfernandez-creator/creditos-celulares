@@ -1,3 +1,10 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "logo-tecnicell",
+      "description": "Logo oficial de Tecnicell Servicio Técnico y Accesorios",
+      "imageUrl": "https://picsum.photos/seed/tecnicell-logo/400/400",
+      "imageHint": "smartphone logo"
+    }
+  ]
 }
