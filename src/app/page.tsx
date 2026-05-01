@@ -57,7 +57,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm">
                 <Image 
-                  src={logo?.imageUrl || ''} 
+                  src="/logo.png"
                   alt="Tecnicell Logo" 
                   width={48} 
                   height={48}
