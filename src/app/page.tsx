@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,19 +29,32 @@ import {
   Loader2,
   ShieldAlert,
   CheckCircle2,
-  Settings
+  Settings,
+  Trash2,
+  MoreVertical
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -71,7 +85,6 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router, mounted]);
 
-  // Consultas estables
   const customersQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
     return query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
@@ -83,6 +96,24 @@ export default function DashboardPage() {
     return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   }, [db, mounted]);
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
+
+  const handleDeleteCustomer = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'customers', id));
+      toast({ title: "Cliente eliminado", description: "Los datos han sido removidos de la base de datos." });
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo eliminar el cliente.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteCredit = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'credits', id));
+      toast({ title: "Crédito eliminado", description: "El expediente del equipo ha sido removido." });
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo eliminar el crédito.", variant: "destructive" });
+    }
+  };
 
   if (!mounted || authLoading) {
     return (
@@ -290,14 +321,6 @@ export default function DashboardPage() {
                           Registrar Cliente
                         </Link>
                       </Button>
-                      {role === 'admin' && (
-                        <Button variant="ghost" className="w-full justify-start h-12 text-slate-500 hover:bg-slate-100 rounded-xl font-bold" asChild>
-                          <Link href="/staff/new">
-                            <Settings className="w-5 h-5 mr-3" />
-                            Gestionar Staff
-                          </Link>
-                        </Button>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -323,8 +346,8 @@ export default function DashboardPage() {
                           <TableHead className="px-6 font-black uppercase text-[10px] tracking-widest text-slate-400">Nombre</TableHead>
                           <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Cédula</TableHead>
                           <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Celular</TableHead>
-                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Crédito Actual</TableHead>
-                          <TableHead className="pr-6 text-right font-black uppercase text-[10px] tracking-widest text-slate-400">Acción</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Estado Crédito</TableHead>
+                          <TableHead className="pr-6 text-right font-black uppercase text-[10px] tracking-widest text-slate-400">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -344,9 +367,29 @@ export default function DashboardPage() {
                                   {latestCredit ? getStatusBadge(latestCredit.status) : <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin Créditos</span>}
                                 </TableCell>
                                 <TableCell className="pr-6 text-right">
-                                  <Button variant="ghost" size="sm" asChild className="rounded-xl font-bold text-primary">
-                                    <Link href={`/credits?customerId=${c.id}`}>Ver créditos</Link>
-                                  </Button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="sm" asChild className="rounded-xl font-bold text-primary">
+                                      <Link href={`/credits?customerId=${c.id}`}>Ver créditos</Link>
+                                    </Button>
+                                    
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="rounded-2xl">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="font-black">¿Eliminar Cliente?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esta acción borrará permanentemente los datos de {c.name}. Esta acción no se puede deshacer.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteCustomer(c.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Cliente</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
@@ -404,9 +447,29 @@ export default function DashboardPage() {
                                 <TableCell className="font-black text-slate-900">{formatCurrency(cr.remainingBalance)}</TableCell>
                                 <TableCell>{getStatusBadge(cr.status)}</TableCell>
                                 <TableCell className="pr-6 text-right">
-                                  <Button variant="outline" size="sm" asChild className="rounded-xl font-bold">
-                                    <Link href={`/credits/${cr.id}`}>Detalles</Link>
-                                  </Button>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button variant="outline" size="sm" asChild className="rounded-xl font-bold">
+                                      <Link href={`/credits/${cr.id}`}>Detalles</Link>
+                                    </Button>
+                                    
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent className="rounded-2xl">
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="font-black">¿Borrar Expediente?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esto eliminará el registro financiero del equipo {cr.deviceModel}.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteCredit(cr.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );

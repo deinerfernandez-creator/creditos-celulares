@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { 
   Card, 
   CardHeader, 
@@ -22,10 +23,11 @@ import {
   CheckCircle2,
   History,
   TrendingUp,
-  Receipt
+  Receipt,
+  Trash2
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, query, where, orderBy, addDoc, serverTimestamp, increment } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, orderBy, addDoc, serverTimestamp, increment, deleteDoc } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -42,6 +44,17 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -59,6 +72,7 @@ const formatCurrency = (value: any) => {
 
 export default function CreditDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
   const db = useFirestore();
   const { toast } = useToast();
@@ -106,14 +120,12 @@ export default function CreditDetailPage() {
 
     setUpdating(true);
     try {
-      // 1. Registrar el pago
       await addDoc(collection(db, 'payments'), {
         creditId: id,
         amount: amount,
         date: serverTimestamp()
       });
 
-      // 2. Actualizar el saldo del crédito
       const newBalance = Math.max(0, credit.remainingBalance - amount);
       const updateData: any = { remainingBalance: increment(-amount) };
       
@@ -130,6 +142,17 @@ export default function CreditDetailPage() {
       toast({ title: "Error", description: "No se pudo procesar el pago.", variant: "destructive" });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDeleteCredit = async () => {
+    if (!id || !db) return;
+    try {
+      await deleteDoc(doc(db, 'credits', id));
+      toast({ title: "Expediente Eliminado", description: "El crédito ha sido removido satisfactoriamente." });
+      router.push('/');
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo eliminar el registro.", variant: "destructive" });
     }
   };
 
@@ -174,6 +197,24 @@ export default function CreditDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="rounded-xl font-bold text-destructive border-destructive/20 hover:bg-destructive/5">
+                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-black">¿Borrar definitivamente?</AlertDialogTitle>
+                  <AlertDialogDescription>Esta acción eliminará permanentemente este expediente de crédito y todo su historial de pagos. No se puede revertir.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteCredit} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Expediente</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <Dialog open={openPayment} onOpenChange={setOpenPayment}>
               <DialogTrigger asChild>
                 <Button className="rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10">
@@ -226,7 +267,6 @@ export default function CreditDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Perfil */}
           <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="bg-primary text-white pb-6">
               <CardTitle className="flex items-center gap-2 text-base font-black">
@@ -253,7 +293,6 @@ export default function CreditDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Equipo */}
           <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="bg-slate-900 text-white pb-6">
               <CardTitle className="flex items-center gap-2 text-base font-black">
@@ -289,7 +328,6 @@ export default function CreditDetailPage() {
           </Card>
         </div>
 
-        {/* Abonos */}
         <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
           <CardHeader className="border-b border-slate-50 p-8">
             <CardTitle className="flex items-center gap-2 text-lg font-black">
