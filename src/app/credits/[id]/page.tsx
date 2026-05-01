@@ -42,12 +42,13 @@ import { addDays, format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const formatCurrency = (value: number) => {
-  if (isNaN(value)) return '$ 0';
+  const num = Number(value);
+  if (isNaN(num)) return '$ 0';
   return new Intl.NumberFormat('es-CO', {
     style: 'currency',
     currency: 'COP',
     minimumFractionDigits: 0,
-  }).format(value);
+  }).format(num);
 };
 
 export default function CreditDetailPage() {
@@ -63,7 +64,7 @@ export default function CreditDetailPage() {
 
   // Fetch Credit Data
   const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id) : null, [db, id]);
-  const { data: credit, isLoading: loadingCredit, error: creditError } = useDoc(creditRef);
+  const { data: credit, isLoading: loadingCredit } = useDoc(creditRef);
 
   // Fetch Customer Data
   const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
@@ -81,14 +82,16 @@ export default function CreditDetailPage() {
 
   // Lógica segura para el progreso
   const progress = useMemo(() => {
-    if (!credit || !credit.totalAmount || credit.totalAmount <= 0) return 0;
-    const paid = (credit.totalAmount || 0) - (credit.remainingBalance || 0);
-    return Math.min(100, Math.max(0, (paid / credit.totalAmount) * 100));
+    if (!credit || typeof credit.totalAmount !== 'number' || credit.totalAmount <= 0) return 0;
+    const remaining = typeof credit.remainingBalance === 'number' ? credit.remainingBalance : credit.totalAmount;
+    const paid = credit.totalAmount - remaining;
+    const calculated = (paid / credit.totalAmount) * 100;
+    return Math.min(100, Math.max(0, calculated));
   }, [credit]);
 
   // Cronograma Seguro
   const schedule = useMemo(() => {
-    if (!credit || !credit.installmentAmount) return [];
+    if (!credit || !credit.installmentAmount || credit.installmentAmount <= 0) return [];
     
     let baseDate: Date;
     if (credit.createdAt?.toDate) {
@@ -105,16 +108,17 @@ export default function CreditDetailPage() {
     const totalPaidAmount = payments?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
     let accumulatedForComparison = 0;
 
-    const numInstallments = credit.planType || 6;
+    const numInstallments = Number(credit.planType) || 6;
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = addDays(baseDate, i * 14);
-      accumulatedForComparison += (credit.installmentAmount || 0);
-      const isPaid = totalPaidAmount >= (accumulatedForComparison - 500);
+      accumulatedForComparison += credit.installmentAmount;
+      // Pequeño margen de error para comparaciones decimales
+      const isPaid = totalPaidAmount >= (accumulatedForComparison - 100);
 
       items.push({
         number: i,
         dueDate,
-        amount: credit.installmentAmount || 0,
+        amount: credit.installmentAmount,
         isPaid
       });
     }
@@ -136,7 +140,7 @@ export default function CreditDetailPage() {
 
     addDoc(collection(db, 'payments'), paymentData)
       .then(() => {
-        const currentBalance = credit.remainingBalance || 0;
+        const currentBalance = Number(credit.remainingBalance) || 0;
         const newBalance = Math.max(0, currentBalance - amount);
         const newStatus = newBalance <= 0 ? 'completado' : credit.status;
         
@@ -171,16 +175,16 @@ export default function CreditDetailPage() {
       const nextDate = firstUnpaid && isValid(firstUnpaid.dueDate) ? format(firstUnpaid.dueDate, 'yyyy-MM-dd') : 'Completado';
 
       const summary = await summarizeCreditStatus({
-        customerName: customer.name,
-        loanAmount: (credit.initialAmount || 0) - (credit.downPayment || 0),
-        totalAmountDue: credit.totalAmount || 0,
-        remainingBalance: credit.remainingBalance || 0,
+        customerName: customer.name || 'Cliente',
+        loanAmount: Number(credit.initialAmount || 0) - Number(credit.downPayment || 0),
+        totalAmountDue: Number(credit.totalAmount || 0),
+        remainingBalance: Number(credit.remainingBalance || 0),
         nextPaymentDate: nextDate,
         paymentFrequency: 'quincenal',
-        paymentHistory: payments?.map(p => ({
+        paymentHistory: (payments || []).map(p => ({
           date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : 'Hoy',
-          amount: p.amount || 0
-        })) || []
+          amount: Number(p.amount || 0)
+        }))
       });
       setAiSummary(summary);
     } catch (err) {
@@ -194,21 +198,21 @@ export default function CreditDetailPage() {
     }
   };
 
-  if (loadingCredit || loadingPayments || (credit && !customer && loadingCustomer)) {
+  if (loadingCredit || (credit && !customer && loadingCustomer)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-medium">Sincronizando información...</p>
+        <p className="text-slate-500 font-medium">Cargando detalles del crédito...</p>
       </div>
     );
   }
 
-  if (!credit && !loadingCredit) {
+  if (!credit) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no disponible</h2>
-        <p className="text-slate-500 mt-2">No se encontró el registro o los permisos han expirado.</p>
+        <p className="text-slate-500 mt-2">No se encontró el registro o los datos están incompletos.</p>
         <Button asChild className="mt-8 rounded-xl px-8">
           <Link href="/">Volver al Dashboard</Link>
         </Button>
@@ -244,7 +248,7 @@ export default function CreditDetailPage() {
             <DialogContent className="rounded-3xl border-none p-8">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black">Registrar Abono</DialogTitle>
-                <DialogDescription>Ingresa el monto recibido en COP.</DialogDescription>
+                <DialogDescription>Ingresa el monto recibido en COP para {customer?.name}.</DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-6">
                 <div className="space-y-3">
@@ -329,22 +333,30 @@ export default function CreditDetailPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {schedule.map((item) => (
-                          <tr key={item.number} className="group hover:bg-slate-50/30">
-                            <td className="px-8 py-6 font-black text-slate-300">#{item.number}</td>
-                            <td className="px-8 py-6 font-bold text-slate-700">
-                              {isValid(item.dueDate) ? format(item.dueDate, 'PPP', { locale: es }) : 'Pendiente'}
-                            </td>
-                            <td className="px-8 py-6 font-black text-slate-900">{formatCurrency(item.amount)}</td>
-                            <td className="px-8 py-6 text-right">
-                              {item.isPaid ? (
-                                <Badge className="bg-green-100 text-green-700 border-none rounded-full px-5 py-1 font-bold">PAGADA</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-slate-400 border-slate-200 rounded-full px-5 py-1 font-medium">PENDIENTE</Badge>
-                              )}
+                        {schedule.length > 0 ? (
+                          schedule.map((item) => (
+                            <tr key={item.number} className="group hover:bg-slate-50/30">
+                              <td className="px-8 py-6 font-black text-slate-300">#{item.number}</td>
+                              <td className="px-8 py-6 font-bold text-slate-700">
+                                {isValid(item.dueDate) ? format(item.dueDate, 'PPP', { locale: es }) : 'Pendiente'}
+                              </td>
+                              <td className="px-8 py-6 font-black text-slate-900">{formatCurrency(item.amount)}</td>
+                              <td className="px-8 py-6 text-right">
+                                {item.isPaid ? (
+                                  <Badge className="bg-green-100 text-green-700 border-none rounded-full px-5 py-1 font-bold">PAGADA</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-slate-400 border-slate-200 rounded-full px-5 py-1 font-medium">PENDIENTE</Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-8 py-20 text-center text-slate-400 italic">
+                              No hay información del plan disponible.
                             </td>
                           </tr>
-                        ))}
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -365,7 +377,7 @@ export default function CreditDetailPage() {
                               <p className="font-black text-2xl text-slate-900">{formatCurrency(p.amount || 0)}</p>
                               <p className="text-xs text-slate-400 font-medium flex items-center gap-2 mt-1">
                                 <Calendar className="w-3 h-3" />
-                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Registrado ahora'}
+                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Registrado recientemente'}
                               </p>
                             </div>
                           </div>
@@ -420,7 +432,7 @@ export default function CreditDetailPage() {
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <p className="text-xs font-bold text-slate-700">Recargo Aplicado</p>
-                  <p className="text-sm text-slate-500">{credit?.planType === 6 ? '50% (6 meses)' : '100% (12 meses)'}</p>
+                  <p className="text-sm text-slate-500">{Number(credit?.planType) === 6 ? '50% (6 meses)' : '100% (12 meses)'}</p>
                 </div>
               </div>
             </Card>
