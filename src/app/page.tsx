@@ -30,7 +30,8 @@ import {
   UserCheck,
   Loader2,
   ShieldAlert,
-  CheckCircle2
+  CheckCircle2,
+  History
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,8 @@ import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -59,6 +62,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const db = useFirestore();
   const { toast } = useToast();
+  
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   useEffect(() => {
     setMounted(true);
@@ -69,7 +74,7 @@ export default function DashboardPage() {
       router.push('/login');
     }
     if (mounted && !authLoading && user && role === 'cliente') {
-      router.push(`/portal/${user.uid}`);
+      router.push('/portal');
     }
   }, [user, authLoading, router, role, mounted]);
 
@@ -84,12 +89,6 @@ export default function DashboardPage() {
     return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   }, [db, mounted]);
   const { data: credits } = useCollection(creditsQuery);
-
-  const staffQuery = useMemoFirebase(() => {
-    if (!db || !mounted || role !== 'admin') return null;
-    return query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-  }, [db, mounted, role]);
-  const { data: staff } = useCollection(staffQuery);
 
   if (!mounted || authLoading) {
     return (
@@ -108,7 +107,7 @@ export default function DashboardPage() {
     { title: "Clientes Totales", value: customers ? customers.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
     { title: "Equipos Bloqueados", value: credits ? credits.filter((c: any) => c.status === 'bloqueado').length.toString() : "0", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10" },
     { 
-      title: "Créditos Pagados", 
+      title: "Pagos Completos", 
       value: credits ? credits.filter((c: any) => c.status === 'pagado').length.toString() : "0", 
       icon: CheckCircle2, 
       color: "text-green-600", 
@@ -124,71 +123,63 @@ export default function DashboardPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'activo':
-        return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-3 capitalize">Activo</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-3 capitalize font-bold">Activo</Badge>;
       case 'pagado':
-        return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize">Pagado</Badge>;
+        return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize font-bold">Pagado</Badge>;
       case 'bloqueado':
-        return <Badge variant="destructive" className="rounded-full px-3 capitalize">Bloqueado</Badge>;
+        return <Badge variant="destructive" className="rounded-full px-3 capitalize font-bold">Bloqueado</Badge>;
       default:
-        return <Badge variant="secondary" className="rounded-full px-3 capitalize">{status}</Badge>;
+        return <Badge variant="secondary" className="rounded-full px-3 capitalize font-bold">{status}</Badge>;
     }
   };
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full overflow-hidden bg-background">
-        <Sidebar className="border-r border-sidebar-border shadow-2xl">
+      <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+        <Sidebar className="border-r border-slate-200 shadow-2xl">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm text-primary font-bold">
-                T
+              <div className="relative w-12 h-12 overflow-hidden rounded-2xl bg-white p-1 flex items-center justify-center shadow-lg border border-slate-100">
+                <Image src={logo?.imageUrl || '/logo.png'} alt="Logo" width={32} height={32} />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>
-                <Badge className="bg-white/20 hover:bg-white/30 border-none text-[10px] py-0 uppercase tracking-tighter">{role}</Badge>
+                <h1 className="text-xl font-black tracking-tighter text-white">Tecnicell</h1>
+                <Badge className="bg-white/20 hover:bg-white/30 border-none text-[10px] py-0 uppercase tracking-widest font-black">{role}</Badge>
               </div>
             </div>
           </SidebarHeader>
-          <SidebarContent className="px-3">
+          <SidebarContent className="px-3 pt-4">
             <SidebarMenu>
-              <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-lg h-11">
+              <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-xl h-12 font-bold mb-1">
                 <LayoutDashboard className="w-5 h-5 mr-3" />
-                <span>Panel de Control</span>
+                <span>Dashboard</span>
               </SidebarMenuButton>
-              <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-lg h-11">
+              <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-xl h-12 font-bold mb-1">
                 <Users className="w-5 h-5 mr-3" />
                 <span>Clientes</span>
               </SidebarMenuButton>
-              <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-lg h-11">
+              <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-xl h-12 font-bold mb-1">
                 <CreditCard className="w-5 h-5 mr-3" />
                 <span>Créditos</span>
               </SidebarMenuButton>
               
-              {isAdmin && (
-                <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-lg h-11">
-                  <ShieldCheck className="w-5 h-5 mr-3" />
-                  <span>Personal</span>
+              <div className="my-6 border-t border-white/10 px-3 pt-6">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Vistas Públicas</p>
+                <SidebarMenuButton asChild className="rounded-xl h-12 text-accent hover:text-accent font-bold">
+                  <Link href="/portal">
+                    <Smartphone className="w-5 h-5 mr-3" />
+                    <span>Portal de Clientes</span>
+                    <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
+                  </Link>
                 </SidebarMenuButton>
-              )}
-              
-              <div className="my-4 border-t border-sidebar-border/30 px-3 pt-4">
-                <p className="text-[10px] font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-2">Accesos Externos</p>
               </div>
-
-              <SidebarMenuButton asChild className="rounded-lg h-11 text-accent hover:text-accent">
-                <Link href="/portal">
-                  <Smartphone className="w-5 h-5 mr-3" />
-                  <span>Portal de Clientes</span>
-                  <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
-                </Link>
-              </SidebarMenuButton>
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter className="p-4">
+          <SidebarFooter className="p-4 border-t border-white/10">
             <Button 
               variant="ghost" 
               onClick={handleLogout}
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent rounded-lg h-11"
+              className="w-full justify-start text-white hover:bg-white/10 rounded-xl h-12 font-bold"
             >
               <LogOut className="w-5 h-5 mr-3" />
               <span>Cerrar Sesión</span>
@@ -197,32 +188,39 @@ export default function DashboardPage() {
         </Sidebar>
 
         <SidebarInset className="flex-1 overflow-auto">
-          <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-white/80 backdrop-blur-md px-8">
+          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b bg-white/80 backdrop-blur-md px-10">
             <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-muted-foreground" />
-              <div className="h-6 w-px bg-border mx-2" />
-              <h2 className="text-lg font-semibold capitalize">
-                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'customers' ? 'Listado de Clientes' : activeTab === 'credits' ? 'Gestión de Créditos' : 'Gestión de Personal'}
+              <SidebarTrigger className="text-slate-500" />
+              <div className="h-6 w-px bg-slate-200 mx-2" />
+              <h2 className="text-xl font-black text-slate-900 tracking-tight capitalize">
+                {activeTab === 'dashboard' ? 'Resumen General' : activeTab === 'customers' ? 'Mis Clientes' : 'Gestión Financiera'}
               </h2>
+            </div>
+            <div className="flex items-center gap-4">
+               <div className="bg-slate-100 p-2 rounded-full text-slate-400">
+                  <Bell className="w-5 h-5" />
+               </div>
+               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-black text-xs">
+                  {user.email?.charAt(0).toUpperCase()}
+               </div>
             </div>
           </header>
 
-          <main className="p-8 space-y-8">
+          <main className="p-10 space-y-10">
             {activeTab === 'dashboard' && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {stats.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-all">
-                      <CardContent className="p-6">
+                    <Card key={idx} className="border-none shadow-sm rounded-3xl overflow-hidden group hover:shadow-xl transition-all border border-slate-100">
+                      <CardContent className="p-8">
                         <div className="flex items-center justify-between">
-                          <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} transition-colors`}>
-                            <stat.icon className="w-6 h-6" />
+                          <div className={`p-4 rounded-2xl ${stat.bg} ${stat.color} transition-colors`}>
+                            <stat.icon className="w-7 h-7" />
                           </div>
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
                         </div>
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                          <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                        <div className="mt-6">
+                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{stat.title}</p>
+                          <h3 className="text-4xl font-black mt-1 text-slate-900 tracking-tighter">{stat.value}</h3>
                         </div>
                       </CardContent>
                     </Card>
@@ -230,21 +228,24 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <Card className="lg:col-span-2 border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between">
+                  <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl border border-slate-100 overflow-hidden bg-white">
+                    <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg">Créditos Recientes</CardTitle>
-                        <CardDescription>Ultimos movimientos del sistema</CardDescription>
+                        <CardTitle className="text-lg font-black text-slate-900">Créditos Recientes</CardTitle>
+                        <CardDescription className="text-xs font-medium">Últimos movimientos del sistema</CardDescription>
                       </div>
+                      <Button variant="ghost" size="sm" asChild className="rounded-full text-primary font-bold">
+                        <Link href="/credits">Ver todos</Link>
+                      </Button>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                       <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead>Cliente</TableHead>
-                            <TableHead>Equipo / IMEI</TableHead>
-                            <TableHead>Saldo</TableHead>
-                            <TableHead>Estado</TableHead>
+                        <TableHeader className="bg-slate-50/50">
+                          <TableRow className="hover:bg-transparent border-none">
+                            <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Cliente</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Equipo / IMEI</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Saldo Pendiente</TableHead>
+                            <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Estado</TableHead>
                             <TableHead></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -253,24 +254,24 @@ export default function DashboardPage() {
                             credits.slice(0, 5).map((credit: any) => {
                               const customer = customers?.find((c: any) => c.id === credit.customerId);
                               return (
-                                <TableRow key={credit.id} className="cursor-pointer group">
-                                  <TableCell>
-                                    <div className="font-medium">{customer?.name || 'Cargando...'}</div>
-                                    <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
+                                <TableRow key={credit.id} className="cursor-pointer group hover:bg-slate-50 transition-all">
+                                  <TableCell className="px-8">
+                                    <div className="font-bold text-slate-900">{customer?.name || 'Cargando...'}</div>
+                                    <div className="text-[10px] text-slate-400 font-medium">CC: {customer?.cedula}</div>
                                   </TableCell>
                                   <TableCell>
-                                    <div className="text-sm">{credit.deviceModel}</div>
-                                    <div className="text-[10px] font-mono text-muted-foreground">
+                                    <div className="text-sm font-bold text-primary">{credit.deviceModel}</div>
+                                    <div className="text-[10px] font-mono text-slate-400">
                                       {credit.imei}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="font-semibold">{formatCurrency(credit.remainingBalance)}</TableCell>
+                                  <TableCell className="font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</TableCell>
                                   <TableCell>
                                     {getStatusBadge(credit.status)}
                                   </TableCell>
-                                  <TableCell>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <Link href={`/credits/${credit.id}`}>Ver</Link>
+                                  <TableCell className="pr-8 text-right">
+                                    <Button variant="outline" size="sm" asChild className="rounded-xl font-bold h-9">
+                                      <Link href={`/credits/${credit.id}`}>Detalles</Link>
                                     </Button>
                                   </TableCell>
                                 </TableRow>
@@ -278,8 +279,8 @@ export default function DashboardPage() {
                             })
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic">
-                                No hay créditos registrados.
+                              <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-medium italic">
+                                No se encontraron registros de créditos.
                               </TableCell>
                             </TableRow>
                           )}
@@ -288,24 +289,33 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-none shadow-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
-                      <CardDescription>Accesos directos comunes</CardDescription>
+                  <Card className="border-none shadow-sm rounded-3xl border border-slate-100 bg-white">
+                    <CardHeader className="p-8">
+                      <CardTitle className="text-lg font-black text-slate-900">Gestión Rápida</CardTitle>
+                      <CardDescription className="text-xs font-medium">Accesos directos de operación</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Button className="w-full justify-start h-12 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20" asChild>
+                    <CardContent className="px-8 space-y-4">
+                      <Button className="w-full justify-start h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-xl shadow-primary/20 transition-all font-bold" asChild>
                         <Link href="/credits/new">
                           <PlusCircle className="w-5 h-5 mr-3" />
-                          Nuevo Crédito
+                          Nueva Solicitud
                         </Link>
                       </Button>
-                      <Button variant="outline" className="w-full justify-start h-12 border-slate-200 hover:bg-slate-50 rounded-xl" asChild>
+                      <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl transition-all font-bold text-slate-600" asChild>
                         <Link href="/customers/new">
                           <Users className="w-5 h-5 mr-3 text-primary" />
                           Registrar Cliente
                         </Link>
                       </Button>
+                      <div className="pt-4 border-t border-slate-50">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Ayuda al Cliente</p>
+                        <Button variant="secondary" className="w-full justify-start h-12 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all font-bold text-slate-500" asChild>
+                          <Link href="/portal" target="_blank">
+                            <Smartphone className="w-4 h-4 mr-3" />
+                            Ver Portal Público
+                          </Link>
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -313,23 +323,26 @@ export default function DashboardPage() {
             )}
 
             {activeTab === 'customers' && (
-              <div className="space-y-6">
+              <div className="space-y-8 animate-in fade-in duration-500">
                 <div className="flex justify-between items-center">
-                   <h3 className="text-2xl font-bold">Clientes</h3>
-                   <Button asChild className="rounded-xl shadow-md">
-                     <Link href="/customers/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo Cliente</Link>
+                   <div>
+                     <h3 className="text-3xl font-black text-slate-900 tracking-tight">Directorio de Clientes</h3>
+                     <p className="text-sm text-slate-500 font-medium">Listado oficial de personas registradas en Tecnicell</p>
+                   </div>
+                   <Button asChild className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-primary/20">
+                     <Link href="/customers/new"><PlusCircle className="mr-2 h-5 w-5" /> Nuevo Cliente</Link>
                    </Button>
                 </div>
-                <Card className="border-none shadow-sm">
+                <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white border border-slate-100">
                   <CardContent className="p-0">
                     <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Cédula</TableHead>
-                          <TableHead>Teléfono</TableHead>
-                          <TableHead>Estado Crédito</TableHead>
-                          <TableHead></TableHead>
+                      <TableHeader className="bg-slate-50/50">
+                        <TableRow className="border-none">
+                          <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Nombre Completo</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Documento</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Contacto</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Crédito Actual</TableHead>
+                          <TableHead className="pr-8 text-right font-black uppercase text-[10px] tracking-widest text-slate-400">Acción</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -337,23 +350,23 @@ export default function DashboardPage() {
                           customers.map((c: any) => {
                             const latestCredit = credits?.find((cr: any) => cr.customerId === c.id);
                             return (
-                              <TableRow key={c.id}>
-                                <TableCell className="font-medium">{c.name}</TableCell>
-                                <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
-                                <TableCell>{c.phone}</TableCell>
+                              <TableRow key={c.id} className="hover:bg-slate-50 border-slate-50 transition-all">
+                                <TableCell className="px-8 font-bold text-slate-900">{c.name}</TableCell>
+                                <TableCell className="font-mono text-xs text-slate-500">{c.cedula}</TableCell>
+                                <TableCell className="text-sm font-medium text-primary">{c.phone}</TableCell>
                                 <TableCell>
-                                  {latestCredit ? getStatusBadge(latestCredit.status) : <span className="text-xs text-muted-foreground">Sin crédito</span>}
+                                  {latestCredit ? getStatusBadge(latestCredit.status) : <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin Créditos</span>}
                                 </TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="sm">Editar</Button>
+                                <TableCell className="pr-8 text-right">
+                                  <Button variant="ghost" size="sm" className="rounded-xl font-bold text-slate-400 hover:text-primary">Editar</Button>
                                 </TableCell>
                               </TableRow>
                             );
                           })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic">
-                              No hay clientes registrados.
+                            <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-medium italic">
+                              No hay clientes registrados en el sistema.
                             </TableCell>
                           </TableRow>
                         )}
@@ -363,8 +376,6 @@ export default function DashboardPage() {
                 </Card>
               </div>
             )}
-            
-            {/* Otros tabs similares con manejo de mounted */}
           </main>
         </SidebarInset>
       </div>
