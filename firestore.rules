@@ -1,52 +1,42 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Verifica si el usuario es el Administrador Maestro.
-     * Acceso total basado directamente en el token de autenticación.
-     */
-    function isMasterAdmin() {
-      return request.auth != null && 
-             request.auth.token.email != null && 
-             request.auth.token.email.lower() == 'deinerfernandez@gmail.com';
-    }
-
-    /**
-     * @description Verifica si el usuario tiene un documento de staff en la colección 'users'.
-     */
-    function isStaff() {
-      return request.auth != null && (
-        isMasterAdmin() || 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid))
-      );
-    }
-
-    // --- REGLA GLOBAL DE SUPERUSUARIO ---
-    // Si eres el administrador maestro, tienes acceso total a todo el sistema.
-    match /{document=**} {
-      allow read, write: if isMasterAdmin();
-    }
-
-    // --- REGLAS ESPECÍFICAS PARA EL RESTO DEL PERSONAL ---
     
+    /**
+     * @description REGLA DE ACCESO TOTAL (MASTER ADMIN)
+     * Si el correo del usuario autenticado es deinerfernandez@gmail.com,
+     * se le concede acceso total a CUALQUIER documento en la base de datos.
+     * Esta regla tiene prioridad absoluta.
+     */
+    match /{document=**} {
+      allow read, write: if request.auth != null && 
+                          request.auth.token.email == "deinerfernandez@gmail.com";
+    }
+
+    /**
+     * @description REGLAS PARA PERSONAL (STAFF)
+     * Para otros usuarios, se verifica si su UID existe en la colección de usuarios habilitados.
+     */
+    function isAuthorizedStaff() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     match /customers/{customerId} {
-      allow read, write: if isStaff();
+      allow read, write: if isAuthorizedStaff();
     }
 
     match /credits/{creditId} {
-      allow read, write: if isStaff();
+      allow read, write: if isAuthorizedStaff();
     }
 
     match /payments/{paymentId} {
-      allow read, write: if isStaff();
+      allow read, write: if isAuthorizedStaff();
     }
 
     match /users/{userId} {
-      // Permite leer perfiles para validar roles
       allow read: if request.auth != null;
-      // Solo el staff puede crear o editar usuarios
-      allow write: if isStaff();
+      allow write: if isAuthorizedStaff();
     }
   }
 }

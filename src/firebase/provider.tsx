@@ -60,7 +60,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // PRIORIDAD CRÍTICA: Identificar al Administrador Maestro instantáneamente por email
-        if (firebaseUser.email?.toLowerCase() === 'deinerfernandez@gmail.com') {
+        const userEmail = firebaseUser.email?.toLowerCase();
+        if (userEmail === 'deinerfernandez@gmail.com') {
           setUserAuthState({ 
             user: firebaseUser, 
             role: 'admin', 
@@ -81,7 +82,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               userError: null 
             });
           } else {
-            // Si no está registrado en la colección de personal, es un cliente externo
             setUserAuthState({ 
               user: firebaseUser, 
               role: 'cliente', 
@@ -90,7 +90,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             });
           }
         } catch (e) {
-          // Si hay error de permisos al leer el perfil (ej. reglas restrictivas), fallback a cliente
           setUserAuthState({ 
             user: firebaseUser, 
             role: 'cliente', 
