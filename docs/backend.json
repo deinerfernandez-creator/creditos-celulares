@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "Customer": {
+      "title": "Customer",
+      "description": "Información del cliente de Tecnicell",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "cedula": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "cedula", "phone"]
+    },
+    "Credit": {
+      "title": "Credit",
+      "description": "Detalles del financiamiento de equipo",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "deviceModel": { "type": "string" },
+        "imei": { "type": "string" },
+        "initialAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "planType": { "type": "number", "enum": [6, 12] },
+        "installmentAmount": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "status": { "type": "string", "enum": ["activo", "completado", "atrasado"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["customerId", "imei", "deviceModel", "totalAmount"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/backend/entities/Customer" },
+      "description": "Documentos de clientes"
+    },
+    "/credits/{creditId}": {
+      "schema": { "$ref": "#/backend/entities/Credit" },
+      "description": "Documentos de créditos"
+    }
+  }
+}
