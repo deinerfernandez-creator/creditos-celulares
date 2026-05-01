@@ -3,16 +3,7 @@
  * 
  * CORE PHILOSOPHY:
  * This ruleset implements an internal staff-management model. Access is strictly controlled 
- * via a Database Access Control (DBAC) pattern where the existence of a document in the 
- * /staffRoles collection OR a master admin email authorizes a user.
- * 
- * DATA STRUCTURE:
- * The data is organized into root-level collections: /customers, /credits, and /payments.
- * 
- * KEY SECURITY DECISIONS:
- * 1. Role-Based Access: All operations require the user to be an authorized staff member.
- * 2. Staff Authorization: Authorization is determined by checking staffRoles OR the master email.
- * 3. Default Deny: All collections are closed by default unless explicitly allowed.
+ * via a check against the /users collection OR a master admin email.
  */
 
 rules_version = '2';
@@ -26,25 +17,19 @@ service cloud.firestore {
     }
 
     /** 
-     * @description Checks if the user is a staff member.
-     * Includes a hardcoded check for the master admin email for bootstrapping.
+     * @description Checks if the user is a staff member (admin or vendedor).
+     * Hardcoded master admin email for bootstrapping and emergency access.
      */
     function isStaff() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/staffRoles/$(request.auth.uid)) ||
-        request.auth.token.email == 'deinerfernandez@gmail.com'
-      );
+      let isMasterAdmin = request.auth.token.email == 'deinerfernandez@gmail.com';
+      let hasStaffRole = exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+                         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+                          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendedor');
+      
+      return isSignedIn() && (isMasterAdmin || hasStaffRole);
     }
 
     // --- COLLECTION RULES ---
-
-    /**
-     * @description Authorization collection.
-     */
-    match /staffRoles/{staffUid} {
-      allow get: if isSignedIn();
-      allow list, write: if false; // Managed via Admin SDK
-    }
 
     /**
      * @description Root collection for customers.
@@ -68,7 +53,9 @@ service cloud.firestore {
     }
 
     /**
-     * @description Root collection for general app users/roles.
+     * @description Root collection for user profiles and roles.
+     * Signed in users can read their own profile to verify roles.
+     * Staff can manage other users.
      */
     match /users/{userId} {
       allow read: if isSignedIn();
