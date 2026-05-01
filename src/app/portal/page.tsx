@@ -7,12 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, ArrowRight, ShieldCheck, Hash, Loader2 } from 'lucide-react';
+import { User, ArrowRight, ShieldCheck, Hash, Loader2, LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import Link from 'next/link';
 
 export default function PortalLoginPage() {
   const [cedula, setCedula] = useState('');
@@ -31,7 +32,6 @@ export default function PortalLoginPage() {
     setLoading(true);
     
     try {
-      // 1. Buscar cliente por cédula
       const customersRef = collection(db, 'customers');
       const qCustomer = query(customersRef, where("cedula", "==", cedula));
       const customerSnap = await getDocs(qCustomer);
@@ -49,7 +49,6 @@ export default function PortalLoginPage() {
       const customerDoc = customerSnap.docs[0];
       const customerId = customerDoc.id;
 
-      // 2. Buscar crédito con ese IMEI para ese cliente
       const creditsRef = collection(db, 'credits');
       const qCredit = query(
         creditsRef, 
@@ -85,7 +84,15 @@ export default function PortalLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md mb-4 flex justify-start">
+        <Button variant="ghost" size="sm" asChild className="rounded-xl text-slate-500 hover:text-primary">
+          <Link href="/">
+            <LayoutDashboard className="w-4 h-4 mr-2" /> Panel Administrativo
+          </Link>
+        </Button>
+      </div>
+
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
           <div className="inline-flex p-1 bg-white rounded-3xl mb-2 shadow-xl shadow-primary/10 overflow-hidden w-24 h-24 items-center justify-center border-4 border-primary/5">

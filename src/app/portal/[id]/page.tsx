@@ -23,38 +23,37 @@ import {
   DollarSign,
   ChevronRight,
   ShieldCheck,
-  Loader2
+  Loader2,
+  LayoutDashboard
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import Link from 'next/link';
 
 export default function CustomerPortalPage() {
   const { id } = useParams();
   const router = useRouter();
   const db = useFirestore();
   
-  // Datos del Cliente
   const customerRef = useMemo(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
   const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
 
-  // Créditos del Cliente
   const creditsQuery = useMemo(() => {
     if (!id) return null;
     return query(collection(db, 'credits'), where("customerId", "==", id), orderBy("createdAt", "desc"));
   }, [db, id]);
   const { data: credits, loading: loadingCredits } = useCollection(creditsQuery);
   
-  const credit = credits?.[0]; // Tomamos el crédito más reciente
+  const credit = credits?.[0];
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
-  // Generar resumen automáticamente al entrar
   useEffect(() => {
     async function getAiSummary() {
       if (customer && credit && !aiSummary) {
@@ -65,9 +64,9 @@ export default function CustomerPortalPage() {
             loanAmount: credit.initialAmount,
             totalAmountDue: credit.totalAmount,
             remainingBalance: credit.remainingBalance,
-            nextPaymentDate: "Próximamente", // En un sistema real vendría del cronograma
+            nextPaymentDate: "Próximamente",
             paymentFrequency: 'quincenal',
-            paymentHistory: [] // Por implementar subcolección de pagos
+            paymentHistory: []
           });
           setAiSummary(summary);
         } catch (err) {
@@ -106,27 +105,34 @@ export default function CustomerPortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-20 px-4 h-16 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="relative w-10 h-10 overflow-hidden rounded-lg bg-white border border-slate-100 p-1 flex items-center justify-center">
-             <Image 
-              src={logo?.imageUrl || '/logo.png'} 
-              alt="Tecnicell Logo" 
-              width={32} 
-              height={32}
-              className="object-contain"
-            />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="relative w-10 h-10 overflow-hidden rounded-lg bg-white border border-slate-100 p-1 flex items-center justify-center">
+               <Image 
+                src={logo?.imageUrl || '/logo.png'} 
+                alt="Tecnicell Logo" 
+                width={32} 
+                height={32}
+                className="object-contain"
+              />
+            </div>
+            <span className="font-black text-xl tracking-tight text-primary">Tecnicell</span>
           </div>
-          <span className="font-black text-xl tracking-tight text-primary">Tecnicell</span>
+          <div className="h-6 w-px bg-slate-200 hidden md:block" />
+          <Button variant="ghost" size="sm" asChild className="hidden md:flex rounded-xl text-slate-500 hover:text-primary transition-colors">
+            <Link href="/"><LayoutDashboard className="w-4 h-4 mr-2" /> Admin</Link>
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => router.push('/portal')} className="text-slate-500 gap-2 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors">
-          <LogOut className="w-4 h-4" /> Salir
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/portal')} className="text-slate-500 gap-2 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors">
+            <LogOut className="w-4 h-4" /> Salir
+          </Button>
+        </div>
       </header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
-        {/* Welcome Section */}
         <div className="space-y-1">
           <h1 className="text-3xl font-black text-slate-900">Hola, {customer.name.split(' ')[0]} 👋</h1>
           <p className="text-slate-500 flex items-center gap-2">
@@ -134,7 +140,6 @@ export default function CustomerPortalPage() {
           </p>
         </div>
 
-        {/* AI Summary Card */}
         <Card className="border-none shadow-xl bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden relative rounded-3xl">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <BrainCircuit className="w-32 h-32" />
@@ -160,7 +165,6 @@ export default function CustomerPortalPage() {
           </CardContent>
         </Card>
 
-        {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border-none shadow-sm bg-white rounded-3xl p-6 hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-4">
@@ -199,7 +203,6 @@ export default function CustomerPortalPage() {
           </Card>
         </div>
 
-        {/* Device Info */}
         <Card className="border-none shadow-sm bg-white rounded-3xl p-8">
           <CardTitle className="text-xs uppercase tracking-[0.2em] text-slate-400 font-black mb-8">Información del Equipo Vinculado</CardTitle>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
