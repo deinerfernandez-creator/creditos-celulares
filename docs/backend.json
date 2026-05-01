@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Customer": {
@@ -89,6 +90,39 @@
         "initialAmount",
         "status"
       ]
+    },
+    "StaffUser": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StaffUser",
+      "type": "object",
+      "description": "Internal staff user with specific roles and permissions.",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "admin",
+            "vendedor"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "email",
+        "role"
+      ]
     }
   },
   "auth": {
@@ -116,6 +150,16 @@
             "$ref": "#/backend/entities/Credit"
           },
           "description": "Root collection for all credit applications."
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "StaffUser",
+          "schema": {
+            "$ref": "#/backend/entities/StaffUser"
+          },
+          "description": "User profiles for staff members including their roles."
         }
       }
     ]

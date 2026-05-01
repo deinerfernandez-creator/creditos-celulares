@@ -30,7 +30,8 @@ import {
   ExternalLink,
   ShieldCheck,
   UserCheck,
-  Loader2
+  Loader2,
+  ShieldAlert
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,13 +55,11 @@ export default function DashboardPage() {
     if (!authLoading && !user) {
       router.push('/login');
     }
-    // Si es cliente, mandarlo al portal
     if (!authLoading && user && role === 'cliente') {
       router.push(`/portal/${user.uid}`);
     }
   }, [user, authLoading, router, role]);
 
-  // Fetch real data from Firestore with proper memoization
   const customersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
@@ -72,6 +71,12 @@ export default function DashboardPage() {
     return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   }, [db]);
   const { data: credits } = useCollection(creditsQuery);
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+  }, [db]);
+  const { data: staff } = useCollection(staffQuery);
 
   if (authLoading) {
     return (
@@ -140,6 +145,15 @@ export default function DashboardPage() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-lg h-11">
+                    <ShieldCheck className="w-5 h-5 mr-3" />
+                    <span>Personal</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              
               <div className="my-4 border-t border-sidebar-border/30 px-3 pt-4">
                 <p className="text-[10px] font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-2">Accesos Externos</p>
               </div>
@@ -184,18 +198,8 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-muted-foreground" />
               <div className="h-6 w-px bg-border mx-2" />
               <h2 className="text-lg font-semibold capitalize">
-                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'customers' ? 'Listado de Clientes' : 'Gestión de Créditos'}
+                {activeTab === 'dashboard' ? 'Panel de Control' : activeTab === 'customers' ? 'Listado de Clientes' : activeTab === 'credits' ? 'Gestión de Créditos' : 'Gestión de Personal'}
               </h2>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="relative hidden sm:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Buscar cliente o crédito..." className="pl-10 w-64 bg-slate-50 border-none ring-offset-background" />
-              </div>
-              <Button size="icon" variant="ghost" className="rounded-full relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-white" />
-              </Button>
             </div>
           </header>
 
@@ -431,6 +435,64 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                </div>
+            )}
+
+            {activeTab === 'staff' && isAdmin && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-2xl font-bold">Gestión de Personal</h3>
+                  <Button asChild className="rounded-xl shadow-md">
+                    <Link href="/staff/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo Staff</Link>
+                  </Button>
+                </div>
+                <Card className="border-none shadow-sm">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nombre / Email</TableHead>
+                          <TableHead>Rol</TableHead>
+                          <TableHead>Fecha Registro</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {staff && staff.length > 0 ? (
+                          staff.map((s: any) => (
+                            <TableRow key={s.id}>
+                              <TableCell>
+                                <div className="font-medium">{s.name || 'Sin nombre'}</div>
+                                <div className="text-xs text-muted-foreground">{s.email}</div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={s.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                                  {s.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : 'Reciente'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-[10px] border-green-200 text-green-600 bg-green-50">Activo</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm">Editar</Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic">
+                              No hay personal registrado fuera del administrador maestro.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </main>
         </SidebarInset>
