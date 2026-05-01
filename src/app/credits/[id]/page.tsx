@@ -24,7 +24,8 @@ import {
   BrainCircuit,
   DollarSign,
   History,
-  FileText
+  FileText,
+  Hash
 } from 'lucide-react';
 import { 
   MOCK_CREDITS, 
@@ -111,7 +112,7 @@ export default function CreditDetailPage() {
                 </CardHeader>
                 <CardContent className="text-sm">
                   <p className="text-muted-foreground">{customer.email}</p>
-                  <p className="font-medium mt-1">{customer.phone}</p>
+                  <p className="font-medium mt-1">ID/Cédula: {customer.cedula}</p>
                 </CardContent>
               </Card>
 
@@ -123,8 +124,10 @@ export default function CreditDetailPage() {
                   <CardTitle className="text-lg">{credit.deviceModel}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="text-muted-foreground">Plan: {credit.planType} Quincenas</p>
-                  <p className="font-medium mt-1">Monto Inicial: ${credit.initialAmount}</p>
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    <Hash className="w-3 h-3" /> IMEI: {credit.imei}
+                  </p>
+                  <p className="font-medium mt-1">Plan: {credit.planType} Quincenas</p>
                 </CardContent>
               </Card>
 
@@ -254,18 +257,6 @@ export default function CreditDetailPage() {
                    </div>
                  )}
                </CardContent>
-               {aiSummary && (
-                 <CardFooter className="pt-0 relative z-10">
-                   <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-white/60 hover:text-white hover:bg-white/10 mx-auto text-xs"
-                    onClick={() => setAiSummary(null)}
-                   >
-                     Limpiar resumen
-                   </Button>
-                 </CardFooter>
-               )}
             </Card>
 
             <Card className="border-none shadow-sm bg-white">
@@ -278,10 +269,6 @@ export default function CreditDetailPage() {
                 <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex gap-3">
                    <Clock className="w-4 h-4 text-orange-500 shrink-0" />
                    <p className="text-xs text-orange-700">Próxima cuota vence en 12 días.</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-xl border border-green-100 flex gap-3">
-                   <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                   <p className="text-xs text-green-700">El cliente mantiene un historial excelente de puntualidad.</p>
                 </div>
               </CardContent>
             </Card>

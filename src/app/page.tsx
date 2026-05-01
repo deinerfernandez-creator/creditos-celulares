@@ -25,7 +25,8 @@ import {
   Search,
   ChevronRight,
   LogOut,
-  Bell
+  Bell,
+  Hash
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,11 +37,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { MOCK_CREDITS, MOCK_CUSTOMERS } from '@/lib/mock-data';
 import Link from 'next/link';
 import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   const stats = [
     { title: "Créditos Activos", value: "24", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
@@ -62,7 +61,6 @@ export default function DashboardPage() {
                   width={48} 
                   height={48}
                   className="object-contain"
-                  data-ai-hint={logo?.imageHint}
                 />
               </div>
               <div>
@@ -160,7 +158,7 @@ export default function DashboardPage() {
                         <TableHeader>
                           <TableRow className="hover:bg-transparent">
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Equipo</TableHead>
+                            <TableHead>Equipo / IMEI</TableHead>
                             <TableHead>Saldo</TableHead>
                             <TableHead>Progreso</TableHead>
                             <TableHead>Estado</TableHead>
@@ -173,8 +171,16 @@ export default function DashboardPage() {
                             const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
                             return (
                               <TableRow key={credit.id} className="cursor-pointer group">
-                                <TableCell className="font-medium">{customer?.name}</TableCell>
-                                <TableCell className="text-muted-foreground">{credit.deviceModel}</TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{customer?.name}</div>
+                                  <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">{credit.deviceModel}</div>
+                                  <div className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                                    <Hash className="w-2 h-2" /> {credit.imei}
+                                  </div>
+                                </TableCell>
                                 <TableCell className="font-semibold">${credit.remainingBalance}</TableCell>
                                 <TableCell className="w-32">
                                   <Progress value={progress} className="h-2" />
@@ -215,23 +221,6 @@ export default function DashboardPage() {
                           Registrar Cliente
                         </Link>
                       </Button>
-                      <div className="pt-6 mt-6 border-t">
-                        <h4 className="text-sm font-semibold mb-4">Próximos Vencimientos</h4>
-                        <div className="space-y-4">
-                          {[1, 2].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-primary font-bold text-xs">JP</div>
-                                <div>
-                                  <p className="text-sm font-medium">Juan Pérez</p>
-                                  <p className="text-xs text-muted-foreground">Vence: 15 Oct</p>
-                                </div>
-                              </div>
-                              <p className="text-sm font-bold">$200</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -296,7 +285,7 @@ export default function DashboardPage() {
                           <TableRow>
                             <TableHead>ID</TableHead>
                             <TableHead>Cliente</TableHead>
-                            <TableHead>Equipo</TableHead>
+                            <TableHead>Equipo / IMEI</TableHead>
                             <TableHead>Plan</TableHead>
                             <TableHead>Cuota</TableHead>
                             <TableHead>Saldo Restante</TableHead>
@@ -310,8 +299,14 @@ export default function DashboardPage() {
                             return (
                               <TableRow key={credit.id}>
                                 <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id}</TableCell>
-                                <TableCell className="font-medium">{customer?.name}</TableCell>
-                                <TableCell>{credit.deviceModel}</TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{customer?.name}</div>
+                                  <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">{credit.deviceModel}</div>
+                                  <div className="text-[10px] font-mono text-muted-foreground">{credit.imei}</div>
+                                </TableCell>
                                 <TableCell>{credit.planType} Quincenas</TableCell>
                                 <TableCell className="font-semibold">${credit.installmentAmount}</TableCell>
                                 <TableCell className="font-bold text-primary">${credit.remainingBalance}</TableCell>
