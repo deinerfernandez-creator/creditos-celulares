@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Customer": {
@@ -32,7 +33,7 @@
         "planType": { "type": "number" },
         "installmentAmount": { "type": "number" },
         "remainingBalance": { "type": "number" },
-        "status": { "type": "string", "enum": ["activo", "completado", "atrasado"] },
+        "status": { "type": "string", "enum": ["activo", "pagado", "bloqueado"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status"]

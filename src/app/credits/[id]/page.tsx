@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -20,10 +21,19 @@ import {
   Fingerprint,
   Phone,
   MapPin,
-  CreditCard
+  CreditCard,
+  Settings2
 } from 'lucide-react';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 const formatCurrency = (value: any) => {
@@ -36,12 +46,27 @@ const formatCurrency = (value: any) => {
   }).format(num);
 };
 
+const getStatusBadge = (status: string) => {
+  switch (status) {
+    case 'activo':
+      return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-4 capitalize">Activo</Badge>;
+    case 'pagado':
+      return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-4 capitalize">Pagado</Badge>;
+    case 'bloqueado':
+      return <Badge variant="destructive" className="rounded-full px-4 capitalize">Bloqueado</Badge>;
+    default:
+      return <Badge variant="secondary" className="rounded-full px-4 capitalize">{status}</Badge>;
+  }
+};
+
 export default function CreditDetailPage() {
   const params = useParams();
   const id = params?.id as string;
   const db = useFirestore();
+  const { toast } = useToast();
 
   const [mounted, setMounted] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -54,6 +79,26 @@ export default function CreditDetailPage() {
   // Fetch Customer Data
   const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!id || !db) return;
+    setUpdating(true);
+    try {
+      await updateDoc(doc(db, 'credits', id), { status: newStatus });
+      toast({
+        title: "Estado actualizado",
+        description: `El crédito ahora está ${newStatus}.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado: " + err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   if (!mounted || loadingCredit || loadingCustomer) {
     return (
@@ -80,17 +125,32 @@ export default function CreditDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" asChild className="rounded-full bg-white shadow-sm">
-            <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">Detalle del Crédito</h1>
-            <p className="text-sm text-slate-500">ID: {id}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon" asChild className="rounded-full bg-white shadow-sm">
+              <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">Detalle del Crédito</h1>
+              <p className="text-sm text-slate-500">ID: {id}</p>
+            </div>
           </div>
-          <Badge className="ml-auto rounded-full px-4 capitalize">
-            {credit.status}
-          </Badge>
+          <div className="flex items-center gap-3 sm:ml-auto">
+            <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border">
+              <Settings2 className="w-4 h-4 text-slate-400 ml-2" />
+              <Select onValueChange={handleStatusChange} defaultValue={credit.status} disabled={updating}>
+                <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 h-8 font-bold capitalize">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="activo" className="text-green-600 font-bold">Activo</SelectItem>
+                  <SelectItem value="pagado" className="text-primary font-bold">Pagado</SelectItem>
+                  <SelectItem value="bloqueado" className="text-destructive font-bold">Bloqueado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {getStatusBadge(credit.status)}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

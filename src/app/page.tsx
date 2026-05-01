@@ -32,7 +32,8 @@ import {
   UserCheck,
   Loader2,
   ShieldAlert,
-  UserCog
+  UserCog,
+  CheckCircle2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,16 +103,15 @@ export default function DashboardPage() {
   const isAdmin = role === 'admin';
 
   const stats = [
-    { title: "Créditos Activos", value: credits ? credits.length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
+    { title: "Créditos Activos", value: credits ? credits.filter((c: any) => c.status === 'activo').length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
     { title: "Clientes Totales", value: customers ? customers.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
-    { title: "Cuentas Atrasadas", value: credits ? credits.filter((c: any) => c.status === 'atrasado').length.toString() : "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
+    { title: "Equipos Bloqueados", value: credits ? credits.filter((c: any) => c.status === 'bloqueado').length.toString() : "0", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10" },
     { 
-      title: "Recaudación Mes", 
-      value: isAdmin ? formatCurrency(12500000) : "Ver Admin", 
-      icon: TrendingUp, 
+      title: "Créditos Pagados", 
+      value: credits ? credits.filter((c: any) => c.status === 'pagado').length.toString() : "0", 
+      icon: CheckCircle2, 
       color: "text-green-600", 
-      bg: "bg-green-100",
-      hide: !isAdmin 
+      bg: "bg-green-100"
     },
   ];
 
@@ -134,6 +134,19 @@ export default function DashboardPage() {
         description: "No se pudo cambiar el rol: " + err.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'activo':
+        return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-3 capitalize">Activo</Badge>;
+      case 'pagado':
+        return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize">Pagado</Badge>;
+      case 'bloqueado':
+        return <Badge variant="destructive" className="rounded-full px-3 capitalize">Bloqueado</Badge>;
+      default:
+        return <Badge variant="secondary" className="rounded-full px-3 capitalize">{status}</Badge>;
     }
   };
 
@@ -292,9 +305,7 @@ export default function DashboardPage() {
                                     <Progress value={progress} className="h-2" />
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'} className="rounded-full px-3">
-                                      {credit.status}
-                                    </Badge>
+                                    {getStatusBadge(credit.status)}
                                   </TableCell>
                                   <TableCell>
                                     <Button variant="outline" size="sm" asChild>
@@ -431,7 +442,7 @@ export default function DashboardPage() {
                                   <TableCell className="font-semibold">{formatCurrency(credit.installmentAmount)}</TableCell>
                                   <TableCell className="font-bold text-primary">{formatCurrency(credit.remainingBalance)}</TableCell>
                                   <TableCell>
-                                     <Badge className="rounded-full px-3">{credit.status}</Badge>
+                                     {getStatusBadge(credit.status)}
                                   </TableCell>
                                   <TableCell>
                                     <Button variant="outline" size="sm" asChild>
