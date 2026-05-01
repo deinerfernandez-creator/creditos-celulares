@@ -41,16 +41,16 @@ const summarizeCreditStatusPrompt = ai.definePrompt({
 
 **Detalles del Cliente:**
 Nombre: {{{customerName}}}
-Monto Inicial del Préstamo: $${{loanAmount}}
-Monto Total a Pagar: $${{totalAmountDue}}
-Saldo Restante: $${{remainingBalance}}
+Monto Inicial del Préstamo: \$ {{loanAmount}}
+Monto Total a Pagar: \$ {{totalAmountDue}}
+Saldo Restante: \$ {{remainingBalance}}
 Próxima Fecha de Pago: {{{nextPaymentDate}}}
 Frecuencia de Pago: {{{paymentFrequency}}}
 
 **Historial de Pagos:**
 {{#if paymentHistory}}
   {{#each paymentHistory}}
-    - Fecha: {{{date}}}, Cantidad: $${{amount}}
+    - Fecha: {{{date}}}, Cantidad: \$ {{amount}}
   {{/each}}
 {{else}}
   No hay historial de pagos registrado.
