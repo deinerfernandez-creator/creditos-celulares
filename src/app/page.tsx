@@ -368,27 +368,34 @@ export default function DashboardPage() {
                           <TableHead>Cédula</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Teléfono</TableHead>
+                          <TableHead>Estado Crédito</TableHead>
                           <TableHead>Dirección</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {customers && customers.length > 0 ? (
-                          customers.map((c: any) => (
-                            <TableRow key={c.id}>
-                              <TableCell className="font-medium">{c.name}</TableCell>
-                              <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
-                              <TableCell>{c.email || 'N/A'}</TableCell>
-                              <TableCell>{c.phone}</TableCell>
-                              <TableCell className="max-w-xs truncate">{c.address || 'N/A'}</TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="sm">Editar</Button>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                          customers.map((c: any) => {
+                            const latestCredit = credits?.find((cr: any) => cr.customerId === c.id);
+                            return (
+                              <TableRow key={c.id}>
+                                <TableCell className="font-medium">{c.name}</TableCell>
+                                <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
+                                <TableCell>{c.email || 'N/A'}</TableCell>
+                                <TableCell>{c.phone}</TableCell>
+                                <TableCell>
+                                  {latestCredit ? getStatusBadge(latestCredit.status) : <span className="text-xs text-muted-foreground">Sin crédito</span>}
+                                </TableCell>
+                                <TableCell className="max-w-xs truncate">{c.address || 'N/A'}</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="sm">Editar</Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground italic">
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground italic">
                               No hay clientes registrados.
                             </TableCell>
                           </TableRow>
