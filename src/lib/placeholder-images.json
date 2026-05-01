@@ -5,6 +5,12 @@
       "description": "Logo oficial de Tecnicell Servicio Técnico y Accesorios",
       "imageUrl": "/logo.png",
       "imageHint": "tecnicell logo"
+    },
+    {
+      "id": "qr-nequi",
+      "description": "Código QR de Nequi para pagos digitales",
+      "imageUrl": "https://picsum.photos/seed/nequi/400/400",
+      "imageHint": "qr code"
     }
   ]
 }

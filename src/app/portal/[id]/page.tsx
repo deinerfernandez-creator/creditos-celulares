@@ -26,13 +26,24 @@ import {
   Receipt,
   CalendarDays,
   Clock,
-  User as UserIcon
+  QrCode,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -46,6 +57,7 @@ export default function CustomerPortalDashboard() {
   const { id } = useParams();
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
   
   const [mounted, setMounted] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -113,6 +125,7 @@ export default function CustomerPortalDashboard() {
   }, [credit, paymentsData]);
 
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
+  const qrNequi = PlaceHolderImages.find(img => img.id === 'qr-nequi');
 
   useEffect(() => {
     async function getAiSummary() {
@@ -142,6 +155,15 @@ export default function CustomerPortalDashboard() {
     }
     getAiSummary();
   }, [customer, credit, payments, aiSummary, mounted]);
+
+  const handleCopyLink = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: "Enlace Copiado",
+      description: "Puedes guardar este enlace para acceder rápido a tu portal.",
+    });
+  };
 
   if (!mounted) return null;
 
@@ -183,11 +205,10 @@ export default function CustomerPortalDashboard() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-slate-900">{customer.name}</p>
-            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">CC: {customer.cedula}</p>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={handleCopyLink} className="rounded-xl border border-slate-100 hidden sm:flex">
+            <Copy className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => router.push('/portal')} className="rounded-xl border border-slate-100 gap-2 font-bold text-slate-500">
             <LogOut className="w-4 h-4" /> Salir
           </Button>
@@ -215,30 +236,82 @@ export default function CustomerPortalDashboard() {
           </Badge>
         </div>
 
-        <Card className="border-none shadow-xl bg-primary text-white overflow-hidden relative rounded-[2rem]">
-          <div className="absolute top-0 right-0 p-6 opacity-10">
-            <BrainCircuit className="w-32 h-32" />
-          </div>
-          <CardHeader className="relative z-10 pb-2 pt-6 px-6">
-            <div className="flex items-center gap-2 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 mb-2">
-              <BrainCircuit className="w-3.5 h-3.5 text-accent" />
-              <span className="text-[9px] uppercase font-black tracking-widest">Análisis Gemini IA</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 border-none shadow-xl bg-primary text-white overflow-hidden relative rounded-[2rem]">
+            <div className="absolute top-0 right-0 p-6 opacity-10">
+              <BrainCircuit className="w-32 h-32" />
             </div>
-            <CardTitle className="text-xl font-black">Tu Resumen Financiero</CardTitle>
-          </CardHeader>
-          <CardContent className="relative z-10 p-6 pt-2">
-            {loadingAi ? (
-              <div className="flex items-center gap-2 py-4">
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                <p className="text-sm font-medium opacity-70">Gemini está analizando tu comportamiento de pago...</p>
+            <CardHeader className="relative z-10 pb-2 pt-6 px-6">
+              <div className="flex items-center gap-2 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 mb-2">
+                <BrainCircuit className="w-3.5 h-3.5 text-accent" />
+                <span className="text-[9px] uppercase font-black tracking-widest">Análisis Gemini IA</span>
               </div>
-            ) : (
-              <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 text-sm leading-relaxed font-medium">
-                {aiSummary || "Analizando tus abonos para darte un reporte personalizado..."}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <CardTitle className="text-xl font-black">Tu Resumen Financiero</CardTitle>
+            </CardHeader>
+            <CardContent className="relative z-10 p-6 pt-2">
+              {loadingAi ? (
+                <div className="flex items-center gap-2 py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                  <p className="text-sm font-medium opacity-70">Gemini está analizando tu comportamiento de pago...</p>
+                </div>
+              ) : (
+                <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 text-sm leading-relaxed font-medium">
+                  {aiSummary || "Analizando tus abonos para darte un reporte personalizado..."}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-xl bg-slate-900 text-white overflow-hidden rounded-[2rem] p-6 flex flex-col justify-center items-center text-center space-y-4">
+            <div className="p-4 bg-primary/20 rounded-2xl">
+              <QrCode className="w-10 h-10 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black">¿Pagar con Nequi?</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">Escanea nuestro QR para abonar a tu cuenta de forma digital.</p>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full rounded-xl font-black bg-primary hover:bg-primary/90 text-xs tracking-widest uppercase">
+                  Ver QR de Nequi
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-[2.5rem] sm:max-w-[400px]">
+                <DialogHeader className="text-center">
+                  <DialogTitle className="text-2xl font-black text-primary">Pago vía Nequi</DialogTitle>
+                  <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">
+                    Escanea y envía el comprobante
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col items-center justify-center space-y-6 py-4">
+                  <div className="relative w-64 h-64 border-8 border-slate-50 rounded-[2rem] shadow-inner overflow-hidden">
+                    <Image 
+                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/qr/400/400"} 
+                      alt="Nequi QR" 
+                      fill 
+                      className="object-cover" 
+                      data-ai-hint="qr code"
+                    />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Pasos a seguir:</p>
+                    <ol className="text-sm font-medium text-slate-600 space-y-1 text-left inline-block">
+                      <li>1. Escanea el código desde tu App Nequi.</li>
+                      <li>2. Realiza el abono de tu cuota.</li>
+                      <li>3. Toma captura del comprobante.</li>
+                      <li>4. Envía la foto a nuestro WhatsApp oficial.</li>
+                    </ol>
+                  </div>
+                </div>
+                <Button className="w-full rounded-2xl h-14 font-black text-lg gap-2" asChild>
+                  <a href="https://wa.me/tu_numero_aqui" target="_blank">
+                    Enviar Comprobante <ExternalLink className="w-5 h-5" />
+                  </a>
+                </Button>
+              </DialogContent>
+            </Dialog>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100 group hover:shadow-lg transition-all">
@@ -372,7 +445,7 @@ export default function CustomerPortalDashboard() {
             <p className="text-base font-black text-amber-900 mb-1 tracking-tight">Recordatorio de Seguridad</p>
             <p className="text-xs text-amber-800 leading-relaxed font-medium">
               Mantener tu crédito al día evita el bloqueo remoto de tu equipo {credit.deviceModel}. 
-              Los pagos se realizan únicamente en nuestro punto físico Tecnicell. Presenta este portal para agilizar el proceso.
+              Los pagos digitales deben ser notificados vía WhatsApp para actualizar tu saldo en el sistema.
             </p>
           </div>
         </div>
