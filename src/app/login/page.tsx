@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -132,7 +131,7 @@ export default function LoginPage() {
           <CardFooter className="bg-slate-50 p-6 text-center border-t">
             <div className="space-y-2 w-full">
               <p className="text-xs text-slate-500">
-                Asegúrate de haber creado el usuario en la Consola de Firebase > Authentication.
+                Asegúrate de haber creado el usuario en la Consola de Firebase &gt; Authentication.
               </p>
             </div>
           </CardFooter>
