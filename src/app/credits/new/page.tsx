@@ -1,18 +1,18 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Smartphone, ChevronLeft, Calendar, Info, Hash } from 'lucide-react';
+import { Smartphone, ChevronLeft, Hash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export default function NewCreditPage() {
@@ -20,8 +20,8 @@ export default function NewCreditPage() {
   const { toast } = useToast();
   const db = useFirestore();
   
-  // Memoizamos la consulta para evitar re-renders infinitos
-  const customersQuery = useMemo(() => {
+  // Memoizamos la consulta correctamente para evitar re-renders infinitos
+  const customersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'customers'), orderBy('name', 'asc'));
   }, [db]);
@@ -85,24 +85,22 @@ export default function NewCreditPage() {
       createdAt: serverTimestamp(),
     };
 
-    // Usamos el patrón no bloqueante (sin await) para una UI instantánea
     addDoc(collection(db, 'credits'), creditData)
+      .then(() => {
+        toast({
+          title: "Éxito",
+          description: "Crédito creado correctamente.",
+        });
+        router.push('/');
+      })
       .catch((error: any) => {
         toast({
-          title: "Error de sincronización",
-          description: "El crédito se guardará cuando recuperes conexión: " + error.message,
+          title: "Error",
+          description: "No se pudo crear el crédito: " + error.message,
           variant: "destructive"
         });
         setLoading(false);
       });
-
-    // Notificamos y navegamos inmediatamente
-    toast({
-      title: "Solicitud iniciada",
-      description: "El crédito se está procesando correctamente.",
-    });
-    
-    router.push('/');
   };
 
   return (

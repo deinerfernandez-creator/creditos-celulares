@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Card, 
@@ -26,7 +26,7 @@ import {
   Loader2,
   LayoutDashboard
 } from 'lucide-react';
-import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import Image from 'next/image';
@@ -38,11 +38,11 @@ export default function CustomerPortalPage() {
   const router = useRouter();
   const db = useFirestore();
   
-  const customerRef = useMemo(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
+  const customerRef = useMemoFirebase(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
   const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
 
-  const creditsQuery = useMemo(() => {
-    if (!id) return null;
+  const creditsQuery = useMemoFirebase(() => {
+    if (!id || !db) return null;
     return query(collection(db, 'credits'), where("customerId", "==", id), orderBy("createdAt", "desc"));
   }, [db, id]);
   const { data: credits, loading: loadingCredits } = useCollection(creditsQuery);

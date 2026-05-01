@@ -38,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { useFirestore, useCollection, useUser, useAuth } from '@/firebase';
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
@@ -60,11 +60,17 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router, role]);
 
-  // Fetch real data from Firestore
-  const customersQuery = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+  // Fetch real data from Firestore with proper memoization
+  const customersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+  }, [db]);
   const { data: customers } = useCollection(customersQuery);
 
-  const creditsQuery = query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
+  const creditsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
+  }, [db]);
   const { data: credits } = useCollection(creditsQuery);
 
   if (authLoading) {
