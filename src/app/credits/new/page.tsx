@@ -20,7 +20,6 @@ export default function NewCreditPage() {
   const { toast } = useToast();
   const db = useFirestore();
   
-  // Fetch real customers
   const customersQuery = query(collection(db, 'customers'), orderBy('name', 'asc'));
   const { data: customers } = useCollection(customersQuery);
 
@@ -66,15 +65,6 @@ export default function NewCreditPage() {
       return;
     }
 
-    if (imei.length < 15) {
-      toast({
-        title: "IMEI Inválido",
-        description: "El IMEI debe tener al menos 15 dígitos.",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setLoading(true);
     try {
       await addDoc(collection(db, 'credits'), {
@@ -96,13 +86,13 @@ export default function NewCreditPage() {
       });
       
       router.push('/');
+      router.refresh();
     } catch (error: any) {
       toast({
         title: "Error",
         description: "No se pudo crear el crédito: " + error.message,
         variant: "destructive"
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -162,7 +152,7 @@ export default function NewCreditPage() {
                       <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
                         id="imei" 
-                        placeholder="15 dígitos del equipo" 
+                        placeholder="15 dígitos" 
                         className="pl-10 rounded-xl h-12 font-mono text-sm"
                         value={imei}
                         onChange={(e) => setImei(e.target.value)}
@@ -197,7 +187,7 @@ export default function NewCreditPage() {
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
                     >
                       <p className="font-bold text-lg text-primary">6 Cuotas</p>
-                      <p className="text-xs text-muted-foreground">Recargo del 50% sobre el monto base</p>
+                      <p className="text-xs text-muted-foreground">Recargo del 50%</p>
                     </button>
                     <button
                       type="button"
@@ -206,13 +196,13 @@ export default function NewCreditPage() {
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
                     >
                       <p className="font-bold text-lg text-primary">12 Cuotas</p>
-                      <p className="text-xs text-muted-foreground">Recargo del 100% sobre el monto base</p>
+                      <p className="text-xs text-muted-foreground">Recargo del 100%</p>
                     </button>
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white transition-all transform hover:scale-[1.01]">
-                  {loading ? "Creando Crédito..." : "Generar Crédito y Plan de Pagos"}
+                <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
+                  {loading ? "Creando..." : "Generar Crédito"}
                 </Button>
               </form>
             </CardContent>
@@ -225,7 +215,6 @@ export default function NewCreditPage() {
               </div>
               <CardHeader>
                 <CardTitle>Resumen Financiero</CardTitle>
-                <CardDescription className="text-white/70">Cálculo del plan seleccionado</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6 relative z-10">
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
@@ -234,42 +223,22 @@ export default function NewCreditPage() {
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm opacity-80">Recargo Aplicado</span>
+                    <span className="text-sm opacity-80">Recargo</span>
                     <Badge variant="outline" className="border-white/30 text-accent font-bold">+{calculation.interestRate}%</Badge>
                   </div>
                   <span className="text-xl font-bold text-accent">+${(calculation.totalAmount - (parseFloat(initialAmount) || 0)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">Total a Pagar</p>
+                    <p className="text-xs opacity-60 font-bold mb-1">Total a Pagar</p>
                     <h2 className="text-4xl font-extrabold">${calculation.totalAmount.toFixed(2)}</h2>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs uppercase tracking-wider opacity-60 font-bold mb-1">Cuota Quincenal</p>
+                    <p className="text-xs opacity-60 font-bold mb-1">Cuota Quincenal</p>
                     <h3 className="text-2xl font-bold">${calculation.installmentAmount.toFixed(2)}</h3>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="bg-white/10 pt-4 flex gap-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-xs font-medium">{planType} Pagos Quincenales</span>
-                </div>
-              </CardFooter>
-            </Card>
-
-            <Card className="border-none shadow-sm bg-slate-50 border border-slate-100">
-               <CardHeader className="pb-2">
-                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                   <Info className="w-4 h-4 text-primary" />
-                   Recordatorios de Pago
-                 </CardTitle>
-               </CardHeader>
-               <CardContent className="text-xs text-muted-foreground space-y-2">
-                 <p>• El cliente recibirá un mensaje de WhatsApp 2 días antes de cada vencimiento.</p>
-                 <p>• Los pagos deben realizarse en sucursal o vía transferencia bancaria.</p>
-                 <p>• <strong>Bloqueo PayJoy:</strong> Si el pago se atrasa más de 48 horas, el equipo se bloqueará automáticamente.</p>
-               </CardContent>
             </Card>
           </div>
         </div>

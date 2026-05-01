@@ -43,10 +43,9 @@ export default function NewCustomerPage() {
     setLoading(true);
     
     try {
-      // Validamos si db está disponible
       if (!db) throw new Error("La base de datos no está inicializada.");
 
-      const docRef = await addDoc(collection(db, 'customers'), {
+      await addDoc(collection(db, 'customers'), {
         name: formData.name,
         cedula: formData.cedula,
         email: formData.email,
@@ -55,22 +54,22 @@ export default function NewCustomerPage() {
         createdAt: serverTimestamp(),
       });
 
-      if (docRef.id) {
-        toast({
-          title: "¡Éxito!",
-          description: "Cliente registrado correctamente.",
-        });
-        router.push('/');
-        router.refresh();
-      }
+      toast({
+        title: "¡Éxito!",
+        description: "Cliente registrado correctamente.",
+      });
+      
+      // Redirigimos inmediatamente
+      router.push('/');
+      router.refresh();
     } catch (error: any) {
       console.error("Error guardando cliente:", error);
       toast({
         title: "Error al guardar",
-        description: error.message || "No se pudo conectar con el servidor. Verifica tu conexión.",
+        description: error.message || "No se pudo conectar con el servidor.",
         variant: "destructive"
       });
-      setLoading(false); // Solo reseteamos si hay error, si tiene éxito redirigimos
+      setLoading(false);
     }
   };
 
