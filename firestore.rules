@@ -2,33 +2,32 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función para identificar al administrador maestro por correo
+    // Función para identificar al administrador maestro de forma segura
     function isMasterAdmin() {
       return request.auth != null && 
              request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // Acceso Maestro: Permiso total para el administrador maestro
+    // REGLA GLOBAL DE ADMINISTRADOR: El Administrador Maestro tiene acceso TOTAL e INCONDICIONAL
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Reglas para usuarios de personal
+    // Reglas para el personal de Staff y otros usuarios autenticados
+    // Estas reglas se evalúan si el usuario NO es el Administrador Maestro
+    
     match /users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isMasterAdmin());
+      allow read, write: if request.auth != null && (request.auth.uid == userId);
     }
 
-    // Reglas para clientes
     match /customers/{customerId} {
       allow read, write: if request.auth != null;
     }
 
-    // Reglas para créditos
     match /credits/{creditId} {
       allow read, write: if request.auth != null;
     }
 
-    // Reglas para pagos
     match /payments/{paymentId} {
       allow read, write: if request.auth != null;
     }
