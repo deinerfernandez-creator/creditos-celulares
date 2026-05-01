@@ -45,7 +45,7 @@ import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, update
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { addDays, format } from 'date-fns';
+import { addDays, format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const formatCurrency = (value: number) => {
@@ -68,16 +68,16 @@ export default function CreditDetailPage() {
 
   // Fetch real data with proper memoization
   const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id as string) : null, [db, id]);
-  const { data: credit, loading: loadingCredit } = useDoc(creditRef);
+  const { data: credit, isLoading: loadingCredit } = useDoc(creditRef);
 
   const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
-  const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
+  const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!id) return null;
     return query(collection(db, 'payments'), where('creditId', '==', id), orderBy('date', 'desc'));
   }, [db, id]);
-  const { data: payments, loading: loadingPayments } = useCollection(paymentsQuery);
+  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
@@ -85,15 +85,19 @@ export default function CreditDetailPage() {
   // Generate Payment Schedule (Cronograma)
   const schedule = useMemo(() => {
     if (!credit || !credit.createdAt) return [];
+    
     const items = [];
     const baseDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
-    const totalPaymentsMade = credit.totalAmount - credit.remainingBalance;
+    
+    if (!isValid(baseDate)) return [];
+
+    const totalPaymentsAmount = payments?.reduce((acc, p) => acc + (p.amount || 0), 0) || (credit.totalAmount - credit.remainingBalance);
     let accumulatedForComparison = 0;
 
-    for (let i = 1; i <= credit.planType; i++) {
+    for (let i = 1; i <= (credit.planType || 6); i++) {
       const dueDate = addDays(baseDate, i * 14); // Fortnightly
       accumulatedForComparison += credit.installmentAmount;
-      const isPaid = totalPaymentsMade >= (accumulatedForComparison - 100); // Small tolerance for rounding
+      const isPaid = totalPaymentsAmount >= (accumulatedForComparison - 100); // Tolerance for rounding
 
       items.push({
         number: i,
@@ -103,7 +107,7 @@ export default function CreditDetailPage() {
       });
     }
     return items;
-  }, [credit]);
+  }, [credit, payments]);
 
   const handleRegisterPayment = () => {
     if (!paymentAmount || isNaN(parseFloat(paymentAmount))) return;
@@ -118,10 +122,8 @@ export default function CreditDetailPage() {
       staffId: user?.uid || 'anonymous'
     };
 
-    // Add payment record
     addDoc(collection(db, 'payments'), paymentData)
       .then(() => {
-        // Update credit balance
         const newBalance = Math.max(0, credit!.remainingBalance - amount);
         const newStatus = newBalance <= 0 ? 'completado' : credit!.status;
         
@@ -152,12 +154,15 @@ export default function CreditDetailPage() {
     if (!credit || !customer) return;
     setLoadingAi(true);
     try {
+      const firstUnpaid = schedule.find(s => !s.isPaid);
+      const nextDate = firstUnpaid && isValid(firstUnpaid.dueDate) ? firstUnpaid.dueDate.toISOString() : 'N/A';
+
       const summary = await summarizeCreditStatus({
         customerName: customer.name,
-        loanAmount: credit.initialAmount - (credit.downPayment || 0),
-        totalAmountDue: credit.totalAmount,
-        remainingBalance: credit.remainingBalance,
-        nextPaymentDate: schedule.find(s => !s.isPaid)?.dueDate.toISOString() || 'N/A',
+        loanAmount: (credit.initialAmount || 0) - (credit.downPayment || 0),
+        totalAmountDue: credit.totalAmount || 0,
+        remainingBalance: credit.remainingBalance || 0,
+        nextPaymentDate: nextDate,
         paymentFrequency: 'quincenal',
         paymentHistory: payments?.map(p => ({
           date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : 'N/A',
@@ -194,7 +199,8 @@ export default function CreditDetailPage() {
     );
   }
 
-  const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
+  const total = credit.totalAmount || 1; // Avoid division by zero
+  const progress = Math.min(100, Math.max(0, ((total - credit.remainingBalance) / total) * 100));
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -359,7 +365,9 @@ export default function CreditDetailPage() {
                         {schedule.map((item) => (
                           <tr key={item.number} className="hover:bg-slate-50 transition-colors">
                             <td className="px-6 py-4 font-bold text-slate-400">#{item.number}</td>
-                            <td className="px-6 py-4 font-medium">{format(item.dueDate, 'PP', { locale: es })}</td>
+                            <td className="px-6 py-4 font-medium">
+                              {isValid(item.dueDate) ? format(item.dueDate, 'PP', { locale: es }) : 'Pendiente'}
+                            </td>
                             <td className="px-6 py-4 font-bold">{formatCurrency(item.amount)}</td>
                             <td className="px-6 py-4">
                               {item.isPaid ? (
@@ -393,7 +401,7 @@ export default function CreditDetailPage() {
                             <div>
                               <p className="font-bold text-lg">{formatCurrency(p.amount)}</p>
                               <p className="text-xs text-muted-foreground">
-                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Fecha desconocida'}
+                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Procesando...'}
                               </p>
                             </div>
                           </div>
