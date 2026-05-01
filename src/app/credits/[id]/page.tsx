@@ -86,16 +86,15 @@ export default function CreditDetailPage() {
 
   // Lógica segura para el progreso
   const progress = useMemo(() => {
-    if (!credit || typeof credit.totalAmount !== 'number' || credit.totalAmount <= 0) return 0;
+    if (!mounted || !credit || typeof credit.totalAmount !== 'number' || credit.totalAmount <= 0) return 0;
     const remaining = typeof credit.remainingBalance === 'number' ? credit.remainingBalance : credit.totalAmount;
     const paid = credit.totalAmount - remaining;
-    const calculated = (paid / credit.totalAmount) * 100;
-    return Math.min(100, Math.max(0, calculated));
-  }, [credit]);
+    return Math.min(100, Math.max(0, (paid / credit.totalAmount) * 100));
+  }, [mounted, credit]);
 
-  // Cronograma Seguro
+  // Cronograma Seguro (Evitar hidratación inconsistente)
   const schedule = useMemo(() => {
-    if (!credit || !credit.installmentAmount) return [];
+    if (!mounted || !credit || !credit.installmentAmount) return [];
     
     let baseDate: Date;
     if (credit.createdAt?.toDate) {
@@ -103,6 +102,7 @@ export default function CreditDetailPage() {
     } else if (credit.createdAt) {
       baseDate = new Date(credit.createdAt);
     } else {
+      // Valor por defecto seguro para evitar fallos de renderizado
       baseDate = new Date();
     }
 
@@ -118,7 +118,7 @@ export default function CreditDetailPage() {
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = addDays(baseDate, i * 14);
       accumulatedForComparison += installmentValue;
-      const isPaid = totalPaidAmount >= (accumulatedForComparison - 50); // Margen de 50 COP
+      const isPaid = totalPaidAmount >= (accumulatedForComparison - 100); // Margen de error de 100 COP
 
       items.push({
         number: i,
@@ -128,7 +128,7 @@ export default function CreditDetailPage() {
       });
     }
     return items;
-  }, [credit, payments]);
+  }, [mounted, credit, payments]);
 
   const handleRegisterPayment = () => {
     if (!paymentAmount || isNaN(parseFloat(paymentAmount)) || !credit) return;
@@ -173,7 +173,7 @@ export default function CreditDetailPage() {
   };
 
   const handleGenerateAiSummary = async () => {
-    if (!credit || !customer) return;
+    if (!credit || !customer || !mounted) return;
     setLoadingAi(true);
     try {
       const firstUnpaid = schedule.find(s => !s.isPaid);
@@ -203,21 +203,23 @@ export default function CreditDetailPage() {
     }
   };
 
-  if (!mounted || loadingCredit) {
+  // Pantalla de carga robusta
+  if (!mounted || loadingCredit || loadingCustomer) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-medium">Sincronizando con el servidor...</p>
+        <p className="text-slate-500 font-medium">Cargando detalles del crédito...</p>
       </div>
     );
   }
 
+  // Manejo de error de existencia
   if (!credit) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no disponible</h2>
-        <p className="text-slate-500 mt-2">No se encontró el registro o los datos están incompletos.</p>
+        <p className="text-slate-500 mt-2">No se encontró el registro o no tienes permisos para verlo.</p>
         <Button asChild className="mt-8 rounded-xl px-8">
           <Link href="/">Volver al Dashboard</Link>
         </Button>
@@ -286,7 +288,7 @@ export default function CreditDetailPage() {
               <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Cliente</CardDescription>
-                  <CardTitle className="text-lg font-bold truncate">{customer?.name || 'Sincronizando...'}</CardTitle>
+                  <CardTitle className="text-lg font-bold truncate">{customer?.name || 'Cargando...'}</CardTitle>
                 </CardHeader>
               </Card>
 

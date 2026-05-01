@@ -2,20 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Regla Maestra: Acceso total para el administrador principal por correo
-    match /{document=**} {
-      allow read, write: if request.auth != null && (
-        request.auth.token.email == "deinerfernandez@gmail.com"
-      );
+    // Función para identificar al administrador maestro por correo
+    function isMasterAdmin() {
+      return request.auth != null && 
+             request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // Regla de Personal: Acceso si existe un perfil de usuario para el UID
+    // Acceso Maestro: Si eres el administrador, tienes permiso total en TODO
     match /{document=**} {
-      allow read, write: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read, write: if isMasterAdmin();
     }
 
-    // Reglas explícitas para colecciones principales
+    // Reglas para personal y otros procesos
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || isMasterAdmin());
+    }
+
     match /customers/{customerId} {
       allow read, write: if request.auth != null;
     }
@@ -25,10 +27,6 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      allow read, write: if request.auth != null;
-    }
-
-    match /users/{userId} {
       allow read, write: if request.auth != null;
     }
   }
