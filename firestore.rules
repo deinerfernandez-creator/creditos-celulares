@@ -13,7 +13,7 @@ service cloud.firestore {
       allow read, write: if isMasterAdmin();
     }
 
-    // ACCESO PARA EL PORTAL DE CLIENTES (Según solicitud del usuario)
+    // ACCESO PARA EL PORTAL DE CLIENTES
     // Se permite lectura pública total para facilitar la búsqueda por Cédula/IMEI 
     // sin necesidad de autenticación forzosa en el portal.
     match /customers/{customerId} {

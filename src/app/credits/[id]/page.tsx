@@ -15,7 +15,6 @@ import {
   ChevronLeft, 
   Loader2,
   Smartphone,
-  Calendar,
   AlertCircle,
   Fingerprint,
   Phone,
@@ -115,7 +114,11 @@ export default function CreditDetailPage() {
     return Math.min(100, Math.max(0, (paid / credit.totalAmount) * 100));
   }, [credit]);
 
-  if (!mounted || loadingCredit || loadingCustomer) {
+  if (!mounted) {
+    return null;
+  }
+
+  if (loadingCredit || loadingCustomer) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
@@ -258,9 +261,6 @@ export default function CreditDetailPage() {
               </CardTitle>
               <CardDescription>Registro completo de entradas de dinero</CardDescription>
             </div>
-            <Button size="sm" className="rounded-xl shadow-lg shadow-primary/20">
-              <History className="w-4 h-4 mr-2" /> Registrar Abono
-            </Button>
           </CardHeader>
           <CardContent className="p-0">
             {loadingPayments ? (
@@ -277,7 +277,7 @@ export default function CreditDetailPage() {
                         <p className="font-black text-slate-900 text-lg">{formatCurrency(p.amount)}</p>
                         <p className="text-xs text-slate-400 font-medium">
                           {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { 
-                            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                            day: 'numeric', month: 'long', year: 'numeric'
                           }) : 'Fecha no disponible'}
                         </p>
                       </div>
