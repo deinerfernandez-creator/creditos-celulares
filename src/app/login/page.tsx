@@ -29,13 +29,13 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       toast({
         title: "Sesión iniciada",
-        description: "Bienvenido al panel de control.",
+        description: "Bienvenido al panel administrativo de Tecnicell.",
       });
       router.push('/');
     } catch (error: any) {
       toast({
         title: "Error de acceso",
-        description: "Credenciales inválidas o sin permisos.",
+        description: "Credenciales inválidas. Verifica tu correo y contraseña.",
         variant: "destructive",
       });
       setLoading(false);
@@ -46,7 +46,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
         <Button variant="ghost" asChild className="rounded-xl text-slate-500">
-          <Link href="/portal"><ArrowLeft className="w-4 h-4 mr-2" /> Ir al Portal de Clientes</Link>
+          <Link href="/portal"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Portal de Clientes</Link>
         </Button>
 
         <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
@@ -54,7 +54,7 @@ export default function LoginPage() {
             <div className="mx-auto bg-white/20 p-3 rounded-2xl w-fit mb-4">
               <ShieldCheck className="w-8 h-8" />
             </div>
-            <CardTitle className="text-2xl font-bold">Tecnicell Staff</CardTitle>
+            <CardTitle className="text-2xl font-bold text-white">Tecnicell Staff</CardTitle>
             <CardDescription className="text-white/70 italic">Acceso para administradores y vendedores</CardDescription>
           </CardHeader>
           <CardContent className="pt-8">
@@ -66,7 +66,7 @@ export default function LoginPage() {
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="usuario@tecnicell.com"
+                    placeholder="ejemplo@correo.com"
                     className="pl-10 h-12 rounded-xl"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -91,15 +91,17 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20">
+              <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary text-white hover:bg-primary/90 transition-all">
                 {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Iniciar Sesión"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="bg-slate-50 p-6 text-center border-t">
-            <p className="text-xs text-slate-500 w-full italic">
-              Si olvidaste tu acceso, contacta al administrador del sistema.
-            </p>
+            <div className="space-y-2 w-full">
+              <p className="text-xs text-slate-500 italic">
+                Usa tus credenciales autorizadas para acceder.
+              </p>
+            </div>
           </CardFooter>
         </Card>
       </div>

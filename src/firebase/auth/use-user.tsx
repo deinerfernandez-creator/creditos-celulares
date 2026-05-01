@@ -19,13 +19,21 @@ export function useUser() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        // Intentar obtener el rol desde Firestore
+        
+        // Bootstrap: Identificar al administrador maestro por correo
+        if (authUser.email === 'deinerfernandez@gmail.com') {
+          setRole('admin');
+          setLoading(false);
+          return;
+        }
+
+        // Intentar obtener el rol desde Firestore para otros usuarios
         try {
           const userDoc = await getDoc(doc(db, 'users', authUser.uid));
           if (userDoc.exists()) {
             setRole(userDoc.data().role as UserRole);
           } else {
-            // Si no está en la tabla de empleados, es un cliente o un usuario nuevo
+            // Por defecto, si no está en la base de datos de staff, es un cliente
             setRole('cliente');
           }
         } catch (e) {
