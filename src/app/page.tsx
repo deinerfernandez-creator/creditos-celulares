@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -23,15 +22,14 @@ import {
   Smartphone, 
   TrendingUp,
   LogOut,
-  Bell,
   ExternalLink,
   ShieldCheck,
   Loader2,
   ShieldAlert,
   CheckCircle2,
-  Settings,
   Trash2,
-  History
+  History,
+  Shield
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -95,24 +93,53 @@ export default function DashboardPage() {
 
   const customersQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
-    return query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'customers'), orderBy('name', 'asc'));
   }, [db, mounted]);
   const { data: customers, isLoading: loadingCustomers } = useCollection(customersQuery);
 
   const creditsQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
-    return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
+    return query(collection(db, 'credits'));
   }, [db, mounted]);
-  const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
+  const { data: creditsData, isLoading: loadingCredits } = useCollection(creditsQuery);
+
+  const credits = React.useMemo(() => {
+    if (!creditsData) return null;
+    return [...creditsData].sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [creditsData]);
+
+  const staffQuery = useMemoFirebase(() => {
+    if (!db || !mounted || role !== 'admin') return null;
+    return query(collection(db, 'users'), orderBy('role', 'asc'));
+  }, [db, mounted, role]);
+  const { data: staff, isLoading: loadingStaff } = useCollection(staffQuery);
 
   const handleDeleteCustomer = (id: string) => {
+    if (role !== 'admin') {
+      toast({ title: "Acceso denegado", description: "Solo administradores pueden eliminar registros.", variant: "destructive" });
+      return;
+    }
     deleteDocumentNonBlocking(doc(db, 'customers', id));
     toast({ title: "Cliente eliminado", description: "Los datos han sido removidos satisfactoriamente." });
   };
 
   const handleDeleteCredit = (id: string) => {
+    if (role !== 'admin') {
+      toast({ title: "Acceso denegado", description: "Solo administradores pueden eliminar registros.", variant: "destructive" });
+      return;
+    }
     deleteDocumentNonBlocking(doc(db, 'credits', id));
     toast({ title: "Crédito eliminado", description: "El expediente ha sido removido." });
+  };
+
+  const handleDeleteStaff = (uid: string) => {
+    if (role !== 'admin') return;
+    deleteDocumentNonBlocking(doc(db, 'users', uid));
+    toast({ title: "Personal removido", description: "Se han revocado los permisos de acceso." });
   };
 
   if (!mounted || authLoading) {
@@ -180,6 +207,13 @@ export default function DashboardPage() {
                 <span>Créditos</span>
               </SidebarMenuButton>
               
+              {role === 'admin' && (
+                <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-xl h-11 font-bold mb-1">
+                  <Shield className="w-5 h-5 mr-3" />
+                  <span>Personal</span>
+                </SidebarMenuButton>
+              )}
+              
               <div className="my-6 border-t border-white/10 px-3 pt-6">
                 <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Acceso Público</p>
                 <SidebarMenuButton asChild className="rounded-xl h-11 text-accent hover:text-accent font-bold">
@@ -210,7 +244,7 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-slate-500" />
               <div className="h-6 w-px bg-slate-200 mx-2" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : 'Control de Financiamientos'}
+                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : activeTab === 'credits' ? 'Control de Financiamientos' : 'Gestión de Personal Staff'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -380,23 +414,25 @@ export default function DashboardPage() {
                                       </Link>
                                     </Button>
                                     
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent className="rounded-2xl">
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle className="font-black">¿Eliminar Cliente?</AlertDialogTitle>
-                                          <AlertDialogDescription>Esta acción borrará permanentemente los datos de {c.name}. Esta acción no se puede deshacer.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteCustomer(c.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Cliente</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
+                                    {role === 'admin' && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-2xl">
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle className="font-black">¿Eliminar Cliente?</AlertDialogTitle>
+                                            <AlertDialogDescription>Esta acción borrará permanentemente los datos de {c.name}. Esta acción no se puede deshacer.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteCustomer(c.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Cliente</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -460,23 +496,25 @@ export default function DashboardPage() {
                                       <Link href={`/credits/${cr.id}`}>Detalles</Link>
                                     </Button>
                                     
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent className="rounded-2xl">
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle className="font-black">¿Borrar Expediente?</AlertDialogTitle>
-                                          <AlertDialogDescription>Esto eliminará el registro financiero del equipo {cr.deviceModel}.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteCredit(cr.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
+                                    {role === 'admin' && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-2xl">
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle className="font-black">¿Borrar Expediente?</AlertDialogTitle>
+                                            <AlertDialogDescription>Esto eliminará el registro financiero del equipo {cr.deviceModel}.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteCredit(cr.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
                                   </div>
                                 </TableCell>
                               </TableRow>
@@ -485,6 +523,81 @@ export default function DashboardPage() {
                         ) : (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-16 text-slate-400">No hay créditos registrados.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'staff' && role === 'admin' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                   <div>
+                     <h3 className="text-2xl font-black text-slate-900">Personal Autorizado</h3>
+                     <p className="text-sm text-slate-500">Gestión de accesos y roles administrativos</p>
+                   </div>
+                   <Button asChild className="rounded-xl h-10 px-5 font-bold">
+                     <Link href="/staff/new"><PlusCircle className="mr-2 h-4 w-4" /> Habilitar Personal</Link>
+                   </Button>
+                </div>
+                <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white border border-slate-100">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50">
+                        <TableRow className="border-none">
+                          <TableHead className="px-6 font-black uppercase text-[10px] tracking-widest text-slate-400">Nombre / Email</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">UID (ID Unico)</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Rol asignado</TableHead>
+                          <TableHead className="pr-6 text-right font-black uppercase text-[10px] tracking-widest text-slate-400">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loadingStaff ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin" /></TableCell>
+                          </TableRow>
+                        ) : staff && staff.length > 0 ? (
+                          staff.map((s: any) => (
+                            <TableRow key={s.id} className="hover:bg-slate-50 transition-colors">
+                              <TableCell className="px-6">
+                                <div className="font-bold text-slate-900">{s.name || 'Staff Sin Nombre'}</div>
+                                <div className="text-xs text-slate-400">{s.email}</div>
+                              </TableCell>
+                              <TableCell className="font-mono text-[10px] text-slate-400">{s.id}</TableCell>
+                              <TableCell>
+                                <Badge variant={s.role === 'admin' ? 'default' : 'secondary'} className="rounded-full px-3 capitalize font-bold">
+                                  {s.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="pr-6 text-right">
+                                {s.email !== user.email && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-xl">
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-2xl">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="font-black">¿Revocar Permisos?</AlertDialogTitle>
+                                        <AlertDialogDescription>Esto eliminará el acceso de {s.email} al panel administrativo de Tecnicell.</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteStaff(s.id)} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Acceso</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-16 text-slate-400 italic">No hay otros miembros del staff registrados.</TableCell>
                           </TableRow>
                         )}
                       </TableBody>

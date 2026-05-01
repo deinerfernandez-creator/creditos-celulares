@@ -2,20 +2,50 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función centralizada para validar al Administrador Maestro
-    function isSuperAdmin() {
-      return request.auth != null && (
+    // Función para verificar si el usuario está autenticado
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Función para verificar si es el Administrador Maestro o tiene rol de admin
+    function isAdmin() {
+      return isSignedIn() && (
         request.auth.token.email == "deinerfernandez@gmail.com" || 
-        request.auth.uid == "XZ8jrnB1LEhCkqv74Lro6O6VW313"
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
       );
     }
 
-    // REGLA MAESTRA: 
-    // 1. Lectura permitida para todos (Portal de Clientes y carga inicial del Dashboard)
-    // 2. Escritura permitida únicamente para el administrador principal
-    match /{document=**} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
+    // Función para verificar si es parte del staff (vendedor o admin)
+    function isStaff() {
+      return isSignedIn() && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "vendedor"
+      );
+    }
+
+    // REGLAS POR COLECCIÓN
+
+    match /customers/{customerId} {
+      allow read: if true; // Permite lectura pública para el portal
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /credits/{creditId} {
+      allow read: if true; // Permite lectura pública para el portal
+      allow create, update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if true; // Permite lectura pública para el portal
+      allow create: if isStaff();
+      allow update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

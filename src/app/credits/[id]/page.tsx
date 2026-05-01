@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -17,7 +16,6 @@ import {
   Loader2,
   Smartphone,
   AlertCircle,
-  Fingerprint,
   Phone,
   Settings2,
   CheckCircle2,
@@ -34,7 +32,8 @@ import {
   useDoc, 
   useCollection, 
   useMemoFirebase,
-  deleteDocumentNonBlocking
+  deleteDocumentNonBlocking,
+  useUser
 } from '@/firebase';
 import { 
   doc, 
@@ -94,6 +93,7 @@ export default function CreditDetailPage() {
   const id = params?.id as string;
   const db = useFirestore();
   const { toast } = useToast();
+  const { role } = useUser();
 
   const [mounted, setMounted] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -177,8 +177,9 @@ export default function CreditDetailPage() {
       const newBalance = Math.max(0, credit.remainingBalance - amount);
       const updateData: any = { remainingBalance: increment(-amount) };
       
-      if (newBalance === 0) {
+      if (newBalance <= 100) { // Tolerancia por redondeo
         updateData.status = 'pagado';
+        updateData.remainingBalance = 0;
       }
 
       await updateDoc(doc(db, 'credits', id), updateData);
@@ -194,6 +195,7 @@ export default function CreditDetailPage() {
   };
 
   const handleDeleteCredit = () => {
+    if (role !== 'admin') return;
     if (!id || !db) return;
     deleteDocumentNonBlocking(doc(db, 'credits', id));
     toast({ title: "Expediente Eliminado", description: "El crédito ha sido removido satisfactoriamente." });
@@ -241,23 +243,25 @@ export default function CreditDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="rounded-xl font-bold text-destructive border-destructive/20 hover:bg-destructive/5">
-                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-2xl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="font-black">¿Borrar definitivamente?</AlertDialogTitle>
-                  <AlertDialogDescription>Esta acción eliminará permanentemente este expediente de crédito y todo su historial de pagos. No se puede revertir.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteCredit} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Expediente</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {role === 'admin' && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="rounded-xl font-bold text-destructive border-destructive/20 hover:bg-destructive/5">
+                    <Trash2 className="w-4 h-4 mr-2" /> Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-2xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="font-black">¿Borrar definitivamente?</AlertDialogTitle>
+                    <AlertDialogDescription>Esta acción eliminará permanentemente este expediente de crédito y todo su historial de pagos. No se puede revertir.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteCredit} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">Eliminar Expediente</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
 
             <Dialog open={openPayment} onOpenChange={setOpenPayment}>
               <DialogTrigger asChild>
