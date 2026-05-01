@@ -33,6 +33,14 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Link from 'next/link';
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
+
 export default function CustomerPortalPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -173,8 +181,8 @@ export default function CustomerPortalPage() {
               </div>
               <Badge variant="outline" className="border-slate-100 bg-slate-50 text-slate-500 rounded-full font-bold">Saldo Actual</Badge>
             </div>
-            <h2 className="text-4xl font-black text-slate-900">${credit.remainingBalance}</h2>
-            <p className="text-sm text-slate-500 mt-2 font-medium">De un total pactado de ${credit.totalAmount}</p>
+            <h2 className="text-3xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</h2>
+            <p className="text-sm text-slate-500 mt-2 font-medium">De un total pactado de {formatCurrency(credit.totalAmount)}</p>
             <div className="mt-8 space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                 <span>Progreso de Pago</span>
@@ -192,7 +200,7 @@ export default function CustomerPortalPage() {
               <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none rounded-full px-4 py-1 font-bold">Plan Quincenal</Badge>
             </div>
             <div className="space-y-1">
-              <h2 className="text-4xl font-black text-slate-900">${credit.installmentAmount}</h2>
+              <h2 className="text-3xl font-black text-slate-900">{formatCurrency(credit.installmentAmount)}</h2>
               <p className="text-lg font-bold text-primary flex items-center gap-2">
                 <Clock className="w-5 h-5" /> Cuota fija de tu plan
               </p>

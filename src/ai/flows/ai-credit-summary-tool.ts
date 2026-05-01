@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI tool to summarize a customer's credit status.
@@ -12,9 +13,9 @@ import {z} from 'genkit';
 
 const SummarizeCreditStatusInputSchema = z.object({
   customerName: z.string().describe("The name of the customer."),
-  loanAmount: z.number().describe("The initial loan amount."),
-  totalAmountDue: z.number().describe("The total amount the customer is expected to pay, including interest/recargo."),
-  remainingBalance: z.number().describe("The current outstanding balance of the credit."),
+  loanAmount: z.number().describe("The initial loan amount in COP."),
+  totalAmountDue: z.number().describe("The total amount the customer is expected to pay in COP, including interest/recargo."),
+  remainingBalance: z.number().describe("The current outstanding balance of the credit in COP."),
   nextPaymentDate: z.string().describe("The date of the next scheduled payment in 'YYYY-MM-DD' format."),
   paymentFrequency: z.string().describe("The frequency of payments (e.g., 'quincenal', 'mensual')."),
   paymentHistory: z.array(
@@ -37,20 +38,20 @@ const summarizeCreditStatusPrompt = ai.definePrompt({
   name: 'summarizeCreditStatusPrompt',
   input: {schema: SummarizeCreditStatusInputSchema},
   output: {schema: SummarizeCreditStatusOutputSchema},
-  prompt: `Eres un asistente de IA especializado en análisis de crédito para 'Tecnicell Créditos'. Genera un resumen conciso del estado crediticio del cliente proporcionado. Mantén la respuesta profesional y enfocada en los puntos clave.
+  prompt: `Eres un asistente de IA especializado en análisis de crédito para 'Tecnicell Créditos' en Colombia. Genera un resumen conciso del estado crediticio del cliente proporcionado. Mantén la respuesta profesional y enfocada en los puntos clave. Todos los valores están en Pesos Colombianos (COP).
 
 **Detalles del Cliente:**
 Nombre: {{{customerName}}}
-Monto Inicial del Préstamo: \$ {{loanAmount}}
-Monto Total a Pagar: \$ {{totalAmountDue}}
-Saldo Restante: \$ {{remainingBalance}}
+Monto Inicial del Préstamo: COP {{loanAmount}}
+Monto Total a Pagar: COP {{totalAmountDue}}
+Saldo Restante: COP {{remainingBalance}}
 Próxima Fecha de Pago: {{{nextPaymentDate}}}
 Frecuencia de Pago: {{{paymentFrequency}}}
 
 **Historial de Pagos:**
 {{#if paymentHistory}}
   {{#each paymentHistory}}
-    - Fecha: {{{date}}}, Cantidad: \$ {{amount}}
+    - Fecha: {{{date}}}, Cantidad: COP {{amount}}
   {{/each}}
 {{else}}
   No hay historial de pagos registrado.
@@ -58,7 +59,7 @@ Frecuencia de Pago: {{{paymentFrequency}}}
 
 Basándote en la información anterior, genera un resumen que incluya:
 1.  El nombre completo del cliente.
-2.  El saldo restante actual del crédito.
+2.  El saldo restante actual del crédito formateado correctamente como Pesos Colombianos.
 3.  La próxima fecha de pago programada.
 4.  Una breve análisis de la consistencia de pagos históricos (ej., 'pagos consistentes y puntuales', 'algunos pagos tardíos o incompletos', 'historial de pagos irregular', 'no hay historial de pagos', etc.) y cualquier observación relevante sobre el comportamiento de pago.
 

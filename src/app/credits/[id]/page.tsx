@@ -33,6 +33,14 @@ import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
+
 export default function CreditDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
@@ -152,10 +160,10 @@ export default function CreditDetailPage() {
                   <CardDescription className="flex items-center gap-2 text-green-600 font-bold">
                     <DollarSign className="w-3 h-3" /> Cuota Inicial
                   </CardDescription>
-                  <CardTitle className="text-2xl font-black">${credit.downPayment || 0}</CardTitle>
+                  <CardTitle className="text-xl font-black">{formatCurrency(credit.downPayment || 0)}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Precio equipo: ${credit.initialAmount}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Precio equipo: {formatCurrency(credit.initialAmount)}</p>
                 </CardContent>
               </Card>
 
@@ -164,7 +172,7 @@ export default function CreditDetailPage() {
                   <CardDescription className="flex items-center gap-2 text-primary font-bold">
                     <DollarSign className="w-3 h-3" /> Saldo Pendiente
                   </CardDescription>
-                  <CardTitle className="text-2xl font-black">${credit.remainingBalance}</CardTitle>
+                  <CardTitle className="text-xl font-black">{formatCurrency(credit.remainingBalance)}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
@@ -173,7 +181,7 @@ export default function CreditDetailPage() {
                        style={{ width: `${progress}%` }}
                      />
                   </div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Financiado: ${credit.totalAmount}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Financiado: {formatCurrency(credit.totalAmount)}</p>
                 </CardContent>
               </Card>
             </div>

@@ -15,6 +15,14 @@ import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
+
 export default function NewCreditPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -57,7 +65,7 @@ export default function NewCreditPage() {
         interestRate: interest * 100,
         financedAmount: amountToFinance,
         totalAmount: totalFinanced,
-        installmentAmount: Math.round(installment * 100) / 100
+        installmentAmount: Math.round(installment)
       });
     } else {
       setCalculation({ interestRate: 0, financedAmount: 0, totalAmount: 0, installmentAmount: 0 });
@@ -116,7 +124,7 @@ export default function NewCreditPage() {
           <Button variant="ghost" size="icon" asChild className="rounded-full">
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Nueva Solicitud de Crédito</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Nueva Solicitud de Crédito (COP)</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -175,11 +183,11 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Precio Total del Equipo ($)</Label>
+                    <Label htmlFor="amount">Precio Total del Equipo (COP)</Label>
                     <Input 
                       id="amount" 
                       type="number" 
-                      placeholder="0.00" 
+                      placeholder="Ej: 3500000" 
                       className="rounded-xl h-12 text-lg font-semibold"
                       value={initialAmount}
                       onChange={(e) => setInitialAmount(e.target.value)}
@@ -189,13 +197,13 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="downPayment">Cuota Inicial / Abono ($)</Label>
+                    <Label htmlFor="downPayment">Cuota Inicial / Abono (COP)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
                       <Input 
                         id="downPayment" 
                         type="number" 
-                        placeholder="0.00" 
+                        placeholder="Ej: 500000" 
                         className="pl-10 rounded-xl h-12 text-lg font-semibold text-green-700 bg-green-50/30"
                         value={downPayment}
                         onChange={(e) => setDownPayment(e.target.value)}
@@ -243,35 +251,35 @@ export default function NewCreditPage() {
                 <Smartphone className="w-32 h-32" />
               </div>
               <CardHeader>
-                <CardTitle>Resumen Financiero</CardTitle>
+                <CardTitle>Resumen Financiero (COP)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 relative z-10">
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <span className="text-sm opacity-80">Precio Equipo</span>
-                  <span className="text-xl font-bold">${parseFloat(initialAmount) || 0}</span>
+                  <span className="text-xl font-bold">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <span className="text-sm opacity-80 text-accent font-bold">Cuota Inicial (-)</span>
-                  <span className="text-xl font-bold text-accent">-${parseFloat(downPayment) || 0}</span>
+                  <span className="text-xl font-bold text-accent">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <span className="text-sm opacity-80">Monto a Financiar</span>
-                  <span className="text-xl font-bold">${calculation.financedAmount.toFixed(2)}</span>
+                  <span className="text-xl font-bold">{formatCurrency(calculation.financedAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm opacity-80">Recargo (+{calculation.interestRate}%)</span>
                   </div>
-                  <span className="text-xl font-bold text-accent">+${(calculation.totalAmount - calculation.financedAmount).toFixed(2)}</span>
+                  <span className="text-xl font-bold text-accent">+{formatCurrency(calculation.totalAmount - calculation.financedAmount)}</span>
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
                     <p className="text-xs opacity-60 font-bold mb-1">Total a Pagar en Cuotas</p>
-                    <h2 className="text-4xl font-extrabold">${calculation.totalAmount.toFixed(2)}</h2>
+                    <h2 className="text-2xl font-extrabold">{formatCurrency(calculation.totalAmount)}</h2>
                   </div>
                   <div className="text-right">
                     <p className="text-xs opacity-60 font-bold mb-1">Cuota Quincenal</p>
-                    <h3 className="text-2xl font-bold">${calculation.installmentAmount.toFixed(2)}</h3>
+                    <h3 className="text-xl font-bold">{formatCurrency(calculation.installmentAmount)}</h3>
                   </div>
                 </div>
               </CardContent>

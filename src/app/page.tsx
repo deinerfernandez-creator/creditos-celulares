@@ -46,6 +46,14 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  }).format(value);
+};
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { user, role, loading: authLoading } = useUser();
@@ -99,7 +107,7 @@ export default function DashboardPage() {
     { title: "Cuentas Atrasadas", value: credits ? credits.filter((c: any) => c.status === 'atrasado').length.toString() : "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
     { 
       title: "Recaudación Mes", 
-      value: isAdmin ? "$4,520" : "Ver Admin", 
+      value: isAdmin ? formatCurrency(12500000) : "Ver Admin", 
       icon: TrendingUp, 
       color: "text-green-600", 
       bg: "bg-green-100",
@@ -146,47 +154,37 @@ export default function DashboardPage() {
           </SidebarHeader>
           <SidebarContent className="px-3">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-lg h-11">
-                  <LayoutDashboard className="w-5 h-5 mr-3" />
-                  <span>Panel de Control</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-lg h-11">
-                  <Users className="w-5 h-5 mr-3" />
-                  <span>Clientes</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-lg h-11">
-                  <CreditCard className="w-5 h-5 mr-3" />
-                  <span>Créditos</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-lg h-11">
+                <LayoutDashboard className="w-5 h-5 mr-3" />
+                <span>Panel de Control</span>
+              </SidebarMenuButton>
+              <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-lg h-11">
+                <Users className="w-5 h-5 mr-3" />
+                <span>Clientes</span>
+              </SidebarMenuButton>
+              <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-lg h-11">
+                <CreditCard className="w-5 h-5 mr-3" />
+                <span>Créditos</span>
+              </SidebarMenuButton>
               
               {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-lg h-11">
-                    <ShieldCheck className="w-5 h-5 mr-3" />
-                    <span>Personal</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-lg h-11">
+                  <ShieldCheck className="w-5 h-5 mr-3" />
+                  <span>Personal</span>
+                </SidebarMenuButton>
               )}
               
               <div className="my-4 border-t border-sidebar-border/30 px-3 pt-4">
                 <p className="text-[10px] font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-2">Accesos Externos</p>
               </div>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className="rounded-lg h-11 text-accent hover:text-accent">
-                  <Link href="/portal">
-                    <Smartphone className="w-5 h-5 mr-3" />
-                    <span>Portal de Clientes</span>
-                    <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <SidebarMenuButton asChild className="rounded-lg h-11 text-accent hover:text-accent">
+                <Link href="/portal">
+                  <Smartphone className="w-5 h-5 mr-3" />
+                  <span>Portal de Clientes</span>
+                  <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4">
@@ -289,7 +287,7 @@ export default function DashboardPage() {
                                       <Hash className="w-2 h-2" /> {credit.imei}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="font-semibold">${credit.remainingBalance}</TableCell>
+                                  <TableCell className="font-semibold">{formatCurrency(credit.remainingBalance)}</TableCell>
                                   <TableCell className="w-32">
                                     <Progress value={progress} className="h-2" />
                                   </TableCell>
@@ -430,8 +428,8 @@ export default function DashboardPage() {
                                     <div className="text-[10px] font-mono text-muted-foreground">{credit.imei}</div>
                                   </TableCell>
                                   <TableCell>{credit.planType} Quincenas</TableCell>
-                                  <TableCell className="font-semibold">${credit.installmentAmount}</TableCell>
-                                  <TableCell className="font-bold text-primary">${credit.remainingBalance}</TableCell>
+                                  <TableCell className="font-semibold">{formatCurrency(credit.installmentAmount)}</TableCell>
+                                  <TableCell className="font-bold text-primary">{formatCurrency(credit.remainingBalance)}</TableCell>
                                   <TableCell>
                                      <Badge className="rounded-full px-3">{credit.status}</Badge>
                                   </TableCell>
