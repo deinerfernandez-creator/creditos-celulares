@@ -7,9 +7,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Smartphone, User, ArrowRight, ShieldCheck, Hash } from 'lucide-react';
+import { User, ArrowRight, ShieldCheck, Hash, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { MOCK_CUSTOMERS, MOCK_CREDITS } from '@/lib/mock-data';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
@@ -19,44 +20,68 @@ export default function PortalLoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const db = useFirestore();
   
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
-  const handleAccess = (e: React.FormEvent) => {
+  const handleAccess = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!cedula || !imei) return;
+    
     setLoading(true);
     
-    // Buscar cliente por cédula
-    const customer = MOCK_CUSTOMERS.find(c => c.cedula === cedula);
-    
-    setTimeout(() => {
-      if (customer) {
-        // Verificar si existe un crédito para este cliente con ese IMEI
-        const credit = MOCK_CREDITS.find(c => c.customerId === customer.id && c.imei === imei);
-        
-        if (credit) {
-          toast({
-            title: "¡Acceso exitoso!",
-            description: `Hola ${customer.name}, bienvenido a tu portal de pagos.`,
-          });
-          router.push(`/portal/${customer.id}`);
-        } else {
-          toast({
-            title: "Error de validación",
-            description: "El IMEI no coincide con ningún equipo registrado a tu nombre.",
-            variant: "destructive"
-          });
-          setLoading(false);
-        }
-      } else {
+    try {
+      // 1. Buscar cliente por cédula
+      const customersRef = collection(db, 'customers');
+      const qCustomer = query(customersRef, where("cedula", "==", cedula));
+      const customerSnap = await getDocs(qCustomer);
+      
+      if (customerSnap.empty) {
         toast({
-          title: "Cliente no encontrado",
-          description: "No encontramos registros con el número de cédula ingresado.",
+          title: "Acceso denegado",
+          description: "No encontramos un cliente con esa cédula.",
           variant: "destructive"
         });
         setLoading(false);
+        return;
       }
-    }, 1000);
+
+      const customerDoc = customerSnap.docs[0];
+      const customerId = customerDoc.id;
+
+      // 2. Buscar crédito con ese IMEI para ese cliente
+      const creditsRef = collection(db, 'credits');
+      const qCredit = query(
+        creditsRef, 
+        where("customerId", "==", customerId),
+        where("imei", "==", imei)
+      );
+      const creditSnap = await getDocs(qCredit);
+
+      if (creditSnap.empty) {
+        toast({
+          title: "Validación fallida",
+          description: "El IMEI no coincide con ningún equipo a tu nombre.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      toast({
+        title: "¡Bienvenido!",
+        description: "Accediendo a tu estado de cuenta...",
+      });
+      
+      router.push(`/portal/${customerId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo validar el acceso. Revisa tu conexión.",
+        variant: "destructive"
+      });
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,12 +90,11 @@ export default function PortalLoginPage() {
         <div className="text-center space-y-2">
           <div className="inline-flex p-1 bg-white rounded-3xl mb-2 shadow-xl shadow-primary/10 overflow-hidden w-24 h-24 items-center justify-center border-4 border-primary/5">
             <Image 
-              src={logo?.imageUrl || ''} 
+              src={logo?.imageUrl || '/logo.png'} 
               alt="Tecnicell Logo" 
               width={80} 
               height={80}
               className="object-contain"
-              data-ai-hint={logo?.imageHint}
             />
           </div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900">Tecnicell Portal</h1>
@@ -93,7 +117,7 @@ export default function PortalLoginPage() {
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
                     id="cedula" 
-                    placeholder="0000-0000-00000" 
+                    placeholder="Tu cédula registrada" 
                     className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all"
                     value={cedula}
                     onChange={(e) => setCedula(e.target.value)}
@@ -108,7 +132,7 @@ export default function PortalLoginPage() {
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
                     id="imei" 
-                    placeholder="15 dígitos" 
+                    placeholder="15 dígitos de tu equipo" 
                     className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200 focus:bg-white transition-all"
                     value={imei}
                     onChange={(e) => setImei(e.target.value)}
@@ -123,9 +147,11 @@ export default function PortalLoginPage() {
               <Button 
                 type="submit" 
                 disabled={loading}
-                className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-lg shadow-primary/20"
+                className="w-full h-14 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg shadow-lg shadow-primary/20"
               >
-                {loading ? 'Verificando...' : (
+                {loading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
                   <span className="flex items-center gap-2">
                     Ingresar a mi cuenta <ArrowRight className="w-5 h-5" />
                   </span>
@@ -134,13 +160,9 @@ export default function PortalLoginPage() {
             </form>
           </CardContent>
           <CardFooter className="bg-slate-50/50 p-6 text-center border-t">
-            <div className="text-xs text-slate-500 w-full space-y-1">
-              <p>¿Problemas para acceder? Contacta a soporte.</p>
-              <div className="pt-2 flex justify-center gap-2 text-[10px] font-mono opacity-50">
-                <span>Demo Cédula: 0801-1990-12345</span>
-                <span>Demo IMEI: 358901234567890</span>
-              </div>
-            </div>
+            <p className="text-xs text-slate-500 w-full">
+              ¿Problemas para acceder? Contacta a soporte de Tecnicell.
+            </p>
           </CardFooter>
         </Card>
       </div>
