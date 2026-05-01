@@ -8,24 +8,27 @@ service cloud.firestore {
              request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // Acceso Maestro: Si eres el administrador, tienes permiso total en TODO
+    // Acceso Maestro: Permiso total para el administrador maestro
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // Reglas para personal y otros procesos
+    // Reglas para usuarios de personal
     match /users/{userId} {
       allow read, write: if request.auth != null && (request.auth.uid == userId || isMasterAdmin());
     }
 
+    // Reglas para clientes
     match /customers/{customerId} {
       allow read, write: if request.auth != null;
     }
 
+    // Reglas para créditos
     match /credits/{creditId} {
       allow read, write: if request.auth != null;
     }
 
+    // Reglas para pagos
     match /payments/{paymentId} {
       allow read, write: if request.auth != null;
     }
