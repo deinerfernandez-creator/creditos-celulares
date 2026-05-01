@@ -17,7 +17,8 @@ import {
   RefreshCw, 
   Check, 
   Search,
-  User as UserIcon
+  User as UserIcon,
+  Circle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -109,15 +110,16 @@ export default function NewCreditPage() {
   }, [initialAmount, downPayment, planType]);
 
   const startCamera = async () => {
+    setShowCamera(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setHasCameraPermission(true);
-        setShowCamera(true);
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
       toast({
         variant: 'destructive',
         title: 'Acceso a Cámara Denegado',
@@ -138,7 +140,9 @@ export default function NewCreditPage() {
         
         // Stop stream
         const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
         setShowCamera(false);
       }
     }
@@ -206,20 +210,20 @@ export default function NewCreditPage() {
           <Button variant="ghost" size="icon" asChild className="rounded-full">
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Nueva Solicitud de Crédito (COP)</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Solicitud de Crédito</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-2 border-none shadow-xl shadow-primary/5">
+          <Card className="lg:col-span-2 border-none shadow-xl">
             <CardHeader className="border-b bg-slate-50/50">
-              <CardTitle className="text-lg">Información del Crédito</CardTitle>
-              <CardDescription>Detalles del cliente, equipo y fotografía obligatoria</CardDescription>
+              <CardTitle className="text-lg font-black">Información del Crédito</CardTitle>
+              <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-widest">Detalles del cliente, equipo y fotografía obligatoria</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="customer">Cliente</Label>
+                    <Label htmlFor="customer" className="font-bold">Cliente</Label>
                     <Select onValueChange={setCustomerId} disabled={loading} required>
                       <SelectTrigger className="rounded-xl h-12">
                         <SelectValue placeholder="Selecciona un cliente" />
@@ -233,7 +237,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="device-search">Modelo de Celular (Buscador)</Label>
+                    <Label htmlFor="device-search" className="font-bold">Modelo de Celular</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
@@ -261,7 +265,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="imei">IMEI del Equipo</Label>
+                    <Label htmlFor="imei" className="font-bold">IMEI del Equipo</Label>
                     <div className="relative">
                       <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input 
@@ -277,12 +281,12 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Precio Total del Equipo (COP)</Label>
+                    <Label htmlFor="amount" className="font-bold">Precio Total (COP)</Label>
                     <Input 
                       id="amount" 
                       type="number" 
                       placeholder="Ej: 3500000" 
-                      className="rounded-xl h-12 text-lg font-semibold"
+                      className="rounded-xl h-12 text-lg font-bold"
                       value={initialAmount}
                       onChange={(e) => setInitialAmount(e.target.value)}
                       disabled={loading}
@@ -291,14 +295,14 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="downPayment">Cuota Inicial / Abono (COP)</Label>
+                    <Label htmlFor="downPayment" className="font-bold">Cuota Inicial (COP)</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
                       <Input 
                         id="downPayment" 
                         type="number" 
                         placeholder="Ej: 500000" 
-                        className="pl-10 rounded-xl h-12 text-lg font-semibold text-green-700 bg-green-50/30"
+                        className="pl-10 rounded-xl h-12 text-lg font-bold text-green-700 bg-green-50/30"
                         value={downPayment}
                         onChange={(e) => setDownPayment(e.target.value)}
                         disabled={loading}
@@ -309,7 +313,7 @@ export default function NewCreditPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <Label>Plan de Pagos Quincenales</Label>
+                  <Label className="font-bold">Plan de Pagos</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       type="button"
@@ -317,8 +321,8 @@ export default function NewCreditPage() {
                       onClick={() => setPlanType('6')}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <p className="font-bold text-lg text-primary">6 Cuotas</p>
-                      <p className="text-xs text-muted-foreground">Recargo del 50%</p>
+                      <p className="font-black text-lg text-primary tracking-tight">6 Cuotas</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recargo del 50%</p>
                     </button>
                     <button
                       type="button"
@@ -326,61 +330,78 @@ export default function NewCreditPage() {
                       onClick={() => setPlanType('12')}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <p className="font-bold text-lg text-primary">12 Cuotas</p>
-                      <p className="text-xs text-muted-foreground">Recargo del 100%</p>
+                      <p className="font-black text-lg text-primary tracking-tight">12 Cuotas</p>
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recargo del 100%</p>
                     </button>
                   </div>
                 </div>
 
                 {/* Camera Section */}
-                <div className="space-y-4 border-t pt-6">
-                  <Label className="text-lg font-black flex items-center gap-2">
-                    <Camera className="w-5 h-5 text-primary" /> Fotografía del Cliente
+                <div className="space-y-4 border-t pt-8">
+                  <Label className="text-lg font-black flex items-center gap-2 text-slate-900">
+                    <Camera className="w-5 h-5 text-primary" /> Registro Fotográfico
                   </Label>
                   
                   {!showCamera && !capturedPhoto && (
                     <Button 
                       type="button" 
                       onClick={startCamera} 
-                      className="w-full h-20 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 font-bold gap-3"
+                      className="w-full h-24 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 font-black gap-3 text-lg"
                     >
-                      <Camera className="w-6 h-6" /> Abrir Cámara para Registro
+                      <Camera className="w-8 h-8" /> Tomar Foto del Cliente
                     </Button>
                   )}
 
                   {showCamera && (
-                    <div className="space-y-4 animate-in fade-in zoom-in duration-300">
-                      <div className="relative rounded-2xl overflow-hidden bg-black aspect-video border-4 border-primary/20">
-                        <video ref={videoRef} autoPlay muted className="w-full h-full object-cover" />
-                        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                          <Button 
+                    <div className="space-y-6 animate-in fade-in zoom-in duration-300">
+                      <div className="relative rounded-3xl overflow-hidden bg-black aspect-video border-4 border-primary/20 shadow-2xl">
+                        <video 
+                          ref={videoRef} 
+                          autoPlay 
+                          muted 
+                          playsInline
+                          className="w-full h-full object-cover" 
+                        />
+                        
+                        <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6">
+                           <Button 
                             type="button" 
                             onClick={capturePhoto} 
-                            className="rounded-full w-16 h-16 bg-white hover:bg-slate-200 border-4 border-primary shadow-xl p-0"
+                            className="rounded-full w-20 h-20 bg-white hover:bg-slate-100 border-8 border-primary shadow-2xl flex items-center justify-center p-0 transition-transform active:scale-95"
                           >
-                            <div className="w-10 h-10 rounded-full bg-primary" />
+                             <div className="w-12 h-12 rounded-full bg-primary" />
                           </Button>
                         </div>
                       </div>
+                      
                       {!hasCameraPermission && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Acceso Requerido</AlertTitle>
-                          <AlertDescription>Por favor permite el acceso a la cámara en tu navegador.</AlertDescription>
+                        <Alert variant="destructive" className="rounded-2xl">
+                          <AlertTitle className="font-black">Cámara no detectada</AlertTitle>
+                          <AlertDescription>Por favor, haz clic en el botón de captura o revisa los permisos de tu navegador.</AlertDescription>
                         </Alert>
                       )}
+                      
+                      <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        Asegúrate de que el rostro del cliente sea claramente visible
+                      </p>
                     </div>
                   )}
 
                   {capturedPhoto && (
-                    <div className="relative rounded-2xl overflow-hidden border-4 border-green-500/20 aspect-video group">
+                    <div className="relative rounded-3xl overflow-hidden border-4 border-green-500/20 aspect-video group shadow-xl">
                       <img src={capturedPhoto} alt="Foto Cliente" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                        <Button type="button" variant="secondary" onClick={() => { setCapturedPhoto(null); startCamera(); }} className="rounded-xl font-bold">
-                          <RefreshCw className="w-4 h-4 mr-2" /> Repetir Foto
-                        </Button>
-                        <div className="bg-green-500 text-white p-3 rounded-full">
-                           <Check className="w-6 h-6" />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
+                        <div className="bg-green-500 text-white p-4 rounded-full shadow-2xl scale-110">
+                           <Check className="w-10 h-10" />
                         </div>
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          onClick={() => { setCapturedPhoto(null); startCamera(); }} 
+                          className="rounded-2xl font-black uppercase text-xs tracking-widest h-12 px-8 bg-white text-slate-900"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-3" /> Repetir Fotografía
+                        </Button>
                       </div>
                       <canvas ref={canvasRef} className="hidden" />
                     </div>
@@ -390,62 +411,61 @@ export default function NewCreditPage() {
                 <Button 
                   type="submit" 
                   disabled={loading || calculation.financedAmount <= 0 || !capturedPhoto} 
-                  className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white"
+                  className="w-full h-16 rounded-2xl text-xl font-black shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 text-white tracking-tight"
                 >
-                  {loading ? "Generando Crédito..." : "Finalizar y Crear Crédito"}
+                  {loading ? "Registrando expediente..." : "Finalizar y Crear Crédito"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
           <div className="space-y-6">
-            <Card className="border-none shadow-lg bg-primary text-white overflow-hidden relative">
+            <Card className="border-none shadow-2xl bg-primary text-white overflow-hidden relative rounded-[2rem]">
               <div className="absolute top-0 right-0 p-8 opacity-10">
                 <Smartphone className="w-32 h-32" />
               </div>
               <CardHeader>
-                <CardTitle>Resumen Financiero (COP)</CardTitle>
+                <CardTitle className="font-black tracking-tight">Resumen Financiero</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6 relative z-10">
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                  <span className="text-sm opacity-80">Precio Equipo</span>
-                  <span className="text-xl font-bold">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
+                  <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Precio Equipo</span>
+                  <span className="text-xl font-black">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                  <span className="text-sm opacity-80 text-accent font-bold">Cuota Inicial (-)</span>
-                  <span className="text-xl font-bold text-accent">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
+                  <span className="text-xs font-bold text-accent uppercase tracking-widest">Cuota Inicial (-)</span>
+                  <span className="text-xl font-black text-accent">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                  <span className="text-sm opacity-80">Monto a Financiar</span>
-                  <span className="text-xl font-bold">{formatCurrency(calculation.financedAmount)}</span>
+                  <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Monto Neto</span>
+                  <span className="text-xl font-black">{formatCurrency(calculation.financedAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm opacity-80">Recargo (+{calculation.interestRate}%)</span>
+                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Recargo ({calculation.interestRate}%)</span>
                   </div>
-                  <span className="text-xl font-bold text-accent">+{formatCurrency(calculation.totalAmount - calculation.financedAmount)}</span>
+                  <span className="text-xl font-black text-accent">+{formatCurrency(calculation.totalAmount - calculation.financedAmount)}</span>
                 </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-xs opacity-60 font-bold mb-1">Total a Pagar en Cuotas</p>
-                    <h2 className="text-2xl font-extrabold">{formatCurrency(calculation.totalAmount)}</h2>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs opacity-60 font-bold mb-1">Cuota Quincenal</p>
-                    <h3 className="text-xl font-bold">{formatCurrency(calculation.installmentAmount)}</h3>
+                <div className="pt-4">
+                  <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-2">Total a Financiar</p>
+                  <h2 className="text-4xl font-black tracking-tighter">{formatCurrency(calculation.totalAmount)}</h2>
+                  
+                  <div className="mt-6 p-4 bg-white/10 rounded-2xl border border-white/10">
+                    <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-1">Valor de la Cuota Quincenal</p>
+                    <h3 className="text-2xl font-black text-accent">{formatCurrency(calculation.installmentAmount)}</h3>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {capturedPhoto && (
-              <Card className="border-none shadow-sm overflow-hidden rounded-[2rem]">
+              <Card className="border-none shadow-lg overflow-hidden rounded-[2rem]">
                 <CardHeader className="bg-slate-900 text-white py-4">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <UserIcon className="w-4 h-4" /> Foto de Registro
+                  <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                    <UserIcon className="w-4 h-4 text-primary" /> Foto del Registro
                   </CardTitle>
                 </CardHeader>
-                <div className="p-2 bg-white">
+                <div className="p-3 bg-white">
                   <img src={capturedPhoto} alt="Previsualización" className="w-full rounded-2xl aspect-[4/3] object-cover" />
                 </div>
               </Card>
