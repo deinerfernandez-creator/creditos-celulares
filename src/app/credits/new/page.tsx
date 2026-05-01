@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -18,7 +17,8 @@ import {
   Check, 
   Search,
   User as UserIcon,
-  X
+  X,
+  Filter
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -26,19 +26,57 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
-const POPULAR_MODELS = [
-  "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
-  "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 13", "iPhone 11",
-  "Samsung Galaxy S24 Ultra", "Samsung Galaxy S24+", "Samsung Galaxy S24",
-  "Samsung Galaxy S23 Ultra", "Samsung Galaxy A54", "Samsung Galaxy A34",
-  "Samsung Galaxy A14", "Samsung Galaxy Z Fold 5", "Samsung Galaxy Z Flip 5",
-  "Xiaomi Redmi Note 13 Pro+", "Xiaomi Redmi Note 13", "Xiaomi 14 Ultra",
-  "Xiaomi Poco F5 Pro", "Xiaomi Redmi 12C", "Xiaomi 13T Pro",
-  "Motorola Edge 40 Pro", "Motorola Moto G84", "Motorola Moto G54",
-  "Motorola Razr 40 Ultra", "Google Pixel 8 Pro", "Google Pixel 8",
-  "Huawei P60 Pro", "Huawei Nova 11", "Infinix Note 30 Pro",
-  "Tecno Camon 20 Pro", "Realme 11 Pro+", "OPPO Reno 10 Pro"
-].sort();
+const PHONE_DATABASE = {
+  "Apple": [
+    "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15 Plus", "iPhone 15",
+    "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14 Plus", "iPhone 14",
+    "iPhone 13 Pro Max", "iPhone 13 Pro", "iPhone 13", "iPhone 13 Mini",
+    "iPhone 12 Pro Max", "iPhone 12 Pro", "iPhone 12", "iPhone 11",
+    "iPhone SE (2022)"
+  ],
+  "Samsung": [
+    "Galaxy S24 Ultra", "Galaxy S24+", "Galaxy S24",
+    "Galaxy S23 Ultra", "Galaxy S23 FE", "Galaxy S23",
+    "Galaxy S22 Ultra", "Galaxy A55", "Galaxy A35", "Galaxy A15",
+    "Galaxy A54 5G", "Galaxy A34 5G", "Galaxy A24", "Galaxy A14 5G",
+    "Galaxy A05s", "Galaxy Z Fold 5", "Galaxy Z Flip 5"
+  ],
+  "Xiaomi": [
+    "Redmi Note 13 Pro+ 5G", "Redmi Note 13 Pro", "Redmi Note 13",
+    "Redmi Note 12 Pro", "Redmi Note 12", "Redmi 13C", "Redmi 12",
+    "Xiaomi 14 Ultra", "Xiaomi 13T Pro", "Xiaomi 13T",
+    "POCO X6 Pro", "POCO F5 Pro", "POCO M6 Pro", "POCO C65"
+  ],
+  "Motorola": [
+    "Edge 50 Pro", "Edge 40 Neo", "Edge 40",
+    "Moto G84 5G", "Moto G54 5G", "Moto G24 Power", "Moto G14",
+    "Moto G04", "Razr 40 Ultra", "Moto E13"
+  ],
+  "Infinix": [
+    "Note 40 Pro", "Note 30 Pro", "Note 30 VIP",
+    "Hot 40 Pro", "Hot 30", "Hot 30i", "Smart 8 Pro"
+  ],
+  "Tecno": [
+    "Camon 30 Premier", "Camon 20 Pro", "Spark 20 Pro+",
+    "Spark 20", "Spark 10 Pro", "Pova 6 Pro", "Pova 5"
+  ],
+  "Realme": [
+    "Realme 12 Pro+", "Realme 11 Pro+", "Realme 11 5G",
+    "Realme C67", "Realme C55", "Realme C53"
+  ],
+  "Honor": [
+    "Honor Magic 6 Pro", "Honor 90", "Honor 90 Lite",
+    "Honor X8b", "Honor X7b"
+  ],
+  "Huawei": [
+    "P60 Pro", "Mate 50 Pro", "Nova 11", "Nova 11i"
+  ],
+  "ZTE": [
+    "Axon 50 5G", "Blade V50 Design", "Blade A54"
+  ]
+};
+
+const BRANDS = Object.keys(PHONE_DATABASE).sort();
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -62,6 +100,7 @@ export default function NewCreditPage() {
 
   const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState<string | 'all'>('all');
   const [deviceModel, setDeviceModel] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [imei, setImei] = useState('');
@@ -83,9 +122,20 @@ export default function NewCreditPage() {
     installmentAmount: 0
   });
 
-  const filteredModels = POPULAR_MODELS.filter(m => 
-    m.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getFilteredModels = () => {
+    let baseList: string[] = [];
+    if (selectedBrand === 'all') {
+      baseList = Object.values(PHONE_DATABASE).flat();
+    } else {
+      baseList = PHONE_DATABASE[selectedBrand as keyof typeof PHONE_DATABASE] || [];
+    }
+
+    return Array.from(new Set(baseList))
+      .filter(m => m.toLowerCase().includes(searchTerm.toLowerCase()))
+      .sort();
+  };
+
+  const filteredModels = getFilteredModels();
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -139,25 +189,14 @@ export default function NewCreditPage() {
       const context = canvas.getContext('2d');
 
       if (context && video.videoWidth > 0) {
-        // Ajustar canvas al tamaño del video
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        
-        // Dibujar frame actual del video en el canvas
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convertir a Base64
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
         setCapturedPhoto(photoData);
-        
-        // Detener la cámara
         stopCamera();
         setShowCamera(false);
-        
-        toast({
-          title: "Foto Capturada",
-          description: "La imagen se ha guardado correctamente.",
-        });
+        toast({ title: "Foto Capturada", description: "La imagen se ha guardado correctamente." });
       }
     }
   };
@@ -173,20 +212,12 @@ export default function NewCreditPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '') {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos requeridos.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Por favor completa todos los campos requeridos.", variant: "destructive" });
       return;
     }
 
     if (!capturedPhoto) {
-      toast({
-        title: "Foto Requerida",
-        description: "Debes tomar una foto del cliente para finalizar el proceso.",
-        variant: "destructive"
-      });
+      toast({ title: "Foto Requerida", description: "Debes tomar una foto del cliente para finalizar el proceso.", variant: "destructive" });
       return;
     }
 
@@ -209,30 +240,21 @@ export default function NewCreditPage() {
 
     addDoc(collection(db, 'credits'), creditData)
       .then(() => {
-        toast({
-          title: "Éxito",
-          description: "Crédito y foto registrados correctamente.",
-        });
+        toast({ title: "Éxito", description: "Crédito y foto registrados correctamente." });
         router.push('/');
       })
       .catch((error: any) => {
-        toast({
-          title: "Error",
-          description: "No se pudo crear el crédito: " + error.message,
-          variant: "destructive"
-        });
+        toast({ title: "Error", description: "No se pudo crear el crédito: " + error.message, variant: "destructive" });
         setLoading(false);
       });
   };
 
-  // Limpiar cámara si se desmonta el componente
   useEffect(() => {
     return () => stopCamera();
   }, []);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 flex items-center justify-center">
-      {/* Canvas oculto necesario para la captura - SIEMPRE EN EL DOM */}
       <canvas ref={canvasRef} className="hidden" />
 
       <div className="w-full max-w-5xl space-y-6">
@@ -267,26 +289,43 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="device-search" className="font-bold">Modelo de Celular</Label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input 
-                        id="device-search" 
-                        placeholder="Busca el modelo..." 
-                        className="pl-10 rounded-xl h-12 mb-2"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        disabled={loading}
-                      />
+                    <Label className="font-bold">Marca y Modelo</Label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex gap-2">
+                        <div className="w-1/3">
+                          <Select onValueChange={setSelectedBrand} value={selectedBrand} disabled={loading}>
+                            <SelectTrigger className="rounded-xl h-12">
+                              <SelectValue placeholder="Marca" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas</SelectItem>
+                              {BRANDS.map(brand => (
+                                <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1 relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="Buscar modelo..." 
+                            className="pl-10 rounded-xl h-12"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      
                       <Select onValueChange={setDeviceModel} value={deviceModel} disabled={loading} required>
                         <SelectTrigger className="rounded-xl h-12">
-                          <SelectValue placeholder="O elige de la lista..." />
+                          <SelectValue placeholder="Selecciona el modelo exacto..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {filteredModels.map((m) => (
                             <SelectItem key={m} value={m}>{m}</SelectItem>
                           ))}
-                          {searchTerm && !POPULAR_MODELS.includes(searchTerm) && (
+                          {searchTerm && !filteredModels.includes(searchTerm) && (
                              <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
                           )}
                         </SelectContent>
@@ -366,7 +405,6 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                {/* Camera Section */}
                 <div className="space-y-4 border-t pt-8">
                   <Label className="text-lg font-black flex items-center gap-2 text-slate-900">
                     <Camera className="w-5 h-5 text-primary" /> Registro Fotográfico
@@ -419,10 +457,6 @@ export default function NewCreditPage() {
                           <AlertDescription>Por favor, haz clic en "Iniciar Cámara" o revisa los permisos de tu navegador.</AlertDescription>
                         </Alert>
                       )}
-                      
-                      <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                        Asegúrate de que el rostro del cliente sea claramente visible
-                      </p>
                     </div>
                   )}
 
@@ -479,9 +513,7 @@ export default function NewCreditPage() {
                   <span className="text-xl font-black">{formatCurrency(calculation.financedAmount)}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Recargo ({calculation.interestRate}%)</span>
-                  </div>
+                  <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Recargo ({calculation.interestRate}%)</span>
                   <span className="text-xl font-black text-accent">+{formatCurrency(calculation.totalAmount - calculation.financedAmount)}</span>
                 </div>
                 <div className="pt-4">
