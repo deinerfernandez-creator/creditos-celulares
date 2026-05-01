@@ -280,14 +280,14 @@ export default function CustomerPortalDashboard() {
                 <DialogHeader className="text-center">
                   <DialogTitle className="text-2xl font-black text-primary">Pago vía Nequi</DialogTitle>
                   <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">
-                    Escanea y envía el comprobante
+                    Tecnicell Rio Verde - Deiner Fernandez
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-col items-center justify-center space-y-6 py-4">
                   <div className="relative w-64 h-64 border-8 border-slate-50 rounded-[2rem] shadow-inner overflow-hidden">
                     <Image 
-                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/qr/400/400"} 
-                      alt="Nequi QR" 
+                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/nequi/400/400"} 
+                      alt="Nequi QR Tecnicell" 
                       fill 
                       className="object-cover" 
                       data-ai-hint="qr code"
@@ -304,7 +304,7 @@ export default function CustomerPortalDashboard() {
                   </div>
                 </div>
                 <Button className="w-full rounded-2xl h-14 font-black text-lg gap-2" asChild>
-                  <a href="https://wa.me/tu_numero_aqui" target="_blank">
+                  <a href="https://wa.me/573009823029" target="_blank">
                     Enviar Comprobante <ExternalLink className="w-5 h-5" />
                   </a>
                 </Button>
@@ -445,7 +445,7 @@ export default function CustomerPortalDashboard() {
             <p className="text-base font-black text-amber-900 mb-1 tracking-tight">Recordatorio de Seguridad</p>
             <p className="text-xs text-amber-800 leading-relaxed font-medium">
               Mantener tu crédito al día evita el bloqueo remoto de tu equipo {credit.deviceModel}. 
-              Los pagos digitales deben ser notificados vía WhatsApp para actualizar tu saldo en el sistema.
+              Los pagos digitales deben ser notificados vía WhatsApp (+57 300 9823029) para actualizar tu saldo en el sistema.
             </p>
           </div>
         </div>

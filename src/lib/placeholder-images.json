@@ -8,8 +8,8 @@
     },
     {
       "id": "qr-nequi",
-      "description": "Código QR de Nequi para pagos digitales",
-      "imageUrl": "https://picsum.photos/seed/nequi/400/400",
+      "description": "Código QR de Nequi Tecnicell Rio Verde - Deiner Fernandez",
+      "imageUrl": "https://picsum.photos/seed/nequi-tecnicell/400/400",
       "imageHint": "qr code"
     }
   ]
