@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -10,13 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Smartphone, ChevronLeft, Calendar, Info, Hash } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { MOCK_CUSTOMERS } from '@/lib/mock-data';
 import Link from 'next/link';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export default function NewCreditPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const db = useFirestore();
   
+  // Fetch real customers
+  const customersQuery = query(collection(db, 'customers'), orderBy('name', 'asc'));
+  const { data: customers } = useCollection(customersQuery);
+
+  const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const [deviceModel, setDeviceModel] = useState('');
   const [imei, setImei] = useState('');
@@ -47,12 +55,12 @@ export default function NewCreditPage() {
     }
   }, [initialAmount, planType]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !deviceModel || !imei || !initialAmount) {
       toast({
         title: "Error",
-        description: "Por favor completa todos los campos requeridos, incluyendo el IMEI.",
+        description: "Por favor completa todos los campos requeridos.",
         variant: "destructive"
       });
       return;
@@ -67,12 +75,36 @@ export default function NewCreditPage() {
       return;
     }
 
-    toast({
-      title: "Éxito",
-      description: "Crédito registrado correctamente. Generando plan de pagos...",
-    });
-    
-    setTimeout(() => router.push('/'), 2000);
+    setLoading(true);
+    try {
+      await addDoc(collection(db, 'credits'), {
+        customerId,
+        deviceModel,
+        imei,
+        initialAmount: parseFloat(initialAmount),
+        totalAmount: calculation.totalAmount,
+        planType: parseInt(planType),
+        installmentAmount: calculation.installmentAmount,
+        remainingBalance: calculation.totalAmount,
+        status: 'activo',
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Éxito",
+        description: "Crédito registrado correctamente.",
+      });
+      
+      router.push('/');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "No se pudo crear el crédito: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,12 +128,12 @@ export default function NewCreditPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="customer">Cliente</Label>
-                    <Select onValueChange={setCustomerId} required>
+                    <Select onValueChange={setCustomerId} disabled={loading} required>
                       <SelectTrigger className="rounded-xl h-12">
                         <SelectValue placeholder="Selecciona un cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        {MOCK_CUSTOMERS.map(c => (
+                        {customers?.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>{c.name} ({c.cedula})</SelectItem>
                         ))}
                       </SelectContent>
@@ -118,6 +150,7 @@ export default function NewCreditPage() {
                         className="pl-10 rounded-xl h-12"
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
+                        disabled={loading}
                         required
                       />
                     </div>
@@ -133,6 +166,7 @@ export default function NewCreditPage() {
                         className="pl-10 rounded-xl h-12 font-mono text-sm"
                         value={imei}
                         onChange={(e) => setImei(e.target.value)}
+                        disabled={loading}
                         required
                       />
                     </div>
@@ -147,6 +181,7 @@ export default function NewCreditPage() {
                       className="rounded-xl h-12 text-lg font-semibold"
                       value={initialAmount}
                       onChange={(e) => setInitialAmount(e.target.value)}
+                      disabled={loading}
                       required
                     />
                   </div>
@@ -157,6 +192,7 @@ export default function NewCreditPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       type="button"
+                      disabled={loading}
                       onClick={() => setPlanType('6')}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
                     >
@@ -165,6 +201,7 @@ export default function NewCreditPage() {
                     </button>
                     <button
                       type="button"
+                      disabled={loading}
                       onClick={() => setPlanType('12')}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
                     >
@@ -174,8 +211,8 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white transition-all transform hover:scale-[1.01]">
-                  Generar Crédito y Plan de Pagos
+                <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white transition-all transform hover:scale-[1.01]">
+                  {loading ? "Creando Crédito..." : "Generar Crédito y Plan de Pagos"}
                 </Button>
               </form>
             </CardContent>

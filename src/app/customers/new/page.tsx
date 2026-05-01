@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -10,11 +11,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Users, ChevronLeft, Mail, Phone, MapPin, Fingerprint } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function NewCustomerPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const db = useFirestore();
   
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     cedula: '',
@@ -23,7 +28,7 @@ export default function NewCustomerPage() {
     address: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.phone || !formData.cedula) {
       toast({
@@ -34,12 +39,28 @@ export default function NewCustomerPage() {
       return;
     }
 
-    toast({
-      title: "Éxito",
-      description: "Cliente registrado correctamente.",
-    });
-    
-    setTimeout(() => router.push('/'), 1500);
+    setLoading(true);
+    try {
+      await addDoc(collection(db, 'customers'), {
+        ...formData,
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Éxito",
+        description: "Cliente registrado correctamente.",
+      });
+      
+      router.push('/');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el cliente: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,6 +98,7 @@ export default function NewCustomerPage() {
                       className="pl-10 rounded-xl h-12"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      disabled={loading}
                       required
                     />
                   </div>
@@ -91,6 +113,7 @@ export default function NewCustomerPage() {
                       className="pl-10 rounded-xl h-12"
                       value={formData.cedula}
                       onChange={(e) => setFormData({...formData, cedula: e.target.value})}
+                      disabled={loading}
                       required
                     />
                   </div>
@@ -109,6 +132,7 @@ export default function NewCustomerPage() {
                       className="pl-10 rounded-xl h-12"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -122,6 +146,7 @@ export default function NewCustomerPage() {
                       className="pl-10 rounded-xl h-12"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      disabled={loading}
                       required
                     />
                   </div>
@@ -138,12 +163,13 @@ export default function NewCustomerPage() {
                     className="pl-10 rounded-xl min-h-[100px] pt-3"
                     value={formData.address}
                     onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    disabled={loading}
                   />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
-                Guardar Cliente
+              <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
+                {loading ? "Guardando..." : "Guardar Cliente"}
               </Button>
             </form>
           </CardContent>

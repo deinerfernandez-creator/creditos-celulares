@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -19,11 +20,9 @@ import {
   CreditCard, 
   PlusCircle, 
   Smartphone, 
-  ArrowUpRight, 
   AlertCircle,
   TrendingUp,
   Search,
-  ChevronRight,
   LogOut,
   Bell,
   Hash
@@ -34,17 +33,26 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { MOCK_CREDITS, MOCK_CUSTOMERS } from '@/lib/mock-data';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const db = useFirestore();
+
+  // Fetch real data from Firestore
+  const customersQuery = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
+  const { data: customers } = useCollection(customersQuery);
+
+  const creditsQuery = query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
+  const { data: credits } = useCollection(creditsQuery);
 
   const stats = [
-    { title: "Créditos Activos", value: "24", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
-    { title: "Próximos Pagos", value: "12", icon: Bell, color: "text-accent", bg: "bg-accent/10" },
-    { title: "Cuentas Atrasadas", value: "3", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
+    { title: "Créditos Activos", value: credits?.length.toString() || "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
+    { title: "Clientes Totales", value: customers?.length.toString() || "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Cuentas Atrasadas", value: credits?.filter((c: any) => c.status === 'atrasado').length.toString() || "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
     { title: "Recaudación Mes", value: "$4,520", icon: TrendingUp, color: "text-green-600", bg: "bg-green-100" },
   ];
 
@@ -149,8 +157,8 @@ export default function DashboardPage() {
                         <CardTitle className="text-lg">Créditos Recientes</CardTitle>
                         <CardDescription>Ultimos movimientos de la semana</CardDescription>
                       </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href="/credits">Ver todos</Link>
+                      <Button variant="outline" size="sm" asChild onClick={() => setActiveTab('credits')}>
+                        <span>Ver todos</span>
                       </Button>
                     </CardHeader>
                     <CardContent>
@@ -166,13 +174,13 @@ export default function DashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {MOCK_CREDITS.map((credit) => {
-                            const customer = MOCK_CUSTOMERS.find(c => c.id === credit.customerId);
+                          {credits?.slice(0, 5).map((credit: any) => {
+                            const customer = customers?.find((c: any) => c.id === credit.customerId);
                             const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
                             return (
                               <TableRow key={credit.id} className="cursor-pointer group">
                                 <TableCell>
-                                  <div className="font-medium">{customer?.name}</div>
+                                  <div className="font-medium">{customer?.name || 'Cargando...'}</div>
                                   <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
                                 </TableCell>
                                 <TableCell>
@@ -245,19 +253,17 @@ export default function DashboardPage() {
                           <TableHead>Email</TableHead>
                           <TableHead>Teléfono</TableHead>
                           <TableHead>Dirección</TableHead>
-                          <TableHead>Fecha Registro</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {MOCK_CUSTOMERS.map(c => (
+                        {customers?.map((c: any) => (
                           <TableRow key={c.id}>
                             <TableCell className="font-medium">{c.name}</TableCell>
                             <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
                             <TableCell>{c.email}</TableCell>
                             <TableCell>{c.phone}</TableCell>
                             <TableCell className="max-w-xs truncate">{c.address}</TableCell>
-                            <TableCell>{c.createdAt}</TableCell>
                             <TableCell>
                               <Button variant="ghost" size="sm">Editar</Button>
                             </TableCell>
@@ -294,13 +300,13 @@ export default function DashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {MOCK_CREDITS.map(credit => {
-                            const customer = MOCK_CUSTOMERS.find(c => c.id === credit.customerId);
+                          {credits?.map((credit: any) => {
+                            const customer = customers?.find((c: any) => c.id === credit.customerId);
                             return (
                               <TableRow key={credit.id}>
-                                <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id}</TableCell>
+                                <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id.slice(0, 5)}</TableCell>
                                 <TableCell>
-                                  <div className="font-medium">{customer?.name}</div>
+                                  <div className="font-medium">{customer?.name || 'Cargando...'}</div>
                                   <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
                                 </TableCell>
                                 <TableCell>
