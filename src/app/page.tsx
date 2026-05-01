@@ -50,9 +50,9 @@ export default function DashboardPage() {
   const { data: credits } = useCollection(creditsQuery);
 
   const stats = [
-    { title: "Créditos Activos", value: credits?.length.toString() || "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
-    { title: "Clientes Totales", value: customers?.length.toString() || "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
-    { title: "Cuentas Atrasadas", value: credits?.filter((c: any) => c.status === 'atrasado').length.toString() || "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
+    { title: "Créditos Activos", value: credits ? credits.length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
+    { title: "Clientes Totales", value: customers ? customers.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Cuentas Atrasadas", value: credits ? credits.filter((c: any) => c.status === 'atrasado').length.toString() : "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
     { title: "Recaudación Mes", value: "$4,520", icon: TrendingUp, color: "text-green-600", bg: "bg-green-100" },
   ];
 
