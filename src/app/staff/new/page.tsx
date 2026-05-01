@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -24,8 +23,8 @@ export default function NewStaffPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    role: 'vendedor',
-    uid: '' // El ID de usuario debe ser obtenido tras crear el usuario en Auth manualmente o vía consola
+    role: 'vendedor' as 'vendedor' | 'admin',
+    uid: '' 
   });
 
   useEffect(() => {
@@ -61,7 +60,6 @@ export default function NewStaffPage() {
       createdAt: serverTimestamp(),
     };
 
-    // Guardamos el permiso en la colección de usuarios habilitados
     setDoc(doc(db, 'users', formData.uid), staffData)
       .then(() => {
         toast({
@@ -107,7 +105,7 @@ export default function NewStaffPage() {
               <ShieldAlert className="w-5 h-5 shrink-0 text-amber-500" />
               <div>
                 <p className="font-bold">Instrucciones Importantes:</p>
-                <p className="mt-1">1. Crea primero el usuario en la <strong>Consola de Firebase > Authentication</strong>.</p>
+                <p className="mt-1">1. Crea primero el usuario en la <strong>Consola de Firebase &gt; Authentication</strong>.</p>
                 <p>2. Copia el <strong>User UID</strong> generado.</p>
                 <p>3. Pégalo aquí para habilitar su acceso al panel.</p>
               </div>
@@ -161,7 +159,7 @@ export default function NewStaffPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="role">Rol en el Sistema</Label>
-                <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+                <Select value={formData.role} onValueChange={(val: 'vendedor' | 'admin') => setFormData({...formData, role: val})}>
                   <SelectTrigger className="rounded-xl h-12">
                     <SelectValue placeholder="Selecciona un rol" />
                   </SelectTrigger>
