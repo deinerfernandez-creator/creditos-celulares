@@ -7,11 +7,12 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, Mail, Lock, Loader2, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { firebaseConfig } from '@/firebase/config';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +22,19 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const isConfigMissing = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined' || firebaseConfig.apiKey === '';
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isConfigMissing) {
+      toast({
+        title: "Configuración incompleta",
+        description: "Falta la API Key de Firebase. Por favor, configúrala en el archivo src/firebase/config.ts",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -33,15 +45,18 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
+      console.error("Login Error:", error.code, error.message);
+      
       let message = "Credenciales inválidas. Verifica tu correo y contraseña.";
       
-      // Manejo de errores específicos de Firebase Auth para guiar al usuario
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/invalid-api-key' || error.code === 'auth/network-request-failed') {
+        message = "Error técnico: La API Key de Firebase no es válida o no hay conexión.";
+      } else if (error.code === 'auth/user-not-found') {
         message = "El usuario no existe. Regístralo en la consola de Firebase.";
-      } else if (error.code === 'auth/wrong-password') {
-        message = "La contraseña es incorrecta.";
-      } else if (error.code === 'auth/invalid-credential') {
+      } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         message = "Correo o contraseña incorrectos.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "Demasiados intentos fallidos. Intenta más tarde.";
       }
 
       toast({
@@ -59,6 +74,13 @@ export default function LoginPage() {
         <Button variant="ghost" asChild className="rounded-xl text-slate-500">
           <Link href="/portal"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Portal de Clientes</Link>
         </Button>
+
+        {isConfigMissing && (
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex gap-3 text-amber-800 text-sm mb-4 shadow-sm animate-pulse">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500" />
+            <p><strong>Atención:</strong> No has configurado las credenciales de Firebase. El inicio de sesión no funcionará hasta que añadas tu API Key en <code>src/firebase/config.ts</code>.</p>
+          </div>
+        )}
 
         <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
           <CardHeader className="bg-primary text-white text-center pb-8">
@@ -109,8 +131,8 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="bg-slate-50 p-6 text-center border-t">
             <div className="space-y-2 w-full">
-              <p className="text-xs text-slate-500 italic">
-                Usa el correo administrador con la contraseña 12345678.
+              <p className="text-xs text-slate-500">
+                Asegúrate de haber creado el usuario en la Consola de Firebase > Authentication.
               </p>
             </div>
           </CardFooter>

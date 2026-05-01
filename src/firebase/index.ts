@@ -16,15 +16,15 @@ export function initializeFirebase() {
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
-    // Si la config no es válida, usamos una de respaldo para evitar crashes, 
-    // pero Firestore dará error de permisos o proyecto no encontrado.
+    // Si no hay configuración válida, inicializamos con un objeto vacío para evitar que la app explote,
+    // pero las funciones de Auth y Firestore fallarán con errores descriptivos.
     firebaseApp = initializeApp(isConfigValid ? firebaseConfig : {
-      apiKey: "placeholder-key",
-      authDomain: "placeholder.firebaseapp.com",
-      projectId: "tecnicell-placeholder",
-      storageBucket: "tecnicell-placeholder.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef"
+      apiKey: "MISSING_API_KEY",
+      authDomain: "missing-project.firebaseapp.com",
+      projectId: "missing-project",
+      storageBucket: "missing-project.appspot.com",
+      messagingSenderId: "000000000",
+      appId: "0:000000000:web:000000000"
     });
   }
 
