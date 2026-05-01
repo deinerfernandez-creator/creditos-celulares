@@ -2,18 +2,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función ultra-simplificada para el Administrador Maestro
-    function isMasterAdmin() {
-      return request.auth != null && 
-             request.auth.token.email == "deinerfernandez@gmail.com";
+    // Función para validar si es el administrador principal
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == "deinerfernandez@gmail.com" || 
+        request.auth.uid == "XZ8jrnB1LEhCkqv74Lro6O6VW313"
+      );
     }
 
-    // Acceso Maestro y Público
+    // Regla global: Lectura permitida para todos (Portal de Clientes y Dashboard)
+    // Escritura permitida únicamente para el Administrador Maestro
     match /{document=**} {
-      // Lectura pública para Dashboard y Portal de Clientes
       allow read: if true;
-      // Solo el Administrador Maestro puede crear, editar o borrar datos
-      allow write: if isMasterAdmin();
+      allow write: if isAdmin();
     }
   }
 }

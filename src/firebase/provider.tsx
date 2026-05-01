@@ -59,9 +59,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // PRIORIDAD: Identificar al Administrador Maestro instantáneamente por email
         const userEmail = firebaseUser.email?.toLowerCase();
-        if (userEmail === 'deinerfernandez@gmail.com') {
+        const userUid = firebaseUser.uid;
+
+        // ACCESO MAESTRO: Detección prioritaria por Email o UID conocido
+        if (userEmail === 'deinerfernandez@gmail.com' || userUid === 'XZ8jrnB1LEhCkqv74Lro6O6VW313') {
           setUserAuthState({ 
             user: firebaseUser, 
             role: 'admin', 
@@ -71,7 +73,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           return;
         }
 
-        // Para otros usuarios, intentar obtener el rol desde Firestore
         try {
           const userDoc = await getDoc(doc(firestore, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
