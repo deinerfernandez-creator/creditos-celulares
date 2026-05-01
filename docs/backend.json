@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Customer": {
@@ -7,35 +6,15 @@
       "type": "object",
       "description": "Represents a customer who applies for a credit in Tecnicell Créditos.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "cedula": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "phone": {
-          "type": "string"
-        },
-        "address": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cedula": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "name",
-        "cedula",
-        "phone"
-      ]
+      "required": ["name", "cedula", "phone"]
     },
     "Credit": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -43,60 +22,20 @@
       "type": "object",
       "description": "Represents a credit application for a customer.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "customerId": {
-          "type": "string"
-        },
-        "deviceModel": {
-          "type": "string"
-        },
-        "imei": {
-          "type": "string"
-        },
-        "initialAmount": {
-          "type": "number",
-          "description": "The total price of the device."
-        },
-        "downPayment": {
-          "type": "number",
-          "description": "The initial amount paid by the customer."
-        },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total amount to be paid in installments after interest."
-        },
-        "planType": {
-          "type": "number"
-        },
-        "installmentAmount": {
-          "type": "number"
-        },
-        "remainingBalance": {
-          "type": "number"
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "activo",
-            "completado",
-            "atrasado"
-          ]
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "deviceModel": { "type": "string" },
+        "imei": { "type": "string" },
+        "initialAmount": { "type": "number" },
+        "downPayment": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "planType": { "type": "number" },
+        "installmentAmount": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "status": { "type": "string", "enum": ["activo", "completado", "atrasado"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "customerId",
-        "deviceModel",
-        "imei",
-        "initialAmount",
-        "downPayment",
-        "status"
-      ]
+      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -104,28 +43,13 @@
       "type": "object",
       "description": "Records a payment made towards a credit.",
       "properties": {
-        "id": {
-          "type": "string"
-        },
-        "creditId": {
-          "type": "string"
-        },
-        "amount": {
-          "type": "number"
-        },
-        "date": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "staffId": {
-          "type": "string"
-        }
+        "id": { "type": "string" },
+        "creditId": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "staffId": { "type": "string" }
       },
-      "required": [
-        "creditId",
-        "amount",
-        "date"
-      ]
+      "required": ["creditId", "amount", "date"]
     },
     "StaffUser": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -133,81 +57,34 @@
       "type": "object",
       "description": "Internal staff user with specific roles and permissions.",
       "properties": {
-        "uid": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "enum": [
-            "admin",
-            "vendedor"
-          ]
-        },
-        "name": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "vendedor"] },
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "email",
-        "role"
-      ]
+      "required": ["email", "role"]
     }
   },
   "auth": {
-    "providers": [
-      "password"
-    ]
+    "providers": ["password"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/customers/{customerId}",
-        "definition": {
-          "entityName": "Customer",
-          "schema": {
-            "$ref": "#/backend/entities/Customer"
-          },
-          "description": "Root collection for all customer profiles."
-        }
-      },
-      {
-        "path": "/credits/{creditId}",
-        "definition": {
-          "entityName": "Credit",
-          "schema": {
-            "$ref": "#/backend/entities/Credit"
-          },
-          "description": "Root collection for all credit applications."
-        }
-      },
-      {
-        "path": "/payments/{paymentId}",
-        "definition": {
-          "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Global collection for all payments made."
-        }
-      },
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "StaffUser",
-          "schema": {
-            "$ref": "#/backend/entities/StaffUser"
-          },
-          "description": "User profiles for staff members including their roles."
-        }
-      }
-    ]
+    "/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Root collection for all customer profiles."
+    },
+    "/credits/{creditId}": {
+      "schema": "Credit",
+      "description": "Root collection for all credit applications."
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Global collection for all payments made."
+    },
+    "/users/{userId}": {
+      "schema": "StaffUser",
+      "description": "User profiles for staff members including their roles."
+    }
   }
 }

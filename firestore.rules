@@ -2,8 +2,7 @@
  * TECNICELL CRÉDITOS FIRESTORE SECURITY RULES
  * 
  * CORE PHILOSOPHY:
- * This ruleset implements an internal staff-management model. Access is strictly controlled 
- * via a check against the /users collection OR a master admin email.
+ * Acceso basado en roles internos. El administrador maestro tiene acceso total.
  */
 
 rules_version = '2';
@@ -17,46 +16,35 @@ service cloud.firestore {
     }
 
     /** 
-     * @description Checks if the user is a staff member (admin or vendedor).
-     * Hardcoded master admin email for bootstrapping and emergency access.
+     * @description Verifica si el usuario es parte del staff.
+     * Prioriza al administrador maestro por correo electrónico.
      */
     function isStaff() {
-      let isMasterAdmin = request.auth.token.email == 'deinerfernandez@gmail.com';
-      let hasStaffRole = exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-                          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'vendedor');
+      if (!isSignedIn()) return false;
       
-      return isSignedIn() && (isMasterAdmin || hasStaffRole);
+      // Acceso directo para el administrador maestro
+      if (request.auth.token.email == 'deinerfernandez@gmail.com') return true;
+      
+      // Verificación de rol en la colección de usuarios
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) && 
+             (get(userPath).data.role == 'admin' || get(userPath).data.role == 'vendedor');
     }
 
     // --- COLLECTION RULES ---
 
-    /**
-     * @description Root collection for customers.
-     */
     match /customers/{customerId} {
       allow read, write: if isStaff();
     }
 
-    /**
-     * @description Root collection for credits.
-     */
     match /credits/{creditId} {
       allow read, write: if isStaff();
     }
 
-    /**
-     * @description Root collection for payments.
-     */
     match /payments/{paymentId} {
       allow read, write: if isStaff();
     }
 
-    /**
-     * @description Root collection for user profiles and roles.
-     * Signed in users can read their own profile to verify roles.
-     * Staff can manage other users.
-     */
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isStaff();
