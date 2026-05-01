@@ -2,32 +2,39 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // REGLA MAESTRA: El administrador maestro tiene acceso TOTAL
-    match /{document=**} {
-      allow read, write: if request.auth != null && 
-                          request.auth.token.email == "deinerfernandez@gmail.com";
+    // Función para verificar si es el administrador maestro
+    function isMasterAdmin() {
+      return request.auth != null && 
+             request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // ACCESO PORTAL DE CLIENTES: Lectura pública para búsqueda por Cédula/IMEI
-    // El usuario pidió quitar restricciones para que solo ingresen con esos datos
+    // Colección de Clientes: Lectura pública para búsqueda en el portal
     match /customers/{customerId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isMasterAdmin();
     }
 
+    // Colección de Créditos: Lectura pública para búsqueda en el portal
     match /credits/{creditId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isMasterAdmin();
     }
 
+    // Colección de Pagos: Lectura pública para ver historial de abonos
     match /payments/{paymentId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isMasterAdmin();
     }
 
+    // Perfiles de Usuario (Staff)
     match /users/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isMasterAdmin();
+    }
+
+    // Regla de respaldo: El administrador maestro tiene acceso TOTAL a todo lo demás
+    match /{document=**} {
+      allow read, write: if isMasterAdmin();
     }
   }
 }
