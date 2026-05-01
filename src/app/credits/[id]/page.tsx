@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -25,7 +26,8 @@ import {
   Trash2,
   CalendarDays,
   Clock,
-  User as UserIcon
+  User as UserIcon,
+  DollarSign
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -66,7 +68,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -366,17 +367,21 @@ export default function CreditDetailPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Saldo Actual</p>
-                  <p className="text-2xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cuota Inicial</p>
+                  <p className="text-lg font-black text-green-600">{formatCurrency(credit.downPayment)}</p>
                 </div>
-                <div className="p-5 bg-primary/5 rounded-[1.5rem] border border-primary/10 text-right">
+                <div className="p-4 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Saldo Actual</p>
+                  <p className="text-lg font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</p>
+                </div>
+                <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 text-right">
                   <div className="flex items-center justify-end gap-2 mb-1">
                     <TrendingUp className="w-3 h-3 text-primary" />
                     <p className="text-[10px] font-black uppercase text-primary tracking-widest">Progreso</p>
                   </div>
-                  <p className="text-2xl font-black text-primary">{Math.round(progress)}%</p>
+                  <p className="text-xl font-black text-primary">{Math.round(progress)}%</p>
                 </div>
               </div>
             </CardContent>
