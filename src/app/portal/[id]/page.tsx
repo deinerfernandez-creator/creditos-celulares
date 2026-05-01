@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -286,7 +285,7 @@ export default function CustomerPortalDashboard() {
                 <div className="flex flex-col items-center justify-center space-y-6 py-4">
                   <div className="relative w-64 h-64 border-8 border-slate-50 rounded-[2rem] shadow-inner overflow-hidden">
                     <Image 
-                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/nequi/400/400"} 
+                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/400/400"} 
                       alt="Nequi QR Tecnicell" 
                       fill 
                       className="object-cover" 
@@ -299,7 +298,7 @@ export default function CustomerPortalDashboard() {
                       <li>1. Escanea el código desde tu App Nequi.</li>
                       <li>2. Realiza el abono de tu cuota.</li>
                       <li>3. Toma captura del comprobante.</li>
-                      <li>4. Envía la foto a nuestro WhatsApp oficial.</li>
+                      <li>4. Envía la foto a nuestro WhatsApp oficial (+57 300 9823029).</li>
                     </ol>
                   </div>
                 </div>
