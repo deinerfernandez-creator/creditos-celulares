@@ -73,22 +73,20 @@ export default function DashboardPage() {
     if (mounted && !authLoading && !user) {
       router.push('/login');
     }
-    if (mounted && !authLoading && user && role === 'cliente') {
-      router.push('/portal');
-    }
-  }, [user, authLoading, router, role, mounted]);
+  }, [user, authLoading, router, mounted]);
 
+  // Queries con useMemoFirebase para estabilidad
   const customersQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
     return query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
   }, [db, mounted]);
-  const { data: customers } = useCollection(customersQuery);
+  const { data: customers, isLoading: loadingCustomers } = useCollection(customersQuery);
 
   const creditsQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
     return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   }, [db, mounted]);
-  const { data: credits } = useCollection(creditsQuery);
+  const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
 
   if (!mounted || authLoading) {
     return (
@@ -234,8 +232,8 @@ export default function DashboardPage() {
                         <CardTitle className="text-lg font-black text-slate-900">Créditos Recientes</CardTitle>
                         <CardDescription className="text-xs font-medium">Últimos movimientos del sistema</CardDescription>
                       </div>
-                      <Button variant="ghost" size="sm" asChild className="rounded-full text-primary font-bold">
-                        <Link href="/credits">Ver todos</Link>
+                      <Button variant="ghost" size="sm" onClick={() => setActiveTab('credits')} className="rounded-full text-primary font-bold">
+                        Ver todos
                       </Button>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -250,13 +248,17 @@ export default function DashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {credits && credits.length > 0 ? (
+                          {loadingCredits ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin inline-block mr-2" /> Cargando...</TableCell>
+                            </TableRow>
+                          ) : credits && credits.length > 0 ? (
                             credits.slice(0, 5).map((credit: any) => {
                               const customer = customers?.find((c: any) => c.id === credit.customerId);
                               return (
                                 <TableRow key={credit.id} className="cursor-pointer group hover:bg-slate-50 transition-all">
                                   <TableCell className="px-8">
-                                    <div className="font-bold text-slate-900">{customer?.name || 'Cargando...'}</div>
+                                    <div className="font-bold text-slate-900">{customer?.name || '---'}</div>
                                     <div className="text-[10px] text-slate-400 font-medium">CC: {customer?.cedula}</div>
                                   </TableCell>
                                   <TableCell>
@@ -346,7 +348,11 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {customers && customers.length > 0 ? (
+                        {loadingCustomers ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin inline-block mr-2" /> Cargando...</TableCell>
+                          </TableRow>
+                        ) : customers && customers.length > 0 ? (
                           customers.map((c: any) => {
                             const latestCredit = credits?.find((cr: any) => cr.customerId === c.id);
                             return (
@@ -358,7 +364,9 @@ export default function DashboardPage() {
                                   {latestCredit ? getStatusBadge(latestCredit.status) : <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin Créditos</span>}
                                 </TableCell>
                                 <TableCell className="pr-8 text-right">
-                                  <Button variant="ghost" size="sm" className="rounded-xl font-bold text-slate-400 hover:text-primary">Editar</Button>
+                                  <Button variant="ghost" size="sm" asChild className="rounded-xl font-bold text-slate-400 hover:text-primary">
+                                    <Link href={`/credits?customerId=${c.id}`}>Ver créditos</Link>
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             );
@@ -367,6 +375,68 @@ export default function DashboardPage() {
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-medium italic">
                               No hay clientes registrados en el sistema.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'credits' && (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center">
+                   <div>
+                     <h3 className="text-3xl font-black text-slate-900 tracking-tight">Gestión de Créditos</h3>
+                     <p className="text-sm text-slate-500 font-medium">Control total de financiamientos y estados</p>
+                   </div>
+                   <Button asChild className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-primary/20">
+                     <Link href="/credits/new"><PlusCircle className="mr-2 h-5 w-5" /> Nueva Solicitud</Link>
+                   </Button>
+                </div>
+                <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white border border-slate-100">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader className="bg-slate-50/50">
+                        <TableRow className="border-none">
+                          <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Cliente / Equipo</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Identificador IMEI</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Saldo Pendiente</TableHead>
+                          <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Estado</TableHead>
+                          <TableHead className="pr-8 text-right font-black uppercase text-[10px] tracking-widest text-slate-400">Acción</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loadingCredits ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin inline-block mr-2" /> Cargando...</TableCell>
+                          </TableRow>
+                        ) : credits && credits.length > 0 ? (
+                          credits.map((cr: any) => {
+                            const customer = customers?.find((c: any) => c.id === cr.customerId);
+                            return (
+                              <TableRow key={cr.id} className="hover:bg-slate-50 border-slate-50 transition-all">
+                                <TableCell className="px-8">
+                                  <div className="font-bold text-slate-900">{customer?.name || '---'}</div>
+                                  <div className="text-[10px] text-primary font-black uppercase">{cr.deviceModel}</div>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs text-slate-500">{cr.imei}</TableCell>
+                                <TableCell className="font-black text-slate-900">{formatCurrency(cr.remainingBalance)}</TableCell>
+                                <TableCell>{getStatusBadge(cr.status)}</TableCell>
+                                <TableCell className="pr-8 text-right">
+                                  <Button variant="outline" size="sm" asChild className="rounded-xl font-bold">
+                                    <Link href={`/credits/${cr.id}`}>Detalles</Link>
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-20 text-slate-400 font-medium italic">
+                              No hay créditos registrados.
                             </TableCell>
                           </TableRow>
                         )}

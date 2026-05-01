@@ -8,10 +8,30 @@ service cloud.firestore {
              request.auth.token.email.lowerCase() == "deinerfernandez@gmail.com";
     }
 
-    // ACCESO TOTAL PARA EL ADMINISTRADOR
-    // LECTURA PÚBLICA PARA EL PORTAL DE CLIENTES
-    // Se permite lectura pública total para que el portal de búsqueda (Cédula + IMEI)
-    // funcione sin necesidad de autenticación previa, tal como se solicitó.
+    // ACCESO DE LECTURA PÚBLICO
+    // Permitimos lectura total para que el portal de clientes (Cédula + IMEI) 
+    // y el dashboard administrativo funcionen sin bloqueos de permisos.
+    match /customers/{customerId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+    
+    match /credits/{creditId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+    
+    match /payments/{paymentId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+    
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isMasterAdmin();
+    }
+
+    // Regla de respaldo para cualquier otra colección
     match /{document=**} {
       allow read: if true;
       allow write: if isMasterAdmin();
