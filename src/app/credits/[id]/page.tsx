@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -26,8 +25,24 @@ import {
   Receipt,
   Trash2
 } from 'lucide-react';
-import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, query, where, orderBy, addDoc, serverTimestamp, increment, deleteDoc } from 'firebase/firestore';
+import { 
+  useFirestore, 
+  useDoc, 
+  useCollection, 
+  useMemoFirebase,
+  deleteDocumentNonBlocking
+} from '@/firebase';
+import { 
+  doc, 
+  updateDoc, 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  addDoc, 
+  serverTimestamp, 
+  increment 
+} from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -108,7 +123,7 @@ export default function CreditDetailPage() {
       await updateDoc(doc(db, 'credits', id), { status: newStatus });
       toast({ title: "Estado actualizado", description: `El crédito ahora está ${newStatus}.` });
     } catch (err: any) {
-      toast({ title: "Error de permisos", description: "No tienes autorización para cambiar el estado.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
     } finally {
       setUpdating(false);
     }
@@ -145,15 +160,11 @@ export default function CreditDetailPage() {
     }
   };
 
-  const handleDeleteCredit = async () => {
+  const handleDeleteCredit = () => {
     if (!id || !db) return;
-    try {
-      await deleteDoc(doc(db, 'credits', id));
-      toast({ title: "Expediente Eliminado", description: "El crédito ha sido removido satisfactoriamente." });
-      router.push('/');
-    } catch (e) {
-      toast({ title: "Error", description: "No se pudo eliminar el registro.", variant: "destructive" });
-    }
+    deleteDocumentNonBlocking(doc(db, 'credits', id));
+    toast({ title: "Expediente Eliminado", description: "El crédito ha sido removido satisfactoriamente." });
+    router.push('/');
   };
 
   const progress = useMemo(() => {

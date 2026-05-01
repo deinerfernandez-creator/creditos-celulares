@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -37,8 +36,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { 
+  useFirestore, 
+  useCollection, 
+  useUser, 
+  useAuth, 
+  useMemoFirebase,
+  deleteDocumentNonBlocking
+} from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -97,22 +103,14 @@ export default function DashboardPage() {
   }, [db, mounted]);
   const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
 
-  const handleDeleteCustomer = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'customers', id));
-      toast({ title: "Cliente eliminado", description: "Los datos han sido removidos de la base de datos." });
-    } catch (e) {
-      toast({ title: "Error", description: "No se pudo eliminar el cliente.", variant: "destructive" });
-    }
+  const handleDeleteCustomer = (id: string) => {
+    deleteDocumentNonBlocking(doc(db, 'customers', id));
+    toast({ title: "Cliente eliminado", description: "Los datos han sido removidos satisfactoriamente." });
   };
 
-  const handleDeleteCredit = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'credits', id));
-      toast({ title: "Crédito eliminado", description: "El expediente del equipo ha sido removido." });
-    } catch (e) {
-      toast({ title: "Error", description: "No se pudo eliminar el crédito.", variant: "destructive" });
-    }
+  const handleDeleteCredit = (id: string) => {
+    deleteDocumentNonBlocking(doc(db, 'credits', id));
+    toast({ title: "Crédito eliminado", description: "El expediente ha sido removido." });
   };
 
   if (!mounted || authLoading) {

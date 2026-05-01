@@ -2,17 +2,17 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función para identificar al Administrador Maestro (Tú)
+    // Función ultra-simplificada para el Administrador Maestro
     function isMasterAdmin() {
       return request.auth != null && 
-             request.auth.token.email.lowerCase() == "deinerfernandez@gmail.com";
+             request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // ACCESO DE LECTURA PÚBLICO
-    // Permitimos lectura a todas las colecciones para que el Dashboard y el Portal de Clientes
-    // (que usa búsqueda por Cédula + IMEI) funcionen sin bloqueos de permisos.
+    // Acceso Maestro y Público
     match /{document=**} {
+      // Lectura pública para Dashboard y Portal de Clientes
       allow read: if true;
+      // Solo el Administrador Maestro puede crear, editar o borrar datos
       allow write: if isMasterAdmin();
     }
   }
