@@ -31,7 +31,8 @@ import {
   ShieldCheck,
   UserCheck,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  UserCog
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,8 +41,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -50,6 +52,7 @@ export default function DashboardPage() {
   const auth = useAuth();
   const router = useRouter();
   const db = useFirestore();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -109,6 +112,23 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
+  const handleToggleRole = async (staffId: string, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'vendedor' : 'admin';
+    try {
+      await updateDoc(doc(db, 'users', staffId), { role: newRole });
+      toast({
+        title: "Rol Actualizado",
+        description: `Usuario cambiado a ${newRole}.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: "No se pudo cambiar el rol: " + err.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full overflow-hidden bg-background">
@@ -120,7 +140,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>
-                <Badge className="bg-white/20 hover:bg-white/30 border-none text-[10px] py-0">{isAdmin ? 'ADMIN' : 'VENDEDOR'}</Badge>
+                <Badge className="bg-white/20 hover:bg-white/30 border-none text-[10px] py-0 uppercase tracking-tighter">{role}</Badge>
               </div>
             </div>
           </SidebarHeader>
@@ -451,10 +471,9 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nombre / Email</TableHead>
-                          <TableHead>Rol</TableHead>
+                          <TableHead>Rol Actual</TableHead>
                           <TableHead>Fecha Registro</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead></TableHead>
+                          <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -474,17 +493,22 @@ export default function DashboardPage() {
                                 {s.createdAt?.toDate ? s.createdAt.toDate().toLocaleDateString() : 'Reciente'}
                               </TableCell>
                               <TableCell>
-                                <Badge variant="outline" className="text-[10px] border-green-200 text-green-600 bg-green-50">Activo</Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="sm">Editar</Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleToggleRole(s.id, s.role)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <UserCog className="w-4 h-4" /> 
+                                  Cambiar a {s.role === 'admin' ? 'Vendedor' : 'Admin'}
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground italic">
-                              No hay personal registrado fuera del administrador maestro.
+                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground italic">
+                              No hay personal registrado en la base de datos de usuarios.
                             </TableCell>
                           </TableRow>
                         )}

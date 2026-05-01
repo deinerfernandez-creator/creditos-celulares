@@ -20,8 +20,8 @@ export function useUser() {
       if (authUser) {
         setUser(authUser);
         
-        // Bootstrap: Identificar al administrador maestro por correo
-        if (authUser.email === 'deinerfernandez@gmail.com') {
+        // Bootstrap: Identificar al administrador maestro por correo (case-insensitive)
+        if (authUser.email?.toLowerCase() === 'deinerfernandez@gmail.com') {
           setRole('admin');
           setLoading(false);
           return;
