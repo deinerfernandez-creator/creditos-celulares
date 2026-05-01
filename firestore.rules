@@ -2,39 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función para verificar si es el administrador maestro
+    // Función para identificar al Administrador Maestro
     function isMasterAdmin() {
       return request.auth != null && 
-             request.auth.token.email == "deinerfernandez@gmail.com";
+             request.auth.token.email.lowerCase() == "deinerfernandez@gmail.com";
     }
 
-    // Colección de Clientes: Lectura pública para búsqueda en el portal
-    match /customers/{customerId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-
-    // Colección de Créditos: Lectura pública para búsqueda en el portal
-    match /credits/{creditId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-
-    // Colección de Pagos: Lectura pública para ver historial de abonos
-    match /payments/{paymentId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-
-    // Perfiles de Usuario (Staff)
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-
-    // Regla de respaldo: El administrador maestro tiene acceso TOTAL a todo lo demás
+    // ACCESO TOTAL PARA EL ADMINISTRADOR
     match /{document=**} {
       allow read, write: if isMasterAdmin();
+    }
+
+    // ACCESO PARA EL PORTAL DE CLIENTES (Según solicitud del usuario)
+    // Se permite lectura pública total para facilitar la búsqueda por Cédula/IMEI 
+    // sin necesidad de autenticación forzosa en el portal.
+    match /customers/{customerId} {
+      allow read: if true;
+    }
+
+    match /credits/{creditId} {
+      allow read: if true;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if true;
     }
   }
 }
