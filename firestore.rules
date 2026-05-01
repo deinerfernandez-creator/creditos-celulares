@@ -7,7 +7,7 @@
  * /staffRoles collection OR a master admin email authorizes a user.
  * 
  * DATA STRUCTURE:
- * The data is organized into root-level collections: /customers and /credits.
+ * The data is organized into root-level collections: /customers, /credits, and /payments.
  * 
  * KEY SECURITY DECISIONS:
  * 1. Role-Based Access: All operations require the user to be an authorized staff member.
@@ -57,6 +57,13 @@ service cloud.firestore {
      * @description Root collection for credits.
      */
     match /credits/{creditId} {
+      allow read, write: if isStaff();
+    }
+
+    /**
+     * @description Root collection for payments.
+     */
+    match /payments/{paymentId} {
       allow read, write: if isStaff();
     }
 
