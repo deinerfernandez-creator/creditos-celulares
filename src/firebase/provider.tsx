@@ -59,18 +59,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Lógica de Bootstrapping para el Administrador Maestro
+        // PRIORIDAD MÁXIMA: Identificar al Administrador Maestro de forma instantánea
         if (firebaseUser.email?.toLowerCase() === 'deinerfernandez@gmail.com') {
-          setUserAuthState({ user: firebaseUser, role: 'admin', isUserLoading: false, userError: null });
+          setUserAuthState({ 
+            user: firebaseUser, 
+            role: 'admin', 
+            isUserLoading: false, 
+            userError: null 
+          });
           return;
         }
 
-        // Intentar obtener rol desde Firestore
+        // Para otros usuarios, consultar el rol en Firestore
         try {
           const userDoc = await getDoc(doc(firestore, 'users', firebaseUser.uid));
           const role = userDoc.exists() ? (userDoc.data().role as UserRole) : 'cliente';
           setUserAuthState({ user: firebaseUser, role, isUserLoading: false, userError: null });
         } catch (e) {
+          // Fallback a cliente si hay error de permisos al leer el perfil propio
           setUserAuthState({ user: firebaseUser, role: 'cliente', isUserLoading: false, userError: null });
         }
       } else {
