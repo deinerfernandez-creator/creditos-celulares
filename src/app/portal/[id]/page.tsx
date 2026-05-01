@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -24,7 +23,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Loader2,
-  LayoutDashboard
+  Receipt,
+  AlertCircle
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -47,13 +47,13 @@ export default function CustomerPortalPage() {
   const db = useFirestore();
   
   const customerRef = useMemoFirebase(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
-  const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
+  const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
   const creditsQuery = useMemoFirebase(() => {
     if (!id || !db) return null;
     return query(collection(db, 'credits'), where("customerId", "==", id), orderBy("createdAt", "desc"));
   }, [db, id]);
-  const { data: credits, loading: loadingCredits } = useCollection(creditsQuery);
+  const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
   
   const credit = credits?.[0];
 
@@ -72,7 +72,7 @@ export default function CustomerPortalPage() {
             loanAmount: credit.initialAmount,
             totalAmountDue: credit.totalAmount,
             remainingBalance: credit.remainingBalance,
-            nextPaymentDate: "Próximamente",
+            nextPaymentDate: "Según cronograma",
             paymentFrequency: 'quincenal',
             paymentHistory: []
           });
@@ -100,22 +100,25 @@ export default function CustomerPortalPage() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8 text-center">
         <Card className="max-w-md w-full p-12 border-none shadow-xl rounded-3xl">
-          <ShieldCheck className="w-16 h-16 text-slate-200 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold">No se encontraron créditos</h2>
-          <p className="text-slate-500 mt-2 mb-8">No tienes planes activos registrados con nosotros.</p>
-          <Button onClick={() => router.push('/portal')} variant="outline" className="rounded-xl h-12 w-full">Volver</Button>
+          <AlertCircle className="w-16 h-16 text-destructive/20 mx-auto mb-6" />
+          <h2 className="text-2xl font-bold">Información no disponible</h2>
+          <p className="text-slate-500 mt-2 mb-8">No pudimos encontrar datos vinculados a tu perfil.</p>
+          <Button onClick={() => router.push('/portal')} variant="outline" className="rounded-xl h-12 w-full">Volver al inicio</Button>
         </Card>
       </div>
     );
   }
 
   const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
+  const installmentsPaid = Math.floor((credit.totalAmount - credit.remainingBalance) / credit.installmentAmount);
+  const totalInstallments = credit.planType;
+  const remainingInstallments = Math.max(0, totalInstallments - installmentsPaid);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <header className="bg-white border-b sticky top-0 z-20 px-4 h-16 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+          <Link href="/portal" className="flex items-center gap-2">
             <div className="relative w-10 h-10 overflow-hidden rounded-lg bg-white border border-slate-100 p-1 flex items-center justify-center">
                <Image 
                 src={logo?.imageUrl || '/logo.png'} 
@@ -126,11 +129,7 @@ export default function CustomerPortalPage() {
               />
             </div>
             <span className="font-black text-xl tracking-tight text-primary">Tecnicell</span>
-          </div>
-          <div className="h-6 w-px bg-slate-200 hidden md:block" />
-          <Button variant="ghost" size="sm" asChild className="hidden md:flex rounded-xl text-slate-500 hover:text-primary transition-colors">
-            <Link href="/"><LayoutDashboard className="w-4 h-4 mr-2" /> Admin</Link>
-          </Button>
+          </Link>
         </div>
         
         <div className="flex items-center gap-2">
@@ -141,11 +140,19 @@ export default function CustomerPortalPage() {
       </header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black text-slate-900">Hola, {customer.name.split(' ')[0]} 👋</h1>
-          <p className="text-slate-500 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-green-500" /> Tu equipo {credit.deviceModel} está registrado
-          </p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black text-slate-900">Hola, {customer.name}</h1>
+            <p className="text-slate-500 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-green-500" /> Cédula: {customer.cedula}
+            </p>
+          </div>
+          <Badge className={`rounded-full px-6 py-1 capitalize text-sm font-bold ${
+            credit.status === 'activo' ? 'bg-green-500' : 
+            credit.status === 'pagado' ? 'bg-primary' : 'bg-destructive'
+          }`}>
+            Estado: {credit.status}
+          </Badge>
         </div>
 
         <Card className="border-none shadow-xl bg-gradient-to-br from-primary to-primary/80 text-white overflow-hidden relative rounded-3xl">
@@ -155,7 +162,7 @@ export default function CustomerPortalPage() {
           <CardHeader className="relative z-10 pb-0">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BrainCircuit className="w-5 h-5 text-accent" />
-              Estado de tu Crédito (Análisis IA)
+              Resumen de Cuenta (IA)
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10 pt-4">
@@ -179,13 +186,13 @@ export default function CustomerPortalPage() {
               <div className="p-4 bg-accent/10 text-accent rounded-2xl">
                 <DollarSign className="w-6 h-6" />
               </div>
-              <Badge variant="outline" className="border-slate-100 bg-slate-50 text-slate-500 rounded-full font-bold">Saldo Actual</Badge>
+              <Badge variant="outline" className="border-slate-100 bg-slate-50 text-slate-500 rounded-full font-bold">Saldo Pendiente</Badge>
             </div>
             <h2 className="text-3xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</h2>
-            <p className="text-sm text-slate-500 mt-2 font-medium">De un total pactado de {formatCurrency(credit.totalAmount)}</p>
+            <p className="text-sm text-slate-500 mt-2 font-medium">De un total de {formatCurrency(credit.totalAmount)}</p>
             <div className="mt-8 space-y-2">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <span>Progreso de Pago</span>
+                <span>Progreso del Crédito</span>
                 <span>{Math.round(progress)}%</span>
               </div>
               <Progress value={progress} className="h-3 rounded-full bg-slate-100" />
@@ -195,18 +202,28 @@ export default function CustomerPortalPage() {
           <Card className="border-none shadow-sm bg-white rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-4">
               <div className="p-4 bg-primary/10 text-primary rounded-2xl">
-                <Calendar className="w-6 h-6" />
+                <Receipt className="w-6 h-6" />
               </div>
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none rounded-full px-4 py-1 font-bold">Plan Quincenal</Badge>
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none rounded-full px-4 py-1 font-bold">Cuotas</Badge>
             </div>
-            <div className="space-y-1">
-              <h2 className="text-3xl font-black text-slate-900">{formatCurrency(credit.installmentAmount)}</h2>
-              <p className="text-lg font-bold text-primary flex items-center gap-2">
-                <Clock className="w-5 h-5" /> Cuota fija de tu plan
-              </p>
+            <div className="space-y-4">
+              <div className="flex items-end gap-2">
+                <h2 className="text-4xl font-black text-slate-900">{remainingInstallments}</h2>
+                <p className="text-slate-500 font-bold mb-1">Cuotas restantes</p>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-slate-600">
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span>{installmentsPaid} pagadas</span>
+                </div>
+                <div className="w-px h-4 bg-slate-200" />
+                <div className="font-bold text-primary">
+                  Valor cuota: {formatCurrency(credit.installmentAmount)}
+                </div>
+              </div>
             </div>
-            <Button className="w-full mt-8 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl h-14 font-bold shadow-lg shadow-slate-200">
-              ¿Cómo realizar pagos? <ChevronRight className="ml-2 w-5 h-5" />
+            <Button className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl h-14 font-bold shadow-lg shadow-slate-200">
+              ¿Cómo pagar mi cuota? <ChevronRight className="ml-2 w-5 h-5" />
             </Button>
           </Card>
         </div>
@@ -224,13 +241,12 @@ export default function CustomerPortalPage() {
                 <p className="text-xs font-mono text-slate-500 mt-1">IMEI: {credit.imei}</p>
               </div>
             </div>
-            <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10 flex items-start gap-4">
-              <ShieldCheck className="w-6 h-6 text-primary shrink-0" />
+            <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
+              <Clock className="w-6 h-6 text-amber-600 shrink-0" />
               <div>
-                <p className="text-xs text-primary font-black mb-2 italic">Aviso de Bloqueo:</p>
+                <p className="text-xs text-amber-700 font-black mb-2 italic">Importante:</p>
                 <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  Para mantener tu equipo desbloqueado, asegúrate de realizar tus pagos antes de la fecha de vencimiento. 
-                  En caso de retraso, el sistema procederá al bloqueo automático hasta que se registre el pago.
+                  Recuerda realizar tus pagos quincenales a tiempo. Si tienes dudas sobre tu fecha de pago o necesitas soporte técnico, visítanos en nuestra tienda física.
                 </p>
               </div>
             </div>
