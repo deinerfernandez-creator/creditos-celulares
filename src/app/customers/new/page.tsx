@@ -30,9 +30,10 @@ export default function NewCustomerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!formData.name || !formData.phone || !formData.cedula) {
       toast({
-        title: "Error",
+        title: "Campos faltantes",
         description: "Nombre, Cédula y Teléfono son obligatorios.",
         variant: "destructive"
       });
@@ -40,26 +41,36 @@ export default function NewCustomerPage() {
     }
 
     setLoading(true);
+    
     try {
-      await addDoc(collection(db, 'customers'), {
-        ...formData,
+      // Validamos si db está disponible
+      if (!db) throw new Error("La base de datos no está inicializada.");
+
+      const docRef = await addDoc(collection(db, 'customers'), {
+        name: formData.name,
+        cedula: formData.cedula,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
         createdAt: serverTimestamp(),
       });
 
-      toast({
-        title: "Éxito",
-        description: "Cliente registrado correctamente.",
-      });
-      
-      router.push('/');
+      if (docRef.id) {
+        toast({
+          title: "¡Éxito!",
+          description: "Cliente registrado correctamente.",
+        });
+        router.push('/');
+        router.refresh();
+      }
     } catch (error: any) {
+      console.error("Error guardando cliente:", error);
       toast({
-        title: "Error",
-        description: "No se pudo guardar el cliente: " + error.message,
+        title: "Error al guardar",
+        description: error.message || "No se pudo conectar con el servidor. Verifica tu conexión.",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
+      setLoading(false); // Solo reseteamos si hay error, si tiene éxito redirigimos
     }
   };
 
@@ -169,7 +180,7 @@ export default function NewCustomerPage() {
               </div>
 
               <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
-                {loading ? "Guardando..." : "Guardar Cliente"}
+                {loading ? "Procesando..." : "Guardar Cliente"}
               </Button>
             </form>
           </CardContent>

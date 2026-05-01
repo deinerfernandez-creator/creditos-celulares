@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -10,21 +11,20 @@ let firestore: Firestore;
 let auth: Auth;
 
 export function initializeFirebase() {
-  // Verificación básica para evitar errores de inicialización si la configuración está vacía
-  const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+  const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== '' && firebaseConfig.apiKey !== 'undefined';
 
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
-    // Si no hay config válida, usamos un objeto vacío para evitar el crash inmediato en desarrollo,
-    // aunque los servicios de Firebase no funcionarán hasta que se configure correctamente.
+    // Si la config no es válida, usamos una de respaldo para evitar crashes, 
+    // pero Firestore dará error de permisos o proyecto no encontrado.
     firebaseApp = initializeApp(isConfigValid ? firebaseConfig : {
       apiKey: "placeholder-key",
       authDomain: "placeholder.firebaseapp.com",
-      projectId: "placeholder-project",
-      storageBucket: "placeholder.appspot.com",
-      messagingSenderId: "placeholder",
-      appId: "placeholder"
+      projectId: "tecnicell-placeholder",
+      storageBucket: "tecnicell-placeholder.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
     });
   }
 
