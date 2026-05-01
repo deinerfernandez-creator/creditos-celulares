@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Card, 
@@ -25,7 +26,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -55,21 +56,39 @@ export default function CustomerPortalDashboard() {
   const customerRef = useMemoFirebase(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
-  // 2. Obtener Créditos del Cliente
+  // 2. Obtener Créditos del Cliente (Sin orderBy para evitar error de índice)
   const creditsQuery = useMemoFirebase(() => {
     if (!id || !db) return null;
-    return query(collection(db, 'credits'), where("customerId", "==", id), orderBy("createdAt", "desc"));
+    return query(collection(db, 'credits'), where("customerId", "==", id));
   }, [db, id]);
-  const { data: credits, isLoading: loadingCredits } = useCollection(creditsQuery);
+  const { data: creditsData, isLoading: loadingCredits } = useCollection(creditsQuery);
   
-  const credit = credits?.[0];
+  // Ordenar en memoria
+  const credit = useMemo(() => {
+    if (!creditsData || creditsData.length === 0) return null;
+    return [...creditsData].sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    })[0];
+  }, [creditsData]);
 
-  // 3. Obtener Historial de Pagos
+  // 3. Obtener Historial de Pagos (Sin orderBy para evitar error de índice)
   const paymentsQuery = useMemoFirebase(() => {
     if (!credit?.id || !db) return null;
-    return query(collection(db, 'payments'), where("creditId", "==", credit.id), orderBy("date", "desc"));
+    return query(collection(db, 'payments'), where("creditId", "==", credit.id));
   }, [db, credit?.id]);
-  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
+  const { data: paymentsData, isLoading: loadingPayments } = useCollection(paymentsQuery);
+
+  // Ordenar en memoria
+  const payments = useMemo(() => {
+    if (!paymentsData) return null;
+    return [...paymentsData].sort((a, b) => {
+      const dateA = a.date?.seconds || 0;
+      const dateB = b.date?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [paymentsData]);
 
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
@@ -87,7 +106,7 @@ export default function CustomerPortalDashboard() {
             nextPaymentDate: "Próxima quincena",
             paymentFrequency: 'quincenal',
             paymentHistory: payments.map(p => ({
-              date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : String(p.date),
+              date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : '---',
               amount: p.amount
             }))
           });
@@ -128,7 +147,7 @@ export default function CustomerPortalDashboard() {
   }
 
   const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
-  const remainingInstallments = Math.ceil(credit.remainingBalance / credit.installmentAmount);
+  const remainingInstallments = credit.installmentAmount > 0 ? Math.ceil(credit.remainingBalance / credit.installmentAmount) : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 font-body">
@@ -272,7 +291,7 @@ export default function CustomerPortalDashboard() {
                       <div>
                         <p className="text-lg font-black text-slate-900">{formatCurrency(p.amount)}</p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : String(p.date)}
+                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
                         </p>
                       </div>
                     </div>

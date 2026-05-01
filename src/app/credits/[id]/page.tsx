@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -38,7 +39,6 @@ import {
   collection, 
   query, 
   where, 
-  orderBy, 
   addDoc, 
   serverTimestamp, 
   increment 
@@ -109,12 +109,22 @@ export default function CreditDetailPage() {
   const customerRef = useMemoFirebase(() => credit?.customerId && mounted ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId, mounted]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
-  // Fetch Payments History
+  // Fetch Payments History (Sin orderBy para evitar error de índice compuesto)
   const paymentsQuery = useMemoFirebase(() => {
     if (!id || !db || !mounted) return null;
-    return query(collection(db, 'payments'), where("creditId", "==", id), orderBy("date", "desc"));
+    return query(collection(db, 'payments'), where("creditId", "==", id));
   }, [db, id, mounted]);
-  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
+  const { data: paymentsData, isLoading: loadingPayments } = useCollection(paymentsQuery);
+
+  // Ordenar en memoria
+  const payments = useMemo(() => {
+    if (!paymentsData) return null;
+    return [...paymentsData].sort((a, b) => {
+      const dateA = a.date?.seconds || 0;
+      const dateB = b.date?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [paymentsData]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id || !db) return;
