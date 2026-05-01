@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -267,46 +268,52 @@ export default function CustomerPortalDashboard() {
             </div>
             <div>
               <h3 className="text-lg font-black">¿Pagar con Nequi?</h3>
-              <p className="text-xs text-slate-400 font-medium mt-1">Escanea nuestro QR para abonar a tu cuenta de forma digital.</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">Usa nuestro QR oficial para tus abonos quincenales.</p>
             </div>
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="w-full rounded-xl font-black bg-primary hover:bg-primary/90 text-xs tracking-widest uppercase">
-                  Ver QR de Nequi
+                <Button className="w-full rounded-xl font-black bg-primary hover:bg-primary/90 text-xs tracking-widest uppercase h-12">
+                  Ver QR de Pago
                 </Button>
               </DialogTrigger>
-              <DialogContent className="rounded-[2.5rem] sm:max-w-[400px]">
-                <DialogHeader className="text-center">
-                  <DialogTitle className="text-2xl font-black text-primary">Pago vía Nequi</DialogTitle>
-                  <DialogDescription className="font-bold text-slate-500 uppercase text-[10px] tracking-widest">
-                    Tecnicell Rio Verde - Deiner Fernandez
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex flex-col items-center justify-center space-y-6 py-4">
-                  <div className="relative w-64 h-64 border-8 border-slate-50 rounded-[2rem] shadow-inner overflow-hidden">
-                    <Image 
-                      src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/400/400"} 
-                      alt="Nequi QR Tecnicell" 
-                      fill 
-                      className="object-cover" 
-                      data-ai-hint="qr code"
-                    />
+              <DialogContent className="rounded-[2.5rem] sm:max-w-[420px] bg-slate-900 border-slate-800 p-0 overflow-hidden">
+                <div className="bg-gradient-to-b from-primary/20 to-slate-900 p-8">
+                  <DialogHeader className="text-center space-y-2">
+                    <DialogTitle className="text-2xl font-black text-white">Pago vía Nequi</DialogTitle>
+                    <div className="space-y-0.5">
+                      <p className="font-black text-accent uppercase text-[12px] tracking-widest">Tecnicell Rio Verde</p>
+                      <p className="font-bold text-slate-400 text-[10px] tracking-widest uppercase">Deiner Fernandez</p>
+                    </div>
+                  </DialogHeader>
+                  <div className="flex flex-col items-center justify-center space-y-6 py-6">
+                    <div className="relative w-64 h-80 bg-white rounded-2xl shadow-2xl p-4 overflow-hidden flex flex-col items-center">
+                       <div className="relative w-full h-full">
+                          <Image 
+                            src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/600/800"} 
+                            alt="Nequi QR Tecnicell" 
+                            fill 
+                            className="object-contain" 
+                            data-ai-hint="nequi qr code"
+                          />
+                       </div>
+                    </div>
+                    <div className="w-full space-y-4">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center">Instrucciones de Pago</p>
+                        <ul className="text-xs font-medium text-slate-300 space-y-2">
+                          <li className="flex gap-3"><span className="text-primary font-black">1.</span> Escanea el código desde tu app Nequi.</li>
+                          <li className="flex gap-3"><span className="text-primary font-black">2.</span> Realiza el abono de tu cuota quincenal.</li>
+                          <li className="flex gap-3"><span className="text-primary font-black">3.</span> Envía el comprobante al WhatsApp oficial.</li>
+                        </ul>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center space-y-2">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Pasos a seguir:</p>
-                    <ol className="text-sm font-medium text-slate-600 space-y-1 text-left inline-block">
-                      <li>1. Escanea el código desde tu App Nequi.</li>
-                      <li>2. Realiza el abono de tu cuota.</li>
-                      <li>3. Toma captura del comprobante.</li>
-                      <li>4. Envía la foto a nuestro WhatsApp oficial (+57 300 9823029).</li>
-                    </ol>
-                  </div>
+                  <Button className="w-full rounded-2xl h-16 font-black text-lg gap-3 bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20" asChild>
+                    <a href="https://wa.me/573009823029" target="_blank">
+                      <ExternalLink className="w-6 h-6" /> Enviar Comprobante
+                    </a>
+                  </Button>
                 </div>
-                <Button className="w-full rounded-2xl h-14 font-black text-lg gap-2" asChild>
-                  <a href="https://wa.me/573009823029" target="_blank">
-                    Enviar Comprobante <ExternalLink className="w-5 h-5" />
-                  </a>
-                </Button>
               </DialogContent>
             </Dialog>
           </Card>
