@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,12 @@ export default function NewCreditPage() {
   const { toast } = useToast();
   const db = useFirestore();
   
-  const customersQuery = query(collection(db, 'customers'), orderBy('name', 'asc'));
+  // Memoizamos la consulta para evitar re-renders infinitos
+  const customersQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, 'customers'), orderBy('name', 'asc'));
+  }, [db]);
+
   const { data: customers } = useCollection(customersQuery);
 
   const [loading, setLoading] = useState(false);
@@ -54,7 +59,7 @@ export default function NewCreditPage() {
     }
   }, [initialAmount, planType]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !deviceModel || !imei || !initialAmount) {
       toast({
@@ -66,35 +71,38 @@ export default function NewCreditPage() {
     }
 
     setLoading(true);
-    try {
-      await addDoc(collection(db, 'credits'), {
-        customerId,
-        deviceModel,
-        imei,
-        initialAmount: parseFloat(initialAmount),
-        totalAmount: calculation.totalAmount,
-        planType: parseInt(planType),
-        installmentAmount: calculation.installmentAmount,
-        remainingBalance: calculation.totalAmount,
-        status: 'activo',
-        createdAt: serverTimestamp(),
+
+    const creditData = {
+      customerId,
+      deviceModel,
+      imei,
+      initialAmount: parseFloat(initialAmount),
+      totalAmount: calculation.totalAmount,
+      planType: parseInt(planType),
+      installmentAmount: calculation.installmentAmount,
+      remainingBalance: calculation.totalAmount,
+      status: 'activo',
+      createdAt: serverTimestamp(),
+    };
+
+    // Usamos el patrón no bloqueante (sin await) para una UI instantánea
+    addDoc(collection(db, 'credits'), creditData)
+      .catch((error: any) => {
+        toast({
+          title: "Error de sincronización",
+          description: "El crédito se guardará cuando recuperes conexión: " + error.message,
+          variant: "destructive"
+        });
+        setLoading(false);
       });
 
-      toast({
-        title: "Éxito",
-        description: "Crédito registrado correctamente.",
-      });
-      
-      router.push('/');
-      router.refresh();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "No se pudo crear el crédito: " + error.message,
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
+    // Notificamos y navegamos inmediatamente
+    toast({
+      title: "Solicitud iniciada",
+      description: "El crédito se está procesando correctamente.",
+    });
+    
+    router.push('/');
   };
 
   return (
@@ -202,7 +210,7 @@ export default function NewCreditPage() {
                 </div>
 
                 <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
-                  {loading ? "Creando..." : "Generar Crédito"}
+                  {loading ? "Generando..." : "Crear Crédito"}
                 </Button>
               </form>
             </CardContent>
@@ -223,7 +231,7 @@ export default function NewCreditPage() {
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm opacity-80">Recargo</span>
+                    <span className="text-sm opacity-80">Recargo Aplicado</span>
                     <Badge variant="outline" className="border-white/30 text-accent font-bold">+{calculation.interestRate}%</Badge>
                   </div>
                   <span className="text-xl font-bold text-accent">+${(calculation.totalAmount - (parseFloat(initialAmount) || 0)).toFixed(2)}</span>

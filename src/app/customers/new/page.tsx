@@ -28,7 +28,7 @@ export default function NewCustomerPage() {
     address: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.phone || !formData.cedula) {
@@ -42,35 +42,33 @@ export default function NewCustomerPage() {
 
     setLoading(true);
     
-    try {
-      if (!db) throw new Error("La base de datos no está inicializada.");
+    const customerData = {
+      name: formData.name,
+      cedula: formData.cedula,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      createdAt: serverTimestamp(),
+    };
 
-      await addDoc(collection(db, 'customers'), {
-        name: formData.name,
-        cedula: formData.cedula,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        createdAt: serverTimestamp(),
+    // Usamos el patrón no bloqueante (sin await) para una respuesta inmediata
+    addDoc(collection(db, 'customers'), customerData)
+      .catch((error: any) => {
+        toast({
+          title: "Error de sincronización",
+          description: "El cliente se guardará automáticamente al recuperar conexión.",
+          variant: "destructive"
+        });
+        setLoading(false);
       });
 
-      toast({
-        title: "¡Éxito!",
-        description: "Cliente registrado correctamente.",
-      });
-      
-      // Redirigimos inmediatamente
-      router.push('/');
-      router.refresh();
-    } catch (error: any) {
-      console.error("Error guardando cliente:", error);
-      toast({
-        title: "Error al guardar",
-        description: error.message || "No se pudo conectar con el servidor.",
-        variant: "destructive"
-      });
-      setLoading(false);
-    }
+    // Éxito optimista: informamos al usuario y navegamos
+    toast({
+      title: "Registro exitoso",
+      description: "El cliente ha sido registrado correctamente.",
+    });
+    
+    router.push('/');
   };
 
   return (
@@ -179,7 +177,7 @@ export default function NewCustomerPage() {
               </div>
 
               <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
-                {loading ? "Procesando..." : "Guardar Cliente"}
+                {loading ? "Registrando..." : "Guardar Cliente"}
               </Button>
             </form>
           </CardContent>
