@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Users, ChevronLeft, Mail, Phone, MapPin } from 'lucide-react';
+import { Users, ChevronLeft, Mail, Phone, MapPin, Fingerprint } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -17,6 +17,7 @@ export default function NewCustomerPage() {
   
   const [formData, setFormData] = useState({
     name: '',
+    cedula: '',
     email: '',
     phone: '',
     address: ''
@@ -24,10 +25,10 @@ export default function NewCustomerPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.phone) {
+    if (!formData.name || !formData.phone || !formData.cedula) {
       toast({
         title: "Error",
-        description: "Nombre y teléfono son obligatorios.",
+        description: "Nombre, Cédula y Teléfono son obligatorios.",
         variant: "destructive"
       });
       return;
@@ -65,18 +66,34 @@ export default function NewCustomerPage() {
           </CardHeader>
           <CardContent className="pt-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre Completo</Label>
-                <div className="relative">
-                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="name" 
-                    placeholder="Juan Pérez" 
-                    className="pl-10 rounded-xl h-12"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre Completo</Label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="name" 
+                      placeholder="Juan Pérez" 
+                      className="pl-10 rounded-xl h-12"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cedula">Número de Cédula</Label>
+                  <div className="relative">
+                    <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="cedula" 
+                      placeholder="0000-0000-00000" 
+                      className="pl-10 rounded-xl h-12"
+                      value={formData.cedula}
+                      onChange={(e) => setFormData({...formData, cedula: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 

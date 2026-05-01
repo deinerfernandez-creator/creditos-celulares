@@ -252,6 +252,7 @@ export default function DashboardPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Nombre</TableHead>
+                          <TableHead>Cédula</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Teléfono</TableHead>
                           <TableHead>Dirección</TableHead>
@@ -263,6 +264,7 @@ export default function DashboardPage() {
                         {MOCK_CUSTOMERS.map(c => (
                           <TableRow key={c.id}>
                             <TableCell className="font-medium">{c.name}</TableCell>
+                            <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
                             <TableCell>{c.email}</TableCell>
                             <TableCell>{c.phone}</TableCell>
                             <TableCell className="max-w-xs truncate">{c.address}</TableCell>
