@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -239,17 +238,13 @@ export default function DashboardPage() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {stats.map((stat, idx) => (
-                    <Card key={idx} className={`border-none shadow-sm overflow-hidden group hover:shadow-md transition-all ${stat.hide ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}>
+                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-all">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} transition-colors`}>
                             <stat.icon className="w-6 h-6" />
                           </div>
-                          {stat.hide ? (
-                             <Badge variant="outline" className="text-[10px] text-muted-foreground">Admin Only</Badge>
-                          ) : (
-                             <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
-                          )}
+                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
                         </div>
                         <div className="mt-4">
                           <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>

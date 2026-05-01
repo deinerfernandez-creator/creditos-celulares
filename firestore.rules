@@ -2,15 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // REGLA DE ORO: El administrador maestro tiene acceso TOTAL e INCONDICIONAL
-    // Esto permite que el correo deinerfernandez@gmail.com gestione todo el sistema
+    // REGLA MAESTRA: El administrador maestro tiene acceso TOTAL
     match /{document=**} {
       allow read, write: if request.auth != null && 
                           request.auth.token.email == "deinerfernandez@gmail.com";
     }
 
-    // PORTAL DE CLIENTES: Acceso de lectura público para facilitar la consulta por Cédula/IMEI
-    // Se permite la lectura de las colecciones necesarias para el estado de cuenta
+    // ACCESO PORTAL DE CLIENTES: Lectura pública para búsqueda por Cédula/IMEI
+    // El usuario pidió quitar restricciones para que solo ingresen con esos datos
     match /customers/{customerId} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -26,7 +25,6 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
-    // Perfiles de usuario (Staff)
     match /users/{userId} {
       allow read: if true;
       allow write: if request.auth != null;

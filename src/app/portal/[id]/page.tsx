@@ -24,7 +24,8 @@ import {
   ShieldCheck,
   Loader2,
   Receipt,
-  AlertCircle
+  AlertCircle,
+  History
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, orderBy } from 'firebase/firestore';
@@ -46,6 +47,12 @@ export default function CustomerPortalPage() {
   const router = useRouter();
   const db = useFirestore();
   
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const customerRef = useMemoFirebase(() => id ? doc(db, 'customers', id as string) : null, [db, id]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
@@ -57,6 +64,12 @@ export default function CustomerPortalPage() {
   
   const credit = credits?.[0];
 
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!credit?.id || !db) return null;
+    return query(collection(db, 'payments'), where("creditId", "==", credit.id), orderBy("date", "desc"));
+  }, [db, credit?.id]);
+  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
+
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   
@@ -64,7 +77,7 @@ export default function CustomerPortalPage() {
 
   useEffect(() => {
     async function getAiSummary() {
-      if (customer && credit && !aiSummary) {
+      if (customer && credit && payments && !aiSummary) {
         setLoadingAi(true);
         try {
           const summary = await summarizeCreditStatus({
@@ -72,9 +85,12 @@ export default function CustomerPortalPage() {
             loanAmount: credit.initialAmount,
             totalAmountDue: credit.totalAmount,
             remainingBalance: credit.remainingBalance,
-            nextPaymentDate: "Según cronograma",
+            nextPaymentDate: "Próxima quincena",
             paymentFrequency: 'quincenal',
-            paymentHistory: []
+            paymentHistory: payments.map(p => ({
+              date: p.date instanceof Date ? p.date.toISOString().split('T')[0] : (p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : String(p.date)),
+              amount: p.amount
+            }))
           });
           setAiSummary(summary);
         } catch (err) {
@@ -84,14 +100,14 @@ export default function CustomerPortalPage() {
         }
       }
     }
-    getAiSummary();
-  }, [customer, credit, aiSummary]);
+    if (mounted) getAiSummary();
+  }, [customer, credit, payments, aiSummary, mounted]);
 
-  if (loadingCustomer || loadingCredits) {
+  if (!mounted || loadingCustomer || loadingCredits) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8">
         <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-slate-500 animate-pulse">Cargando tu información...</p>
+        <p className="text-slate-500 animate-pulse">Cargando tu información financiera...</p>
       </div>
     );
   }
@@ -174,7 +190,7 @@ export default function CustomerPortalPage() {
               </div>
             ) : (
               <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 text-sm leading-relaxed">
-                {aiSummary || "Analizando tu cuenta..."}
+                {aiSummary || "Analizando tu comportamiento de pago..."}
               </div>
             )}
           </CardContent>
@@ -222,11 +238,39 @@ export default function CustomerPortalPage() {
                 </div>
               </div>
             </div>
-            <Button className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl h-14 font-bold shadow-lg shadow-slate-200">
-              ¿Cómo pagar mi cuota? <ChevronRight className="ml-2 w-5 h-5" />
-            </Button>
           </Card>
         </div>
+
+        <Card className="border-none shadow-sm bg-white rounded-3xl p-8">
+          <CardTitle className="flex items-center gap-2 text-lg font-black text-slate-900 mb-6">
+            <History className="w-5 h-5 text-primary" /> Historial de Abonos
+          </CardTitle>
+          <div className="space-y-4">
+            {loadingPayments ? (
+              <div className="flex justify-center py-4"><Loader2 className="animate-spin text-slate-400" /></div>
+            ) : payments && payments.length > 0 ? (
+              <div className="grid gap-3">
+                {payments.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 text-green-600 p-2 rounded-full"><CheckCircle2 className="w-4 h-4" /></div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">{formatCurrency(p.amount)}</p>
+                        <p className="text-[10px] text-slate-400">{p.date?.toDate ? p.date.toDate().toLocaleDateString() : 'Fecha no disponible'}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="rounded-full text-[10px] border-green-200 text-green-600 bg-green-50">Recibido</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
+                <Receipt className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm text-slate-400">No hay abonos registrados aún.</p>
+              </div>
+            )}
+          </div>
+        </Card>
 
         <Card className="border-none shadow-sm bg-white rounded-3xl p-8">
           <CardTitle className="text-xs uppercase tracking-[0.2em] text-slate-400 font-black mb-8">Información del Equipo Vinculado</CardTitle>
@@ -244,9 +288,9 @@ export default function CustomerPortalPage() {
             <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
               <Clock className="w-6 h-6 text-amber-600 shrink-0" />
               <div>
-                <p className="text-xs text-amber-700 font-black mb-2 italic">Importante:</p>
+                <p className="text-xs text-amber-700 font-black mb-2 italic">Aviso Importante:</p>
                 <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                  Recuerda realizar tus pagos quincenales a tiempo. Si tienes dudas sobre tu fecha de pago o necesitas soporte técnico, visítanos en nuestra tienda física.
+                  Recuerda realizar tus pagos a tiempo para evitar bloqueos del equipo. Puedes realizar tus abonos en nuestra tienda física.
                 </p>
               </div>
             </div>
