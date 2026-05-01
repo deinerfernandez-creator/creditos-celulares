@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -56,12 +55,12 @@ export default function DashboardPage() {
         <Sidebar className="border-r border-sidebar-border">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-white p-1">
+              <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm">
                 <Image 
                   src={logo?.imageUrl || ''} 
                   alt="Tecnicell Logo" 
-                  width={40} 
-                  height={40}
+                  width={48} 
+                  height={48}
                   className="object-contain"
                   data-ai-hint={logo?.imageHint}
                 />
@@ -186,8 +185,8 @@ export default function DashboardPage() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Button variant="ghost" size="icon" className="group-hover:text-primary">
-                                    <ChevronRight className="w-4 h-4" />
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/credits/${credit.id}`}>Ver</Link>
                                   </Button>
                                 </TableCell>
                               </TableRow>
