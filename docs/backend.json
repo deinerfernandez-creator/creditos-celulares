@@ -7,248 +7,93 @@
       "description": "Represents a customer who applies for a credit in Tecnicell Créditos.",
       "properties": {
         "id": {
-          "type": "string",
-          "description": "Unique identifier for the Customer entity."
+          "type": "string"
         },
-        "firstName": {
-          "type": "string",
-          "description": "The customer's first name."
+        "name": {
+          "type": "string"
         },
-        "lastName": {
-          "type": "string",
-          "description": "The customer's last name."
+        "cedula": {
+          "type": "string"
         },
         "email": {
           "type": "string",
-          "description": "The customer's email address.",
           "format": "email"
         },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The customer's phone number, including country code if applicable."
+        "phone": {
+          "type": "string"
         },
         "address": {
-          "type": "string",
-          "description": "The customer's physical address."
-        },
-        "identificationNumber": {
-          "type": "string",
-          "description": "The customer's national identification number (e.g., DNI, Passport)."
+          "type": "string"
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp when the customer record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the customer record was last updated.",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "identificationNumber",
-        "phoneNumber",
-        "createdAt"
+        "name",
+        "cedula",
+        "phone"
       ]
     },
     "Credit": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Credit",
       "type": "object",
-      "description": "Represents a credit application for a customer, including loan terms and overall status.",
+      "description": "Represents a credit application for a customer.",
       "properties": {
         "id": {
-          "type": "string",
-          "description": "Unique identifier for the Credit entity."
+          "type": "string"
         },
         "customerId": {
-          "type": "string",
-          "description": "Reference to the Customer who owns this credit. (Relationship: Customer 1:N Credit)"
+          "type": "string"
+        },
+        "deviceModel": {
+          "type": "string"
+        },
+        "imei": {
+          "type": "string"
         },
         "initialAmount": {
-          "type": "number",
-          "description": "The original principal amount of the loan requested."
+          "type": "number"
         },
-        "totalAmountCharged": {
-          "type": "number",
-          "description": "The total amount the customer is required to pay, including the initial amount and the markup."
+        "totalAmount": {
+          "type": "number"
         },
-        "markupPercentage": {
-          "type": "number",
-          "description": "The percentage applied to the initial amount (50% or 100%) to calculate the total amount charged."
+        "planType": {
+          "type": "number"
         },
-        "installmentsPlanType": {
-          "type": "string",
-          "description": "The type of installment plan chosen by the customer (e.g., 6 bi-weekly, 12 bi-weekly).",
-          "items": {
-            "type": "string"
-          }
+        "installmentAmount": {
+          "type": "number"
         },
-        "totalInstallments": {
-          "type": "number",
-          "description": "The total number of installments for this credit (e.g., 6 or 12)."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date when the credit was approved and started.",
-          "format": "date-time"
+        "remainingBalance": {
+          "type": "number"
         },
         "status": {
           "type": "string",
-          "description": "The current status of the credit (e.g., Active, Paid, Overdue, Cancelled).",
-          "items": {
-            "type": "string"
-          }
+          "enum": [
+            "activo",
+            "completado",
+            "atrasado"
+          ]
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp when the credit record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the credit record was last updated.",
           "format": "date-time"
         }
       },
       "required": [
-        "id",
         "customerId",
+        "deviceModel",
+        "imei",
         "initialAmount",
-        "totalAmountCharged",
-        "markupPercentage",
-        "installmentsPlanType",
-        "totalInstallments",
-        "startDate",
-        "status",
-        "createdAt"
-      ]
-    },
-    "Installment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Installment",
-      "type": "object",
-      "description": "Represents a single scheduled payment (installment) for a credit, including its due date and payment status.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Installment entity."
-        },
-        "creditId": {
-          "type": "string",
-          "description": "Reference to the Credit this installment belongs to. (Relationship: Credit 1:N Installment)"
-        },
-        "installmentNumber": {
-          "type": "number",
-          "description": "The sequential number of the installment within its credit (e.g., 1, 2, 3)."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The date by which this installment is expected to be paid.",
-          "format": "date-time"
-        },
-        "expectedAmount": {
-          "type": "number",
-          "description": "The full amount expected to be paid for this installment."
-        },
-        "paidAmount": {
-          "type": "number",
-          "description": "The total amount that has been paid towards this specific installment so far."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current payment status of the installment (e.g., Pending, Paid, Partially Paid, Overdue).",
-          "items": {
-            "type": "string"
-          }
-        },
-        "balanceRemaining": {
-          "type": "number",
-          "description": "The amount still owed for this specific installment (expectedAmount - paidAmount)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the installment record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the installment record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "creditId",
-        "installmentNumber",
-        "dueDate",
-        "expectedAmount",
-        "paidAmount",
-        "status",
-        "balanceRemaining",
-        "createdAt"
-      ]
-    },
-    "Payment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payment",
-      "type": "object",
-      "description": "Records an individual payment made by a customer towards a specific credit.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Payment entity."
-        },
-        "creditId": {
-          "type": "string",
-          "description": "Reference to the Credit this payment applies to. (Relationship: Credit 1:N Payment)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The amount of this specific payment transaction."
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date and time when the payment was made.",
-          "format": "date-time"
-        },
-        "paymentMethod": {
-          "type": "string",
-          "description": "The method used for this payment (e.g., Cash, Bank Transfer, Card)."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Any additional notes or details about the payment."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the payment record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the payment record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "creditId",
-        "amount",
-        "paymentDate",
-        "paymentMethod",
-        "createdAt"
+        "status"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -260,78 +105,19 @@
           "schema": {
             "$ref": "#/backend/entities/Customer"
           },
-          "description": "Root collection for all customer profiles managed by Tecnicell Créditos staff."
+          "description": "Root collection for all customer profiles."
         }
       },
       {
-        "path": "/customers/{customerId}/credits/{creditId}",
+        "path": "/credits/{creditId}",
         "definition": {
           "entityName": "Credit",
           "schema": {
             "$ref": "#/backend/entities/Credit"
           },
-          "description": "Subcollection for credit applications associated with a specific customer. Includes denormalized 'customerId' for referential integrity and query efficiency.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique identifier of the Customer."
-            },
-            {
-              "name": "creditId",
-              "description": "The unique identifier of the Credit."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/credits/{creditId}/installments/{installmentId}",
-        "definition": {
-          "entityName": "Installment",
-          "schema": {
-            "$ref": "#/backend/entities/Installment"
-          },
-          "description": "Subcollection for scheduled installments belonging to a specific credit. Includes denormalized 'customerId' and 'creditId' for authorization independence and direct querying.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique identifier of the Customer."
-            },
-            {
-              "name": "creditId",
-              "description": "The unique identifier of the Credit."
-            },
-            {
-              "name": "installmentId",
-              "description": "The unique identifier of the Installment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/customers/{customerId}/credits/{creditId}/payments/{paymentId}",
-        "definition": {
-          "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Subcollection for individual payment records made towards a specific credit. Includes denormalized 'customerId' and 'creditId' for authorization independence and direct querying.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "The unique identifier of the Customer."
-            },
-            {
-              "name": "creditId",
-              "description": "The unique identifier of the Credit."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier of the Payment."
-            }
-          ]
+          "description": "Root collection for all credit applications."
         }
       }
-    ],
-    "reasoning": "The Firestore structure for Tecnicell Créditos is designed to be secure, scalable, and debuggable, adhering to the core design principles. This structure primarily supports an internal staff-facing application where authenticated staff members manage customer credits.\n\n1.  **Staff Authorization (DBAC):** For robust Database Access Control (DBAC), a dedicated top-level collection, `/staffRoles/{staffUid}`, will be used. The *existence* of a document at `/staffRoles/$(request.auth.uid)` signifies that the authenticated user (`request.auth.uid`) is an authorized staff member. This approach prevents reliance on custom claims, simplifies security rules by centralizing role checks, and makes authorization intent explicit. Any authenticated staff member will have full read/write access to all customer and credit-related data.\n\n2.  **Hierarchical and Segregated Data (Clarity & QAPs):**\n    *   **`/customers/{customerId}`:** This is the foundational collection, storing individual `Customer` profiles. Each document represents a customer of Tecnicell Créditos. Access to this collection, and all its subcollections, is restricted to authorized staff, ensuring a homogeneous security posture.\n    *   **`/customers/{customerId}/credits/{creditId}`:** This subcollection holds individual `Credit` applications for a specific customer. This path-based ownership makes the relationship between a customer and their credits clear and simplifies security rules for credit access.\n    *   **`/customers/{customerId}/credits/{creditId}/installments/{installmentId}`:** This nested subcollection stores the scheduled `Installment` payments pertaining to a specific `Credit`. Continuing the hierarchy naturally segments the data.\n    *   **`/customers/{customerId}/credits/{creditId}/payments/{paymentId}`:** This subcollection records all individual `Payment` transactions made towards a particular `Credit`.\n\n3.  **Authorization Independence via Denormalization (CRITICAL):** To eliminate the need for expensive and complex `get()` calls to parent documents within security rules, and to enable atomic operations, authorization context is denormalized where necessary:\n    *   Each `Credit` document includes its `customerId`, which is already part of its schema, providing direct parent reference.\n    *   Every `Installment` document (located under `/customers/{customerId}/credits/{creditId}/installments/{installmentId}`) will be denormalized to include its `customerId` (in addition to its `creditId` already in the schema). This ensures that rules evaluating an `Installment` can directly verify its association with the `Customer` and `Credit` without fetching ancestor documents.\n    *   Similarly, every `Payment` document (located under `/customers/{customerId}/credits/{creditId}/payments/{paymentId}`) will include its `customerId` (in addition to its `creditId` already in the schema). This again provides immediate access to the necessary authorization context, enhancing rule efficiency and debuggability.\n\n4.  **QAPs (Query Access Patterns) Support:** The structured segregation of data and consistent security posture within each collection naturally supports Query Access Patterns. Staff members can perform efficient `list` operations (e.g., retrieving all customers, all credits for a customer, or all installments for a credit) without security rules acting as filters. The global staff authorization check ensures that `list` operations return only data permitted by the top-level staff role, preventing incomplete results and ensuring performance.\n\n5.  **Data Clarity and Predictability:** The design uses descriptive wildcards (`{customerId}`, `{creditId}`, etc.), a dedicated `status` field for explicit state modeling in `Credit` and `Installment`, and enforces strict, semantic naming conventions. This consistency enhances the predictability and maintainability of the data structure and associated security rules."
+    ]
   }
 }

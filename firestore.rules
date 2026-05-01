@@ -4,27 +4,15 @@
  * CORE PHILOSOPHY:
  * This ruleset implements an internal staff-management model. Access is strictly controlled 
  * via a Database Access Control (DBAC) pattern where the existence of a document in the 
- * /staffRoles collection authorizes an authenticated user to manage all customer data.
+ * /staffRoles collection OR a master admin email authorizes a user.
  * 
  * DATA STRUCTURE:
- * The data is organized hierarchically: /customers -> /credits -> /installments & /payments.
- * This structure segments data by customer and credit application, facilitating clear 
- * ownership and logical grouping of financial transactions.
+ * The data is organized into root-level collections: /customers and /credits.
  * 
  * KEY SECURITY DECISIONS:
- * 1. Role-Based Access: All read and write operations on customer data require the user 
- *    to be an authorized staff member.
- * 2. Staff Authorization: Authorization is determined by checking if a document exists 
- *    at /staffRoles/{userId}. This centralizes permissions and avoids complex logic.
+ * 1. Role-Based Access: All operations require the user to be an authorized staff member.
+ * 2. Staff Authorization: Authorization is determined by checking staffRoles OR the master email.
  * 3. Default Deny: All collections are closed by default unless explicitly allowed.
- * 4. Immutability: Critical relational IDs (like customerId and creditId) are enforced 
- *    as immutable once a document is created to prevent data corruption.
- * 
- * DENORMALIZATION FOR AUTHORIZATION:
- * To ensure high-performance rules and support direct querying, relational IDs (customerId, 
- * creditId) are denormalized into sub-documents. These rules validate that the 
- * denormalized fields match the actual document path during creation and remain 
- * consistent during updates.
  */
 
 rules_version = '2';
@@ -33,100 +21,51 @@ service cloud.firestore {
 
     // --- GLOBAL HELPER FUNCTIONS ---
 
-    /** @description Checks if the user is authenticated. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user is an authorized staff member. */
+    /** 
+     * @description Checks if the user is a staff member.
+     * Includes a hardcoded check for the master admin email for bootstrapping.
+     */
     function isStaff() {
-      return isSignedIn() && exists(/databases/$(database)/documents/staffRoles/$(request.auth.uid));
-    }
-
-    /** @description Validates that a field in the incoming data matches a specific value. */
-    function isValidLink(field, value) {
-      return request.resource.data[field] == value;
-    }
-
-    /** @description Ensures a field's value does not change during an update. */
-    function isImmutable(field) {
-      return request.resource.data[field] == resource.data[field];
-    }
-
-    /** @description Combines staff check with document existence for destructive operations. */
-    function isExistingStaff() {
-      return isStaff() && resource != null;
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/staffRoles/$(request.auth.uid)) ||
+        request.auth.token.email == 'deinerfernandez@gmail.com'
+      );
     }
 
     // --- COLLECTION RULES ---
 
     /**
-     * @description Authorization collection. Document existence signifies staff status.
-     * @path /staffRoles/{staffUid}
-     * @allow (get) Any signed-in user can check their own staff status.
-     * @deny (list/write) Staff list and role assignment are restricted to Admin SDK/Console.
-     * @principle Role-based access control via existence check.
+     * @description Authorization collection.
      */
     match /staffRoles/{staffUid} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create, update, delete: if false;
+      allow list, write: if false; // Managed via Admin SDK
     }
 
     /**
-     * @description Root collection for customer profiles.
-     * @path /customers/{customerId}
-     * @allow (create) Staff creating a customer with matching internal ID.
-     * @deny (all) Any user who is not an authorized staff member.
-     * @principle Staff-only management and path-to-data consistency.
+     * @description Root collection for customers.
      */
     match /customers/{customerId} {
-      allow get, list: if isStaff();
-      allow create: if isStaff() && isValidLink('id', customerId);
-      allow update: if isExistingStaff() && isImmutable('id');
-      allow delete: if isExistingStaff();
+      allow read, write: if isStaff();
+    }
 
-      /**
-       * @description Credit applications for a specific customer.
-       * @path /customers/{customerId}/credits/{creditId}
-       * @allow (create) Staff creating a credit linked to the parent customer path.
-       * @deny (create) Mismatched customerId in data vs path.
-       * @principle Relational integrity via denormalized parent IDs.
-       */
-      match /credits/{creditId} {
-        allow get, list: if isStaff();
-        allow create: if isStaff() && isValidLink('customerId', customerId) && isValidLink('id', creditId);
-        allow update: if isExistingStaff() && isImmutable('customerId') && isImmutable('id');
-        allow delete: if isExistingStaff();
+    /**
+     * @description Root collection for credits.
+     */
+    match /credits/{creditId} {
+      allow read, write: if isStaff();
+    }
 
-        /**
-         * @description Scheduled installments for a credit.
-         * @path /customers/{customerId}/credits/{creditId}/installments/{installmentId}
-         * @allow (create) Staff creating an installment linked to customer and credit paths.
-         * @deny (update) Attempting to move an installment to a different credit.
-         * @principle Hierarchical data protection and immutable relationships.
-         */
-        match /installments/{installmentId} {
-          allow get, list: if isStaff();
-          allow create: if isStaff() && isValidLink('customerId', customerId) && isValidLink('creditId', creditId) && isValidLink('id', installmentId);
-          allow update: if isExistingStaff() && isImmutable('customerId') && isImmutable('creditId') && isImmutable('id');
-          allow delete: if isExistingStaff();
-        }
-
-        /**
-         * @description Payment records for a credit.
-         * @path /customers/{customerId}/credits/{creditId}/payments/{paymentId}
-         * @allow (get) Staff viewing specific payment details.
-         * @deny (delete) Unauthorized user attempting to delete payment history.
-         * @principle Audit trail integrity and staff-only write access.
-         */
-        match /payments/{paymentId} {
-          allow get, list: if isStaff();
-          allow create: if isStaff() && isValidLink('customerId', customerId) && isValidLink('creditId', creditId) && isValidLink('id', paymentId);
-          allow update: if isExistingStaff() && isImmutable('customerId') && isImmutable('creditId') && isImmutable('id');
-          allow delete: if isExistingStaff();
-        }
-      }
+    /**
+     * @description Root collection for general app users/roles.
+     */
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isStaff();
     }
   }
 }
