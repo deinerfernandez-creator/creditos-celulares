@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Customer": {
@@ -31,6 +32,18 @@
         "createdAt": { "type": "string" }
       },
       "required": ["customerId", "imei", "deviceModel", "totalAmount"]
+    },
+    "StaffUser": {
+      "title": "StaffUser",
+      "description": "Usuarios del sistema administrativo",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "vendedor"] }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "auth": {
@@ -44,6 +57,10 @@
     "/credits/{creditId}": {
       "schema": { "$ref": "#/backend/entities/Credit" },
       "description": "Documentos de créditos"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/StaffUser" },
+      "description": "Perfiles de usuarios administrativos"
     }
   }
 }

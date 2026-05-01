@@ -1,7 +1,8 @@
 
-"use client";
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -26,7 +27,10 @@ import {
   LogOut,
   Bell,
   Hash,
-  ExternalLink
+  ExternalLink,
+  ShieldCheck,
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,14 +38,27 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useUser, useAuth } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const { user, role, loading: authLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
   const db = useFirestore();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+    // Si es cliente, mandarlo al portal
+    if (!authLoading && user && role === 'cliente') {
+      router.push(`/portal/${user.uid}`);
+    }
+  }, [user, authLoading, router, role]);
 
   // Fetch real data from Firestore
   const customersQuery = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
@@ -50,17 +67,41 @@ export default function DashboardPage() {
   const creditsQuery = query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   const { data: credits } = useCollection(creditsQuery);
 
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-12 h-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  const isAdmin = role === 'admin';
+
   const stats = [
     { title: "Créditos Activos", value: credits ? credits.length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
     { title: "Clientes Totales", value: customers ? customers.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
     { title: "Cuentas Atrasadas", value: credits ? credits.filter((c: any) => c.status === 'atrasado').length.toString() : "0", icon: AlertCircle, color: "text-destructive", bg: "bg-destructive/10" },
-    { title: "Recaudación Mes", value: "$4,520", icon: TrendingUp, color: "text-green-600", bg: "bg-green-100" },
+    { 
+      title: "Recaudación Mes", 
+      value: isAdmin ? "$4,520" : "Ver Admin", 
+      icon: TrendingUp, 
+      color: "text-green-600", 
+      bg: "bg-green-100",
+      hide: !isAdmin 
+    },
   ];
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
 
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-screen w-full overflow-hidden bg-background">
-        <Sidebar className="border-r border-sidebar-border">
+        <Sidebar className="border-r border-sidebar-border shadow-2xl">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm text-primary font-bold">
@@ -68,7 +109,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>
-                <p className="text-xs text-sidebar-foreground/70">Gestión de Créditos</p>
+                <Badge className="bg-white/20 hover:bg-white/30 border-none text-[10px] py-0">{isAdmin ? 'ADMIN' : 'VENDEDOR'}</Badge>
               </div>
             </div>
           </SidebarHeader>
@@ -109,7 +150,22 @@ export default function DashboardPage() {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4">
-            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent rounded-lg h-11">
+            <div className="mb-4 px-2">
+              <div className="flex items-center gap-2 p-3 bg-white/10 rounded-xl border border-white/5">
+                <div className="bg-white/20 p-2 rounded-lg text-white">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs font-bold truncate text-white">{user.email?.split('@')[0]}</p>
+                  <p className="text-[10px] opacity-60 text-white uppercase">{role}</p>
+                </div>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={handleLogout}
+              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent rounded-lg h-11"
+            >
               <LogOut className="w-5 h-5 mr-3" />
               <span>Cerrar Sesión</span>
             </Button>
@@ -142,13 +198,17 @@ export default function DashboardPage() {
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {stats.map((stat, idx) => (
-                    <Card key={idx} className="border-none shadow-sm overflow-hidden group hover:shadow-md transition-all">
+                    <Card key={idx} className={`border-none shadow-sm overflow-hidden group hover:shadow-md transition-all ${stat.hide ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} transition-colors`}>
                             <stat.icon className="w-6 h-6" />
                           </div>
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
+                          {stat.hide ? (
+                             <Badge variant="outline" className="text-[10px] text-muted-foreground">Admin Only</Badge>
+                          ) : (
+                             <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal">Hoy</Badge>
+                          )}
                         </div>
                         <div className="mt-4">
                           <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
