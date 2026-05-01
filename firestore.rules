@@ -2,19 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función para validar si es el administrador principal
-    function isAdmin() {
+    // Función centralizada para validar al Administrador Maestro
+    function isSuperAdmin() {
       return request.auth != null && (
         request.auth.token.email == "deinerfernandez@gmail.com" || 
         request.auth.uid == "XZ8jrnB1LEhCkqv74Lro6O6VW313"
       );
     }
 
-    // Regla global: Lectura permitida para todos (Portal de Clientes y Dashboard)
-    // Escritura permitida únicamente para el Administrador Maestro
+    // REGLA MAESTRA: 
+    // 1. Lectura permitida para todos (Portal de Clientes y carga inicial del Dashboard)
+    // 2. Escritura permitida únicamente para el administrador principal
     match /{document=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isSuperAdmin();
     }
   }
 }
