@@ -56,10 +56,16 @@
           "type": "string"
         },
         "initialAmount": {
-          "type": "number"
+          "type": "number",
+          "description": "The total price of the device."
+        },
+        "downPayment": {
+          "type": "number",
+          "description": "The initial amount paid by the customer."
         },
         "totalAmount": {
-          "type": "number"
+          "type": "number",
+          "description": "The total amount to be paid in installments after interest."
         },
         "planType": {
           "type": "number"
@@ -88,6 +94,7 @@
         "deviceModel",
         "imei",
         "initialAmount",
+        "downPayment",
         "status"
       ]
     },

@@ -19,17 +19,15 @@ import {
   Smartphone, 
   Calendar, 
   Clock, 
-  CheckCircle2, 
   AlertCircle,
   BrainCircuit,
   DollarSign,
   History,
-  FileText,
   Hash,
   Loader2,
   ExternalLink
 } from 'lucide-react';
-import { useFirestore, useDoc } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import { useToast } from '@/hooks/use-toast';
@@ -40,11 +38,11 @@ export default function CreditDetailPage() {
   const { toast } = useToast();
   const db = useFirestore();
 
-  // Fetch real data
-  const creditRef = useMemo(() => id ? doc(db, 'credits', id as string) : null, [db, id]);
+  // Fetch real data with proper memoization
+  const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id as string) : null, [db, id]);
   const { data: credit, loading: loadingCredit } = useDoc(creditRef);
 
-  const customerRef = useMemo(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
+  const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
   const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
@@ -73,7 +71,7 @@ export default function CreditDetailPage() {
     try {
       const summary = await summarizeCreditStatus({
         customerName: customer.name,
-        loanAmount: credit.initialAmount,
+        loanAmount: credit.initialAmount - (credit.downPayment || 0),
         totalAmountDue: credit.totalAmount,
         remainingBalance: credit.remainingBalance,
         nextPaymentDate: 'Por definir',
@@ -112,7 +110,7 @@ export default function CreditDetailPage() {
           </div>
           <div className="flex items-center gap-3">
              <Button variant="outline" asChild className="rounded-xl border-slate-200 bg-white">
-               <Link href="/portal" target="_blank" className="flex items-center gap-2">
+               <Link href={`/portal/${customer.id}`} target="_blank" className="flex items-center gap-2">
                  <Smartphone className="w-4 h-4" /> Ver Portal del Cliente <ExternalLink className="w-3 h-3" />
                </Link>
              </Button>
@@ -122,17 +120,16 @@ export default function CreditDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="border-none shadow-sm bg-white">
                 <CardHeader className="pb-2">
                   <CardDescription className="flex items-center gap-2">
                     <User className="w-3 h-3" /> Cliente
                   </CardDescription>
-                  <CardTitle className="text-lg">{customer.name}</CardTitle>
+                  <CardTitle className="text-lg truncate">{customer.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="text-muted-foreground">{customer.email || 'Sin correo'}</p>
-                  <p className="font-medium mt-1">Cédula: {customer.cedula}</p>
+                  <p className="font-medium">Cédula: {customer.cedula}</p>
                   <p className="text-xs text-muted-foreground mt-2">{customer.phone}</p>
                 </CardContent>
               </Card>
@@ -145,10 +142,20 @@ export default function CreditDetailPage() {
                   <CardTitle className="text-lg">{credit.deviceModel}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    <Hash className="w-3 h-3" /> IMEI: {credit.imei}
-                  </p>
-                  <p className="font-medium mt-1">Plan: {credit.planType} Quincenas</p>
+                  <p className="text-[10px] font-mono text-muted-foreground truncate">IMEI: {credit.imei}</p>
+                  <p className="font-medium mt-1">{credit.planType} Quincenas</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm bg-white border-l-4 border-green-500">
+                <CardHeader className="pb-2">
+                  <CardDescription className="flex items-center gap-2 text-green-600 font-bold">
+                    <DollarSign className="w-3 h-3" /> Cuota Inicial
+                  </CardDescription>
+                  <CardTitle className="text-2xl font-black">${credit.downPayment || 0}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Precio equipo: ${credit.initialAmount}</p>
                 </CardContent>
               </Card>
 
@@ -157,7 +164,7 @@ export default function CreditDetailPage() {
                   <CardDescription className="flex items-center gap-2 text-primary font-bold">
                     <DollarSign className="w-3 h-3" /> Saldo Pendiente
                   </CardDescription>
-                  <CardTitle className="text-3xl font-black">${credit.remainingBalance}</CardTitle>
+                  <CardTitle className="text-2xl font-black">${credit.remainingBalance}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
@@ -166,7 +173,7 @@ export default function CreditDetailPage() {
                        style={{ width: `${progress}%` }}
                      />
                   </div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Total pactado: ${credit.totalAmount}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Financiado: ${credit.totalAmount}</p>
                 </CardContent>
               </Card>
             </div>

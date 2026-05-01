@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Smartphone, ChevronLeft, Hash } from 'lucide-react';
+import { Smartphone, ChevronLeft, Hash, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -20,7 +20,6 @@ export default function NewCreditPage() {
   const { toast } = useToast();
   const db = useFirestore();
   
-  // Memoizamos la consulta correctamente para evitar re-renders infinitos
   const customersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'customers'), orderBy('name', 'asc'));
@@ -33,35 +32,41 @@ export default function NewCreditPage() {
   const [deviceModel, setDeviceModel] = useState('');
   const [imei, setImei] = useState('');
   const [initialAmount, setInitialAmount] = useState('');
+  const [downPayment, setDownPayment] = useState('');
   const [planType, setPlanType] = useState<'6' | '12'>('6');
   
   const [calculation, setCalculation] = useState({
     interestRate: 0,
+    financedAmount: 0,
     totalAmount: 0,
     installmentAmount: 0
   });
 
   useEffect(() => {
-    const amount = parseFloat(initialAmount) || 0;
-    if (amount > 0) {
+    const total_price = parseFloat(initialAmount) || 0;
+    const down_pay = parseFloat(downPayment) || 0;
+    const amountToFinance = Math.max(0, total_price - down_pay);
+    
+    if (amountToFinance > 0) {
       const interest = planType === '6' ? 0.5 : 1.0;
-      const total = amount * (1 + interest);
+      const totalFinanced = amountToFinance * (1 + interest);
       const installments = planType === '6' ? 6 : 12;
-      const installment = total / installments;
+      const installment = totalFinanced / installments;
 
       setCalculation({
         interestRate: interest * 100,
-        totalAmount: total,
+        financedAmount: amountToFinance,
+        totalAmount: totalFinanced,
         installmentAmount: Math.round(installment * 100) / 100
       });
     } else {
-      setCalculation({ interestRate: 0, totalAmount: 0, installmentAmount: 0 });
+      setCalculation({ interestRate: 0, financedAmount: 0, totalAmount: 0, installmentAmount: 0 });
     }
-  }, [initialAmount, planType]);
+  }, [initialAmount, downPayment, planType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId || !deviceModel || !imei || !initialAmount) {
+    if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '') {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos requeridos.",
@@ -77,6 +82,7 @@ export default function NewCreditPage() {
       deviceModel,
       imei,
       initialAmount: parseFloat(initialAmount),
+      downPayment: parseFloat(downPayment),
       totalAmount: calculation.totalAmount,
       planType: parseInt(planType),
       installmentAmount: calculation.installmentAmount,
@@ -169,7 +175,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Monto del Préstamo ($)</Label>
+                    <Label htmlFor="amount">Precio Total del Equipo ($)</Label>
                     <Input 
                       id="amount" 
                       type="number" 
@@ -181,25 +187,42 @@ export default function NewCreditPage() {
                       required
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="downPayment">Cuota Inicial / Abono ($)</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+                      <Input 
+                        id="downPayment" 
+                        type="number" 
+                        placeholder="0.00" 
+                        className="pl-10 rounded-xl h-12 text-lg font-semibold text-green-700 bg-green-50/30"
+                        value={downPayment}
+                        onChange={(e) => setDownPayment(e.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
-                  <Label>Plan de Pagos Quincenales</Label>
+                  <Label>Plan de Pagos Quincenales (Sobre saldo restante)</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       type="button"
-                      disabled={loading}
+                      disabled={loading || calculation.financedAmount <= 0}
                       onClick={() => setPlanType('6')}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <p className="font-bold text-lg text-primary">6 Cuotas</p>
                       <p className="text-xs text-muted-foreground">Recargo del 50%</p>
                     </button>
                     <button
                       type="button"
-                      disabled={loading}
+                      disabled={loading || calculation.financedAmount <= 0}
                       onClick={() => setPlanType('12')}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'}`}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <p className="font-bold text-lg text-primary">12 Cuotas</p>
                       <p className="text-xs text-muted-foreground">Recargo del 100%</p>
@@ -207,7 +230,7 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
+                <Button type="submit" disabled={loading || calculation.financedAmount <= 0} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white">
                   {loading ? "Generando..." : "Crear Crédito"}
                 </Button>
               </form>
@@ -224,19 +247,26 @@ export default function NewCreditPage() {
               </CardHeader>
               <CardContent className="space-y-6 relative z-10">
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
-                  <span className="text-sm opacity-80">Monto Base</span>
+                  <span className="text-sm opacity-80">Precio Equipo</span>
                   <span className="text-xl font-bold">${parseFloat(initialAmount) || 0}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-white/20 pb-4">
+                  <span className="text-sm opacity-80 text-accent font-bold">Cuota Inicial (-)</span>
+                  <span className="text-xl font-bold text-accent">-${parseFloat(downPayment) || 0}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-white/20 pb-4">
+                  <span className="text-sm opacity-80">Monto a Financiar</span>
+                  <span className="text-xl font-bold">${calculation.financedAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-white/20 pb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm opacity-80">Recargo Aplicado</span>
-                    <Badge variant="outline" className="border-white/30 text-accent font-bold">+{calculation.interestRate}%</Badge>
+                    <span className="text-sm opacity-80">Recargo (+{calculation.interestRate}%)</span>
                   </div>
-                  <span className="text-xl font-bold text-accent">+${(calculation.totalAmount - (parseFloat(initialAmount) || 0)).toFixed(2)}</span>
+                  <span className="text-xl font-bold text-accent">+${(calculation.totalAmount - calculation.financedAmount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-xs opacity-60 font-bold mb-1">Total a Pagar</p>
+                    <p className="text-xs opacity-60 font-bold mb-1">Total a Pagar en Cuotas</p>
                     <h2 className="text-4xl font-extrabold">${calculation.totalAmount.toFixed(2)}</h2>
                   </div>
                   <div className="text-right">
