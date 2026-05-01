@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { 
   Card, 
@@ -25,19 +25,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   ChevronLeft, 
-  User, 
-  Smartphone, 
-  Calendar, 
-  Clock, 
-  AlertCircle,
-  BrainCircuit,
   DollarSign,
-  History,
-  Hash,
   Loader2,
-  ExternalLink,
-  CheckCircle2,
-  Receipt
+  Receipt,
+  Smartphone,
+  Calendar,
+  BrainCircuit,
+  AlertCircle
 } from 'lucide-react';
 import { useFirestore, useDoc, useMemoFirebase, useCollection, useUser } from '@/firebase';
 import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
@@ -79,28 +73,28 @@ export default function CreditDetailPage() {
     if (!id) return null;
     return query(collection(db, 'payments'), where('creditId', '==', id), orderBy('date', 'desc'));
   }, [db, id]);
-  const { data: payments, isLoading: loadingPayments, error: paymentsError } = useCollection(paymentsQuery);
+  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
   // Generate Payment Schedule (Cronograma)
   const schedule = useMemo(() => {
-    if (!credit || !credit.createdAt) return [];
+    if (!credit) return [];
     
-    const items = [];
+    // Convertir timestamp a Date de forma segura
     const baseDate = credit.createdAt?.toDate ? credit.createdAt.toDate() : (credit.createdAt ? new Date(credit.createdAt) : new Date());
-    
     if (!isValid(baseDate)) return [];
 
+    const items = [];
     const totalPaidAmount = payments?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
     let accumulatedForComparison = 0;
 
     const numInstallments = credit.planType || 6;
     for (let i = 1; i <= numInstallments; i++) {
-      const dueDate = addDays(baseDate, i * 14); // Fortnightly
+      const dueDate = addDays(baseDate, i * 14); // Quincenal
       accumulatedForComparison += credit.installmentAmount;
-      const isPaid = totalPaidAmount >= (accumulatedForComparison - 500); // Tolerance for rounding
+      const isPaid = totalPaidAmount >= (accumulatedForComparison - 500); // Margen de redondeo
 
       items.push({
         number: i,
@@ -146,7 +140,7 @@ export default function CreditDetailPage() {
       .catch((err) => {
         toast({
           title: "Error",
-          description: "No se pudo registrar el pago. Revisa los permisos.",
+          description: "No se pudo registrar el pago. Verifica los permisos de red.",
           variant: "destructive"
         });
         setIsSubmittingPayment(false);
@@ -184,23 +178,24 @@ export default function CreditDetailPage() {
     }
   };
 
-  // Improved loading and error states
-  if (loadingCredit || (credit && !customer && loadingCustomer)) {
+  // Estado de carga inicial
+  if (loadingCredit || loadingPayments || (credit && !customer && loadingCustomer)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-slate-500 font-medium">Cargando información del crédito...</p>
       </div>
     );
   }
 
-  // If there's an error listing or getting, the FirebaseErrorListener will throw, 
-  // but we shouldn't show "Not found" if it was actually a permission error.
-  if (!credit && !creditError) {
+  // Manejo de error o crédito inexistente
+  if (!credit && !loadingCredit) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no encontrado</h2>
-        <Button asChild className="mt-8">
+        <p className="text-slate-500 mt-2">El crédito solicitado no existe o no tienes permisos para verlo.</p>
+        <Button asChild className="mt-8 rounded-xl px-8">
           <Link href="/">Volver al Dashboard</Link>
         </Button>
       </div>
@@ -212,52 +207,55 @@ export default function CreditDetailPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 pb-20">
       <div className="max-w-6xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" asChild className="rounded-full bg-white">
+            <Button variant="outline" size="icon" asChild className="rounded-full bg-white shadow-sm">
               <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-black text-slate-900">Detalle del Crédito</h1>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Detalle del Crédito</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={credit?.status === 'activo' ? 'default' : credit?.status === 'completado' ? 'secondary' : 'destructive'} className="rounded-full capitalize">
+                <Badge variant={credit?.status === 'activo' ? 'default' : credit?.status === 'completado' ? 'secondary' : 'destructive'} className="rounded-full capitalize px-3">
                   {credit?.status || '---'}
                 </Badge>
+                <span className="text-xs text-slate-400 font-mono">ID: {id.slice(0, 8)}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
              <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="rounded-xl bg-primary text-white shadow-lg h-11 px-6 font-bold">Registrar Pago</Button>
+                  <Button className="rounded-2xl bg-primary text-white shadow-xl shadow-primary/20 h-12 px-8 font-bold">
+                    <DollarSign className="w-5 h-5 mr-2" /> Registrar Pago
+                  </Button>
                 </DialogTrigger>
-                <DialogContent className="rounded-3xl border-none">
+                <DialogContent className="rounded-3xl border-none p-8">
                   <DialogHeader>
                     <DialogTitle className="text-2xl font-black">Registrar Abono</DialogTitle>
-                    <DialogDescription>Ingresa el monto en Pesos (COP) recibido.</DialogDescription>
+                    <DialogDescription>Ingresa el monto en Pesos (COP) recibido en efectivo o transferencia.</DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Monto en Pesos (COP)</Label>
+                  <div className="space-y-6 py-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="amount" className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Monto a abonar</Label>
                       <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-600" />
+                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-green-600" />
                         <Input 
                           id="amount" 
                           type="number" 
                           placeholder="0" 
-                          className="pl-10 h-16 text-2xl font-black rounded-2xl bg-slate-50"
+                          className="pl-12 h-20 text-3xl font-black rounded-2xl bg-slate-50 border-none focus-visible:ring-primary"
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value)}
                         />
                       </div>
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)}>Cancelar</Button>
-                    <Button onClick={handleRegisterPayment} disabled={isSubmittingPayment || !paymentAmount} className="bg-primary text-white">
-                      {isSubmittingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pago"}
+                  <DialogFooter className="gap-2 sm:gap-0">
+                    <Button variant="ghost" onClick={() => setIsPaymentDialogOpen(false)} className="rounded-xl h-12">Cancelar</Button>
+                    <Button onClick={handleRegisterPayment} disabled={isSubmittingPayment || !paymentAmount} className="bg-primary text-white rounded-xl h-12 px-8">
+                      {isSubmittingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Abono"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -268,100 +266,114 @@ export default function CreditDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-3 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-none shadow-sm rounded-2xl">
+              <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
-                  <CardDescription className="uppercase text-[10px] font-bold">Cliente</CardDescription>
-                  <CardTitle className="text-lg font-bold">{customer?.name || 'Cargando...'}</CardTitle>
+                  <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Cliente</CardDescription>
+                  <CardTitle className="text-lg font-bold truncate">{customer?.name || 'Cargando...'}</CardTitle>
                 </CardHeader>
               </Card>
 
-              <Card className="border-none shadow-sm rounded-2xl">
+              <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
-                  <CardDescription className="uppercase text-[10px] font-bold">Equipo</CardDescription>
-                  <CardTitle className="text-lg font-bold">{credit?.deviceModel}</CardTitle>
+                  <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Equipo</CardDescription>
+                  <CardTitle className="text-lg font-bold flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-primary" /> {credit?.deviceModel}
+                  </CardTitle>
                 </CardHeader>
               </Card>
 
-              <Card className="border-none shadow-sm border-l-4 border-green-500 rounded-2xl">
+              <Card className="border-none shadow-sm border-l-4 border-green-500 rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
-                  <CardDescription className="uppercase text-[10px] font-bold">Cuota Inicial</CardDescription>
-                  <CardTitle className="text-xl font-black">{formatCurrency(credit?.downPayment || 0)}</CardTitle>
+                  <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Cuota Inicial</CardDescription>
+                  <CardTitle className="text-xl font-black text-green-600">{formatCurrency(credit?.downPayment || 0)}</CardTitle>
                 </CardHeader>
               </Card>
 
-              <Card className="border-none shadow-sm border-l-4 border-primary rounded-2xl">
+              <Card className="border-none shadow-sm border-l-4 border-primary rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
-                  <CardDescription className="uppercase text-[10px] font-bold">Saldo Pendiente</CardDescription>
-                  <CardTitle className="text-xl font-black">{formatCurrency(credit?.remainingBalance || 0)}</CardTitle>
+                  <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Saldo Pendiente</CardDescription>
+                  <CardTitle className="text-xl font-black text-primary">{formatCurrency(credit?.remainingBalance || 0)}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm">
-                  <div className="w-full bg-slate-100 rounded-full h-2.5 mt-2">
-                     <div className="bg-primary h-full rounded-full" style={{ width: `${progress}%` }} />
+                <CardContent className="pt-0">
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                     <div className="bg-primary h-full rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             <Tabs defaultValue="installments" className="w-full">
-              <TabsList className="bg-slate-200/50 p-1.5 rounded-2xl h-14 w-full max-w-md">
-                <TabsTrigger value="installments" className="rounded-xl flex-1 h-full">Cronograma</TabsTrigger>
-                <TabsTrigger value="history" className="rounded-xl flex-1 h-full">Historial</TabsTrigger>
+              <TabsList className="bg-white/50 border p-1.5 rounded-2xl h-14 w-full max-w-md shadow-sm">
+                <TabsTrigger value="installments" className="rounded-xl flex-1 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Cronograma</TabsTrigger>
+                <TabsTrigger value="history" className="rounded-xl flex-1 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">Pagos Realizados</TabsTrigger>
               </TabsList>
               
               <TabsContent value="installments" className="mt-6">
-                <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase border-b">
-                        <th className="px-8 py-5">Cuota #</th>
-                        <th className="px-8 py-5">Fecha Vencimiento</th>
-                        <th className="px-8 py-5">Valor</th>
-                        <th className="px-8 py-5 text-right">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {schedule.map((item) => (
-                        <tr key={item.number}>
-                          <td className="px-8 py-5 font-black text-slate-300">#{item.number}</td>
-                          <td className="px-8 py-5 font-bold">
-                            {isValid(item.dueDate) ? format(item.dueDate, 'PPP', { locale: es }) : '---'}
-                          </td>
-                          <td className="px-8 py-5 font-black">{formatCurrency(item.amount)}</td>
-                          <td className="px-8 py-5 text-right">
-                            {item.isPaid ? (
-                              <Badge className="bg-green-100 text-green-700 border-none rounded-full px-4 py-1">Pagado</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-slate-400 border-slate-200 rounded-full px-4 py-1">Pendiente</Badge>
-                            )}
-                          </td>
+                <Card className="border-none shadow-xl bg-white rounded-[32px] overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/50 text-slate-400 font-black text-[10px] uppercase tracking-widest border-b">
+                          <th className="px-8 py-6">Cuota #</th>
+                          <th className="px-8 py-6">Vencimiento</th>
+                          <th className="px-8 py-6">Valor Cuota</th>
+                          <th className="px-8 py-6 text-right">Estado</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {schedule.map((item) => (
+                          <tr key={item.number} className="group hover:bg-slate-50/30 transition-colors">
+                            <td className="px-8 py-6 font-black text-slate-300 group-hover:text-primary transition-colors">#{item.number}</td>
+                            <td className="px-8 py-6 font-bold text-slate-700">
+                              {isValid(item.dueDate) ? format(item.dueDate, 'PPP', { locale: es }) : '---'}
+                            </td>
+                            <td className="px-8 py-6 font-black text-slate-900">{formatCurrency(item.amount)}</td>
+                            <td className="px-8 py-6 text-right">
+                              {item.isPaid ? (
+                                <Badge className="bg-green-100 text-green-700 border-none rounded-full px-5 py-1 font-bold">PAGADA</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-slate-400 border-slate-200 rounded-full px-5 py-1 font-medium">PENDIENTE</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
               </TabsContent>
 
               <TabsContent value="history" className="mt-6">
-                <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden">
+                <Card className="border-none shadow-xl bg-white rounded-[32px] overflow-hidden">
                   {payments && payments.length > 0 ? (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-slate-50">
                       {payments.map((p: any) => (
-                        <div key={p.id} className="p-8 flex items-center justify-between">
+                        <div key={p.id} className="p-8 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                           <div className="flex items-center gap-6">
-                            <Receipt className="w-6 h-6 text-green-600" />
+                            <div className="p-4 bg-green-50 text-green-600 rounded-2xl">
+                              <Receipt className="w-6 h-6" />
+                            </div>
                             <div>
-                              <p className="font-black text-2xl">{formatCurrency(p.amount)}</p>
-                              <p className="text-xs text-slate-500">
-                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Procesando...'}
+                              <p className="font-black text-2xl text-slate-900">{formatCurrency(p.amount)}</p>
+                              <p className="text-xs text-slate-400 font-medium flex items-center gap-2 mt-1">
+                                <Calendar className="w-3 h-3" />
+                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Recibido ahora'}
                               </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="text-[10px] font-mono opacity-50">REF: {p.id.slice(0, 8)}</Badge>
+                          <div className="text-right">
+                            <Badge variant="outline" className="text-[10px] font-mono bg-slate-50 border-none text-slate-400 px-3">
+                              REF: {p.id.slice(0, 8).toUpperCase()}
+                            </Badge>
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="p-20 text-center italic text-slate-400">No hay pagos registrados.</div>
+                    <div className="p-24 text-center">
+                      <Receipt className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                      <p className="italic text-slate-400 font-medium">No se han registrado abonos todavía.</p>
+                    </div>
                   )}
                 </Card>
               </TabsContent>
@@ -369,21 +381,41 @@ export default function CreditDetailPage() {
           </div>
 
           <div className="space-y-8">
-            <Card className="border-none shadow-2xl bg-primary text-white rounded-3xl">
-               <CardHeader>
+            <Card className="border-none shadow-2xl bg-primary text-white rounded-[32px] overflow-hidden relative group">
+               <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700" />
+               <CardHeader className="relative z-10">
                   <CardTitle className="flex items-center gap-2 text-lg font-black">
                     <BrainCircuit className="w-5 h-5 text-accent" /> Análisis IA
                   </CardTitle>
                </CardHeader>
-               <CardContent>
+               <CardContent className="relative z-10 space-y-6">
                  {aiSummary ? (
-                   <div className="text-sm bg-white/10 p-5 rounded-2xl border border-white/10">{aiSummary}</div>
+                   <div className="text-sm bg-white/10 backdrop-blur-md p-6 rounded-[24px] border border-white/20 leading-relaxed">
+                    {aiSummary}
+                   </div>
                  ) : (
-                   <Button onClick={handleGenerateAiSummary} disabled={loadingAi} className="w-full bg-accent text-primary font-black">
-                     {loadingAi ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generar Resumen'}
-                   </Button>
+                   <div className="space-y-4">
+                     <p className="text-xs text-white/70 italic">Obtén un resumen inteligente del comportamiento de pago del cliente y recomendaciones.</p>
+                     <Button onClick={handleGenerateAiSummary} disabled={loadingAi} className="w-full h-12 bg-accent text-primary font-black rounded-xl shadow-lg hover:scale-[1.02] transition-transform">
+                       {loadingAi ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generar Análisis'}
+                     </Button>
+                   </div>
                  )}
                </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-[32px] bg-white p-6">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Información de Soporte</h4>
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-xs font-bold text-slate-700">Frecuencia de Pago</p>
+                  <p className="text-sm text-slate-500">Quincenal (Cada 14 días)</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-xs font-bold text-slate-700">Recargo Aplicado</p>
+                  <p className="text-sm text-slate-500">{credit?.planType === 6 ? '50% (6 meses)' : '100% (12 meses)'}</p>
+                </div>
+              </div>
             </Card>
           </div>
         </div>
