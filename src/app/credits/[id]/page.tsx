@@ -68,18 +68,18 @@ export default function CreditDetailPage() {
 
   // Fetch Credit Data
   const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id) : null, [db, id]);
-  const { data: credit, isLoading: loadingCredit } = useDoc(creditRef);
+  const { data: credit, isLoading: loadingCredit, error: creditError } = useDoc(creditRef);
 
   // Fetch Customer Data (dependent on credit)
   const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
   const { data: customer, isLoading: loadingCustomer } = useDoc(customerRef);
 
-  // Fetch Payments - Simplificado para evitar errores de permisos iniciales
+  // Fetch Payments
   const paymentsQuery = useMemoFirebase(() => {
     if (!id) return null;
     return query(collection(db, 'payments'), where('creditId', '==', id), orderBy('date', 'desc'));
   }, [db, id]);
-  const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
+  const { data: payments, isLoading: loadingPayments, error: paymentsError } = useCollection(paymentsQuery);
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
@@ -184,6 +184,7 @@ export default function CreditDetailPage() {
     }
   };
 
+  // Improved loading and error states
   if (loadingCredit || (credit && !customer && loadingCustomer)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -192,7 +193,9 @@ export default function CreditDetailPage() {
     );
   }
 
-  if (!credit) {
+  // If there's an error listing or getting, the FirebaseErrorListener will throw, 
+  // but we shouldn't show "Not found" if it was actually a permission error.
+  if (!credit && !creditError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
@@ -204,7 +207,7 @@ export default function CreditDetailPage() {
     );
   }
 
-  const progress = credit.totalAmount > 0 
+  const progress = credit?.totalAmount > 0 
     ? Math.min(100, Math.max(0, ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100))
     : 0;
 
@@ -219,8 +222,8 @@ export default function CreditDetailPage() {
             <div>
               <h1 className="text-3xl font-black text-slate-900">Detalle del Crédito</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={credit.status === 'activo' ? 'default' : credit.status === 'completado' ? 'secondary' : 'destructive'} className="rounded-full capitalize">
-                  {credit.status}
+                <Badge variant={credit?.status === 'activo' ? 'default' : credit?.status === 'completado' ? 'secondary' : 'destructive'} className="rounded-full capitalize">
+                  {credit?.status || '---'}
                 </Badge>
               </div>
             </div>
@@ -275,21 +278,21 @@ export default function CreditDetailPage() {
               <Card className="border-none shadow-sm rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-bold">Equipo</CardDescription>
-                  <CardTitle className="text-lg font-bold">{credit.deviceModel}</CardTitle>
+                  <CardTitle className="text-lg font-bold">{credit?.deviceModel}</CardTitle>
                 </CardHeader>
               </Card>
 
               <Card className="border-none shadow-sm border-l-4 border-green-500 rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-bold">Cuota Inicial</CardDescription>
-                  <CardTitle className="text-xl font-black">{formatCurrency(credit.downPayment || 0)}</CardTitle>
+                  <CardTitle className="text-xl font-black">{formatCurrency(credit?.downPayment || 0)}</CardTitle>
                 </CardHeader>
               </Card>
 
               <Card className="border-none shadow-sm border-l-4 border-primary rounded-2xl">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-bold">Saldo Pendiente</CardDescription>
-                  <CardTitle className="text-xl font-black">{formatCurrency(credit.remainingBalance)}</CardTitle>
+                  <CardTitle className="text-xl font-black">{formatCurrency(credit?.remainingBalance || 0)}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
                   <div className="w-full bg-slate-100 rounded-full h-2.5 mt-2">

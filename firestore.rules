@@ -1,51 +1,35 @@
-/**
- * TECNICELL CRÉDITOS - REGLAS DE SEGURIDAD DEFINITIVAS
- * Optimizadas para acceso total del administrador maestro.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE SEGURIDAD ---
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     /**
-     * @description Identifica al Administrador Maestro por su correo.
-     * Esta regla es absoluta y prioritaria.
+     * @description Verifica si el usuario es el Administrador Maestro.
+     * Acceso total basado directamente en el token de autenticación.
      */
     function isMasterAdmin() {
-      return isSignedIn() && 
+      return request.auth != null && 
              request.auth.token.email != null && 
              request.auth.token.email.lower() == 'deinerfernandez@gmail.com';
     }
 
     /**
-     * @description Verifica si el usuario tiene un rol autorizado en la colección de users.
+     * @description Verifica si el usuario tiene un documento de staff en la colección 'users'.
      */
-    function hasRole(role) {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) && get(userPath).data.role == role;
-    }
-
     function isStaff() {
-      return isSignedIn() && (
+      return request.auth != null && (
         isMasterAdmin() || 
-        hasRole('admin') || 
-        hasRole('vendedor')
+        exists(/databases/$(database)/documents/users/$(request.auth.uid))
       );
     }
 
-    // --- REGLAS DE ACCESO ---
-
-    // 1. EL ADMINISTRADOR MAESTRO TIENE ACCESO TOTAL A TODO EL SISTEMA
+    // --- REGLA GLOBAL DE SUPERUSUARIO ---
+    // Si eres el administrador maestro, tienes acceso total a todo el sistema.
     match /{document=**} {
       allow read, write: if isMasterAdmin();
     }
 
-    // 2. REGLAS PARA EL RESTO DEL PERSONAL (VENDEDORES / OTROS ADMINS)
+    // --- REGLAS ESPECÍFICAS PARA EL RESTO DEL PERSONAL ---
+    
     match /customers/{customerId} {
       allow read, write: if isStaff();
     }
@@ -59,9 +43,9 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      // Cualquier usuario autenticado puede leer perfiles (para validar su propio rol)
-      allow read: if isSignedIn();
-      // Solo el staff con permisos puede crear o editar usuarios
+      // Permite leer perfiles para validar roles
+      allow read: if request.auth != null;
+      // Solo el staff puede crear o editar usuarios
       allow write: if isStaff();
     }
   }
