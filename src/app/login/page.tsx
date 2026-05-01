@@ -33,9 +33,20 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
+      let message = "Credenciales inválidas. Verifica tu correo y contraseña.";
+      
+      // Manejo de errores específicos de Firebase Auth para guiar al usuario
+      if (error.code === 'auth/user-not-found') {
+        message = "El usuario no existe. Regístralo en la consola de Firebase.";
+      } else if (error.code === 'auth/wrong-password') {
+        message = "La contraseña es incorrecta.";
+      } else if (error.code === 'auth/invalid-credential') {
+        message = "Correo o contraseña incorrectos.";
+      }
+
       toast({
         title: "Error de acceso",
-        description: "Credenciales inválidas. Verifica tu correo y contraseña.",
+        description: message,
         variant: "destructive",
       });
       setLoading(false);
@@ -99,7 +110,7 @@ export default function LoginPage() {
           <CardFooter className="bg-slate-50 p-6 text-center border-t">
             <div className="space-y-2 w-full">
               <p className="text-xs text-slate-500 italic">
-                Usa tus credenciales autorizadas para acceder.
+                Usa el correo administrador con la contraseña 12345678.
               </p>
             </div>
           </CardFooter>
