@@ -25,7 +25,8 @@ import {
   Search,
   LogOut,
   Bell,
-  Hash
+  Hash,
+  ExternalLink
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,14 +63,8 @@ export default function DashboardPage() {
         <Sidebar className="border-r border-sidebar-border">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm">
-                <Image 
-                  src="/logo.png"
-                  alt="Tecnicell Logo" 
-                  width={48} 
-                  height={48}
-                  className="object-contain"
-                />
+              <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-white p-1 flex items-center justify-center shadow-sm text-primary font-bold">
+                T
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-white">Tecnicell</h1>
@@ -95,6 +90,20 @@ export default function DashboardPage() {
                 <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-lg h-11">
                   <CreditCard className="w-5 h-5 mr-3" />
                   <span>Créditos</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              
+              <div className="my-4 border-t border-sidebar-border/30 px-3 pt-4">
+                <p className="text-[10px] font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-2">Accesos Externos</p>
+              </div>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="rounded-lg h-11 text-accent hover:text-accent">
+                  <Link href="/portal">
+                    <Smartphone className="w-5 h-5 mr-3" />
+                    <span>Portal de Clientes</span>
+                    <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -157,8 +166,8 @@ export default function DashboardPage() {
                         <CardTitle className="text-lg">Créditos Recientes</CardTitle>
                         <CardDescription>Ultimos movimientos de la semana</CardDescription>
                       </div>
-                      <Button variant="outline" size="sm" asChild onClick={() => setActiveTab('credits')}>
-                        <span>Ver todos</span>
+                      <Button variant="outline" size="sm" onClick={() => setActiveTab('credits')}>
+                        Ver todos
                       </Button>
                     </CardHeader>
                     <CardContent>
@@ -174,38 +183,46 @@ export default function DashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {credits?.slice(0, 5).map((credit: any) => {
-                            const customer = customers?.find((c: any) => c.id === credit.customerId);
-                            const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
-                            return (
-                              <TableRow key={credit.id} className="cursor-pointer group">
-                                <TableCell>
-                                  <div className="font-medium">{customer?.name || 'Cargando...'}</div>
-                                  <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="text-sm">{credit.deviceModel}</div>
-                                  <div className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
-                                    <Hash className="w-2 h-2" /> {credit.imei}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="font-semibold">${credit.remainingBalance}</TableCell>
-                                <TableCell className="w-32">
-                                  <Progress value={progress} className="h-2" />
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'} className="rounded-full px-3">
-                                    {credit.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/credits/${credit.id}`}>Ver</Link>
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
+                          {credits && credits.length > 0 ? (
+                            credits.slice(0, 5).map((credit: any) => {
+                              const customer = customers?.find((c: any) => c.id === credit.customerId);
+                              const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
+                              return (
+                                <TableRow key={credit.id} className="cursor-pointer group">
+                                  <TableCell>
+                                    <div className="font-medium">{customer?.name || 'Cliente'}</div>
+                                    <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">{credit.deviceModel}</div>
+                                    <div className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                                      <Hash className="w-2 h-2" /> {credit.imei}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="font-semibold">${credit.remainingBalance}</TableCell>
+                                  <TableCell className="w-32">
+                                    <Progress value={progress} className="h-2" />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'} className="rounded-full px-3">
+                                      {credit.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button variant="outline" size="sm" asChild>
+                                      <Link href={`/credits/${credit.id}`}>Ver</Link>
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground italic">
+                                No hay créditos registrados.
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -257,18 +274,26 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {customers?.map((c: any) => (
-                          <TableRow key={c.id}>
-                            <TableCell className="font-medium">{c.name}</TableCell>
-                            <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
-                            <TableCell>{c.email}</TableCell>
-                            <TableCell>{c.phone}</TableCell>
-                            <TableCell className="max-w-xs truncate">{c.address}</TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="sm">Editar</Button>
+                        {customers && customers.length > 0 ? (
+                          customers.map((c: any) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="font-medium">{c.name}</TableCell>
+                              <TableCell className="font-mono text-xs">{c.cedula}</TableCell>
+                              <TableCell>{c.email || 'N/A'}</TableCell>
+                              <TableCell>{c.phone}</TableCell>
+                              <TableCell className="max-w-xs truncate">{c.address || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm">Editar</Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground italic">
+                              No hay clientes registrados.
                             </TableCell>
                           </TableRow>
-                        ))}
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -300,33 +325,41 @@ export default function DashboardPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {credits?.map((credit: any) => {
-                            const customer = customers?.find((c: any) => c.id === credit.customerId);
-                            return (
-                              <TableRow key={credit.id}>
-                                <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id.slice(0, 5)}</TableCell>
-                                <TableCell>
-                                  <div className="font-medium">{customer?.name || 'Cargando...'}</div>
-                                  <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="text-sm">{credit.deviceModel}</div>
-                                  <div className="text-[10px] font-mono text-muted-foreground">{credit.imei}</div>
-                                </TableCell>
-                                <TableCell>{credit.planType} Quincenas</TableCell>
-                                <TableCell className="font-semibold">${credit.installmentAmount}</TableCell>
-                                <TableCell className="font-bold text-primary">${credit.remainingBalance}</TableCell>
-                                <TableCell>
-                                   <Badge className="rounded-full px-3">{credit.status}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/credits/${credit.id}`}>Detalles</Link>
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
+                          {credits && credits.length > 0 ? (
+                            credits.map((credit: any) => {
+                              const customer = customers?.find((c: any) => c.id === credit.customerId);
+                              return (
+                                <TableRow key={credit.id}>
+                                  <TableCell className="font-mono text-xs text-muted-foreground uppercase">{credit.id.slice(0, 5)}</TableCell>
+                                  <TableCell>
+                                    <div className="font-medium">{customer?.name || 'Cliente'}</div>
+                                    <div className="text-[10px] text-muted-foreground">{customer?.cedula}</div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-sm">{credit.deviceModel}</div>
+                                    <div className="text-[10px] font-mono text-muted-foreground">{credit.imei}</div>
+                                  </TableCell>
+                                  <TableCell>{credit.planType} Quincenas</TableCell>
+                                  <TableCell className="font-semibold">${credit.installmentAmount}</TableCell>
+                                  <TableCell className="font-bold text-primary">${credit.remainingBalance}</TableCell>
+                                  <TableCell>
+                                     <Badge className="rounded-full px-3">{credit.status}</Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button variant="outline" size="sm" asChild>
+                                      <Link href={`/credits/${credit.id}`}>Detalles</Link>
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground italic">
+                                No hay créditos registrados.
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </TableBody>
                       </Table>
                     </CardContent>

@@ -26,7 +26,8 @@ import {
   History,
   FileText,
   Hash,
-  Loader2
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 import { useFirestore, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -103,15 +104,18 @@ export default function CreditDetailPage() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Detalle del Crédito</h1>
-              <p className="text-muted-foreground flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="font-mono text-xs uppercase bg-slate-200 px-2 py-1 rounded">{id}</span>
-                <span>•</span>
-                <span>Registrado</span>
-              </p>
+                <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'}>{credit.status}</Badge>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <Button variant="outline" className="rounded-xl border-slate-200 bg-white">Editar</Button>
+             <Button variant="outline" asChild className="rounded-xl border-slate-200 bg-white">
+               <Link href="/portal" target="_blank" className="flex items-center gap-2">
+                 <Smartphone className="w-4 h-4" /> Ver Portal del Cliente <ExternalLink className="w-3 h-3" />
+               </Link>
+             </Button>
              <Button className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20">Registrar Pago</Button>
           </div>
         </div>
@@ -127,8 +131,9 @@ export default function CreditDetailPage() {
                   <CardTitle className="text-lg">{customer.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <p className="text-muted-foreground">{customer.email}</p>
+                  <p className="text-muted-foreground">{customer.email || 'Sin correo'}</p>
                   <p className="font-medium mt-1">Cédula: {customer.cedula}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{customer.phone}</p>
                 </CardContent>
               </Card>
 
@@ -161,7 +166,7 @@ export default function CreditDetailPage() {
                        style={{ width: `${progress}%` }}
                      />
                   </div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Total a pagar: ${credit.totalAmount}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Total pactado: ${credit.totalAmount}</p>
                 </CardContent>
               </Card>
             </div>
@@ -178,7 +183,8 @@ export default function CreditDetailPage() {
               
               <TabsContent value="installments" className="mt-6">
                 <Card className="border-none shadow-sm bg-white p-8 text-center text-muted-foreground">
-                   Cronograma de pagos en desarrollo...
+                   <p>Cronograma de pagos en desarrollo...</p>
+                   <p className="text-xs mt-2">Próximamente verás las cuotas quincenales aquí.</p>
                 </Card>
               </TabsContent>
 
@@ -198,9 +204,9 @@ export default function CreditDetailPage() {
                <CardHeader className="relative z-10 pb-0">
                   <CardTitle className="flex items-center gap-2 text-lg">
                     <BrainCircuit className="w-5 h-5 text-accent" />
-                    Resumen IA
+                    Análisis IA
                   </CardTitle>
-                  <CardDescription className="text-white/60">Análisis inteligente</CardDescription>
+                  <CardDescription className="text-white/60">Estado de cuenta inteligente</CardDescription>
                </CardHeader>
                <CardContent className="relative z-10 pt-6">
                  {aiSummary ? (
@@ -209,7 +215,7 @@ export default function CreditDetailPage() {
                    </div>
                  ) : (
                    <div className="text-center py-6 space-y-4">
-                      <p className="text-sm text-white/70">Obtén una visión rápida del estado de este cliente.</p>
+                      <p className="text-sm text-white/70">Obtén una visión rápida del comportamiento de este cliente.</p>
                       <Button 
                         onClick={handleGenerateAiSummary} 
                         disabled={loadingAi}
@@ -231,7 +237,7 @@ export default function CreditDetailPage() {
               <CardContent className="space-y-4">
                 <div className="p-3 bg-orange-50 rounded-xl border border-orange-100 flex gap-3">
                    <Clock className="w-4 h-4 text-orange-500 shrink-0" />
-                   <p className="text-xs text-orange-700">El sistema de alertas automáticas está activo.</p>
+                   <p className="text-xs text-orange-700">Recuerda que los pagos son quincenales.</p>
                 </div>
               </CardContent>
             </Card>
