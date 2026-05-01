@@ -31,7 +31,12 @@ const SummarizeCreditStatusOutputSchema = z.string().describe("A concise summary
 export type SummarizeCreditStatusOutput = z.infer<typeof SummarizeCreditStatusOutputSchema>;
 
 export async function summarizeCreditStatus(input: SummarizeCreditStatusInput): Promise<SummarizeCreditStatusOutput> {
-  return summarizeCreditStatusFlow(input);
+  try {
+    return await summarizeCreditStatusFlow(input);
+  } catch (error) {
+    console.error("Error calling summarizeCreditStatusFlow:", error);
+    return "El resumen automático de IA no está disponible en este momento. Por favor, consulte los datos financieros abajo.";
+  }
 }
 
 const summarizeCreditStatusPrompt = ai.definePrompt({
