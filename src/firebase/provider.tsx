@@ -59,7 +59,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // PRIORIDAD CRÍTICA: Identificar al Administrador Maestro instantáneamente por email
+        // PRIORIDAD: Identificar al Administrador Maestro instantáneamente por email
         const userEmail = firebaseUser.email?.toLowerCase();
         if (userEmail === 'deinerfernandez@gmail.com') {
           setUserAuthState({ 

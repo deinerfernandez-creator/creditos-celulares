@@ -2,36 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función para identificar al Administrador Maestro
+    // Función para identificar al Administrador Maestro (Tú)
     function isMasterAdmin() {
       return request.auth != null && 
              request.auth.token.email.lowerCase() == "deinerfernandez@gmail.com";
     }
 
     // ACCESO DE LECTURA PÚBLICO
-    // Permitimos lectura total para que el portal de clientes (Cédula + IMEI) 
-    // y el dashboard administrativo funcionen sin bloqueos de permisos.
-    match /customers/{customerId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-    
-    match /credits/{creditId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-    
-    match /payments/{paymentId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-    
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
-    }
-
-    // Regla de respaldo para cualquier otra colección
+    // Permitimos lectura a todas las colecciones para que el Dashboard y el Portal de Clientes
+    // (que usa búsqueda por Cédula + IMEI) funcionen sin bloqueos de permisos.
     match /{document=**} {
       allow read: if true;
       allow write: if isMasterAdmin();

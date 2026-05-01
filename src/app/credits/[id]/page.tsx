@@ -18,15 +18,14 @@ import {
   AlertCircle,
   Fingerprint,
   Phone,
-  MapPin,
-  CreditCard,
   Settings2,
-  Receipt,
   CheckCircle2,
-  History
+  History,
+  TrendingUp,
+  Receipt
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, collection, query, where, orderBy, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -34,6 +33,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -47,19 +57,6 @@ const formatCurrency = (value: any) => {
   }).format(num);
 };
 
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'activo':
-      return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-4 capitalize">Activo</Badge>;
-    case 'pagado':
-      return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-4 capitalize">Pagado</Badge>;
-    case 'bloqueado':
-      return <Badge variant="destructive" className="rounded-full px-4 capitalize">Bloqueado</Badge>;
-    default:
-      return <Badge variant="secondary" className="rounded-full px-4 capitalize">{status}</Badge>;
-  }
-};
-
 export default function CreditDetailPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -68,6 +65,8 @@ export default function CreditDetailPage() {
 
   const [mounted, setMounted] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [openPayment, setOpenPayment] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -93,16 +92,42 @@ export default function CreditDetailPage() {
     setUpdating(true);
     try {
       await updateDoc(doc(db, 'credits', id), { status: newStatus });
-      toast({
-        title: "Estado actualizado",
-        description: `El crédito ahora está ${newStatus}.`,
-      });
+      toast({ title: "Estado actualizado", description: `El crédito ahora está ${newStatus}.` });
     } catch (err: any) {
-      toast({
-        title: "Error de permisos",
-        description: "Solo el administrador maestro puede realizar cambios.",
-        variant: "destructive"
+      toast({ title: "Error de permisos", description: "No tienes autorización para cambiar el estado.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleProcessPayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (isNaN(amount) || amount <= 0 || !id || !db || !credit) return;
+
+    setUpdating(true);
+    try {
+      // 1. Registrar el pago
+      await addDoc(collection(db, 'payments'), {
+        creditId: id,
+        amount: amount,
+        date: serverTimestamp()
       });
+
+      // 2. Actualizar el saldo del crédito
+      const newBalance = Math.max(0, credit.remainingBalance - amount);
+      const updateData: any = { remainingBalance: increment(-amount) };
+      
+      if (newBalance === 0) {
+        updateData.status = 'pagado';
+      }
+
+      await updateDoc(doc(db, 'credits', id), updateData);
+
+      toast({ title: "Abono Procesado", description: "El saldo ha sido actualizado correctamente." });
+      setPaymentAmount('');
+      setOpenPayment(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: "No se pudo procesar el pago.", variant: "destructive" });
     } finally {
       setUpdating(false);
     }
@@ -114,19 +139,13 @@ export default function CreditDetailPage() {
     return Math.min(100, Math.max(0, (paid / credit.totalAmount) * 100));
   }, [credit]);
 
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   if (loadingCredit || loadingCustomer) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-medium">Cargando detalles financieros...</p>
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <p className="text-[10px] font-black uppercase text-slate-400 mt-4 tracking-widest">Cargando expediente...</p>
       </div>
     );
   }
@@ -136,33 +155,65 @@ export default function CreditDetailPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no encontrado</h2>
-        <p className="text-slate-500 mt-2">No se encontró el registro o los datos aún están cargando.</p>
-        <Button asChild className="mt-8 rounded-xl px-8">
-          <Link href="/">Volver al Dashboard</Link>
-        </Button>
+        <Button asChild className="mt-8 rounded-xl"><Link href="/">Volver</Link></Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-body">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon" asChild className="rounded-full bg-white shadow-sm border-slate-200">
+            <Button variant="outline" size="icon" asChild className="rounded-xl bg-white shadow-sm">
               <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-black text-slate-900">Gestión de Crédito</h1>
-              <p className="text-xs text-slate-400 font-mono">#{id.slice(0, 8)}</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Expediente Financiero</h1>
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Crédito #{id.slice(0, 8)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 sm:ml-auto">
-            <div className="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3">
+            <Dialog open={openPayment} onOpenChange={setOpenPayment}>
+              <DialogTrigger asChild>
+                <Button className="rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10">
+                  <Receipt className="w-4 h-4 mr-2" /> Registrar Abono
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-2xl sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-black">Registrar Pago en Efectivo</DialogTitle>
+                  <DialogDescription>Ingresa el monto recibido para actualizar el saldo del equipo.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="pay-amount">Monto del Abono (COP)</Label>
+                    <Input 
+                      id="pay-amount" 
+                      type="number" 
+                      placeholder="Ejem: 50000"
+                      className="rounded-xl h-12 text-lg font-bold"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Saldo Actual</p>
+                     <p className="text-xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</p>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpenPayment(false)} className="rounded-xl font-bold">Cancelar</Button>
+                  <Button onClick={handleProcessPayment} disabled={updating || !paymentAmount} className="rounded-xl font-bold">Procesar Pago</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-sm border border-slate-100">
               <Settings2 className="w-4 h-4 text-slate-400 ml-2" />
               <Select onValueChange={handleStatusChange} defaultValue={credit.status} disabled={updating}>
-                <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 h-8 font-bold capitalize">
-                  <SelectValue placeholder="Estado" />
+                <SelectTrigger className="w-[120px] border-none shadow-none focus:ring-0 h-8 font-bold capitalize text-xs">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   <SelectItem value="activo" className="text-green-600 font-bold">Activo</SelectItem>
@@ -171,42 +222,41 @@ export default function CreditDetailPage() {
                 </SelectContent>
               </Select>
             </div>
-            {getStatusBadge(credit.status)}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Perfil del Cliente */}
-          <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+          {/* Perfil */}
+          <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="bg-primary text-white pb-6">
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2 text-base font-black">
                 <Fingerprint className="w-5 h-5" /> Perfil del Cliente
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Nombre Completo</p>
-                <p className="font-bold text-lg text-slate-900">{customer?.name || 'Cargando...'}</p>
+                <p className="font-black text-xl text-slate-900">{customer?.name || '---'}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-slate-50 rounded-2xl">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cédula</p>
-                  <p className="font-bold text-slate-700">{customer?.cedula || 'N/A'}</p>
+                  <p className="font-bold text-slate-700">{customer?.cedula || '---'}</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-2xl">
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Teléfono</p>
-                  <p className="font-bold text-primary flex items-center gap-1">
-                    <Phone className="w-3 h-3" /> {customer?.phone || 'N/A'}
+                  <p className="font-bold text-primary flex items-center gap-2">
+                    <Phone className="w-3 h-3" /> {customer?.phone || '---'}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Datos del Equipo */}
-          <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+          {/* Equipo */}
+          <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="bg-slate-900 text-white pb-6">
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2 text-base font-black">
                 <Smartphone className="w-5 h-5 text-accent" /> Datos del Equipo
               </CardTitle>
             </CardHeader>
@@ -218,59 +268,63 @@ export default function CreditDetailPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">IMEI</p>
-                  <p className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-600">{credit.imei}</p>
+                  <p className="font-mono text-xs bg-slate-100 px-3 py-1.5 rounded-xl text-slate-600 border border-slate-200">{credit.imei}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Saldo Pendiente</p>
-                  <p className="text-xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</p>
+                <div className="p-5 bg-slate-50 rounded-[1.5rem] border border-slate-100">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Saldo Actual</p>
+                  <p className="text-2xl font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</p>
                 </div>
-                <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10 text-right">
-                  <p className="text-[10px] font-black uppercase text-primary tracking-widest mb-1">Progreso</p>
-                  <p className="text-xl font-black text-primary">{Math.round(progress)}%</p>
+                <div className="p-5 bg-primary/5 rounded-[1.5rem] border border-primary/10 text-right">
+                  <div className="flex items-center justify-end gap-2 mb-1">
+                    <TrendingUp className="w-3 h-3 text-primary" />
+                    <p className="text-[10px] font-black uppercase text-primary tracking-widest">Progreso</p>
+                  </div>
+                  <p className="text-2xl font-black text-primary">{Math.round(progress)}%</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Historial de Pagos */}
-        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="border-b border-slate-50">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <History className="w-5 h-5 text-primary" /> Historial de Abonos
+        {/* Abonos */}
+        <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+          <CardHeader className="border-b border-slate-50 p-8">
+            <CardTitle className="flex items-center gap-2 text-lg font-black">
+              <History className="w-6 h-6 text-primary" /> Historial de Abonos Recibidos
             </CardTitle>
+            <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Control de flujo de caja</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {loadingPayments ? (
-              <div className="p-12 flex justify-center"><Loader2 className="animate-spin text-slate-300" /></div>
+              <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-slate-200" /></div>
             ) : payments && payments.length > 0 ? (
               <div className="divide-y divide-slate-50">
                 {payments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-6">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-green-100 text-green-600 rounded-2xl">
-                        <CheckCircle2 className="w-5 h-5" />
+                  <div key={p.id} className="flex items-center justify-between p-8 hover:bg-slate-50/50 transition-colors group">
+                    <div className="flex items-center gap-6">
+                      <div className="p-4 bg-green-100 text-green-600 rounded-2xl group-hover:bg-green-500 group-hover:text-white transition-all">
+                        <CheckCircle2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-black text-slate-900 text-lg">{formatCurrency(p.amount)}</p>
-                        <p className="text-xs text-slate-400">
-                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO') : 'Fecha no disponible'}
+                        <p className="font-black text-slate-900 text-xl tracking-tight">{formatCurrency(p.amount)}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                          {p.date?.toDate ? p.date.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : '---'}
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="rounded-full border-green-200 text-green-600 bg-green-50">
-                      Procesado
+                    <Badge variant="outline" className="rounded-full border-green-200 text-green-600 bg-green-50 font-black text-[9px] px-4 py-1">
+                      VERIFICADO
                     </Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <History className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                <p className="text-slate-400 font-medium">No hay abonos registrados para este crédito.</p>
+              <div className="text-center py-20">
+                <History className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Sin abonos registrados en este crédito.</p>
               </div>
             )}
           </CardContent>
