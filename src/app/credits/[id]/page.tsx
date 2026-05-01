@@ -26,7 +26,8 @@ import {
   Receipt,
   Trash2,
   CalendarDays,
-  Clock
+  Clock,
+  User as UserIcon
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -313,24 +314,31 @@ export default function CreditDetailPage() {
           <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="bg-primary text-white pb-6">
               <CardTitle className="flex items-center gap-2 text-base font-black">
-                <Fingerprint className="w-5 h-5" /> Perfil del Cliente
+                <UserIcon className="w-5 h-5" /> Perfil del Cliente
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Nombre Completo</p>
-                <p className="font-black text-xl text-slate-900">{customer?.name || '---'}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cédula</p>
-                  <p className="font-bold text-slate-700">{customer?.cedula || '---'}</p>
+            <CardContent className="pt-6 flex flex-col sm:flex-row gap-6">
+              {credit.customerPhoto && (
+                <div className="w-full sm:w-32 h-40 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-sm shrink-0">
+                  <img src={credit.customerPhoto} alt="Foto Cliente" className="w-full h-full object-cover" />
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Teléfono</p>
-                  <p className="font-bold text-primary flex items-center gap-2">
-                    <Phone className="w-3 h-3" /> {customer?.phone || '---'}
-                  </p>
+              )}
+              <div className="space-y-6 flex-1">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Nombre Completo</p>
+                  <p className="font-black text-xl text-slate-900">{customer?.name || '---'}</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Cédula</p>
+                    <p className="font-bold text-slate-700">{customer?.cedula || '---'}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Teléfono</p>
+                    <p className="font-bold text-primary flex items-center gap-2">
+                      <Phone className="w-3 h-3" /> {customer?.phone || '---'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>

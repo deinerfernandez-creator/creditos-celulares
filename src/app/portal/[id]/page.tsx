@@ -25,7 +25,8 @@ import {
   CheckCircle2,
   Receipt,
   CalendarDays,
-  Clock
+  Clock,
+  User as UserIcon
 } from 'lucide-react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
@@ -195,9 +196,16 @@ export default function CustomerPortalDashboard() {
 
       <main className="max-w-6xl mx-auto p-4 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Hola, {customer.name.split(' ')[0]}</h1>
-            <p className="text-slate-500 font-medium text-sm">Estado actual de tu financiamiento</p>
+          <div className="flex items-center gap-4">
+             {credit.customerPhoto && (
+               <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary shadow-sm">
+                 <img src={credit.customerPhoto} alt="Tu Foto" className="w-full h-full object-cover" />
+               </div>
+             )}
+             <div className="space-y-1">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Hola, {customer.name.split(' ')[0]}</h1>
+              <p className="text-slate-500 font-medium text-sm">Estado actual de tu financiamiento</p>
+            </div>
           </div>
           <Badge className={`rounded-full px-6 py-1.5 capitalize text-[10px] font-black tracking-widest ${
             credit.status === 'activo' ? 'bg-green-500' : 

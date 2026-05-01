@@ -34,6 +34,7 @@
         "installmentAmount": { "type": "number" },
         "remainingBalance": { "type": "number" },
         "status": { "type": "string", "enum": ["activo", "pagado", "bloqueado"] },
+        "customerPhoto": { "type": "string", "description": "Base64 string of the customer photo taken during registration." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status"]
