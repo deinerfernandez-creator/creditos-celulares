@@ -14,6 +14,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
   ChevronLeft, 
   User, 
   Smartphone, 
@@ -25,13 +36,17 @@ import {
   History,
   Hash,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  CheckCircle2,
+  Receipt
 } from 'lucide-react';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useCollection, useUser } from '@/firebase';
+import { doc, collection, query, where, orderBy, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { addDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -44,7 +59,12 @@ const formatCurrency = (value: number) => {
 export default function CreditDetailPage() {
   const { id } = useParams();
   const { toast } = useToast();
+  const { user } = useUser();
   const db = useFirestore();
+
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // Fetch real data with proper memoization
   const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id as string) : null, [db, id]);
@@ -53,10 +73,110 @@ export default function CreditDetailPage() {
   const customerRef = useMemoFirebase(() => credit?.customerId ? doc(db, 'customers', credit.customerId) : null, [db, credit?.customerId]);
   const { data: customer, loading: loadingCustomer } = useDoc(customerRef);
 
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!id) return null;
+    return query(collection(db, 'payments'), where('creditId', '==', id), orderBy('date', 'desc'));
+  }, [db, id]);
+  const { data: payments, loading: loadingPayments } = useCollection(paymentsQuery);
+
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
-  if (loadingCredit || loadingCustomer) {
+  // Generate Payment Schedule (Cronograma)
+  const schedule = useMemo(() => {
+    if (!credit || !credit.createdAt) return [];
+    const items = [];
+    const baseDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
+    const totalPaymentsMade = credit.totalAmount - credit.remainingBalance;
+    let accumulatedForComparison = 0;
+
+    for (let i = 1; i <= credit.planType; i++) {
+      const dueDate = addDays(baseDate, i * 14); // Fortnightly
+      accumulatedForComparison += credit.installmentAmount;
+      const isPaid = totalPaymentsMade >= (accumulatedForComparison - 100); // Small tolerance for rounding
+
+      items.push({
+        number: i,
+        dueDate,
+        amount: credit.installmentAmount,
+        isPaid
+      });
+    }
+    return items;
+  }, [credit]);
+
+  const handleRegisterPayment = () => {
+    if (!paymentAmount || isNaN(parseFloat(paymentAmount))) return;
+    
+    setIsSubmittingPayment(true);
+    const amount = parseFloat(paymentAmount);
+    
+    const paymentData = {
+      creditId: id,
+      amount: amount,
+      date: serverTimestamp(),
+      staffId: user?.uid || 'anonymous'
+    };
+
+    // Add payment record
+    addDoc(collection(db, 'payments'), paymentData)
+      .then(() => {
+        // Update credit balance
+        const newBalance = Math.max(0, credit!.remainingBalance - amount);
+        const newStatus = newBalance <= 0 ? 'completado' : credit!.status;
+        
+        updateDoc(doc(db, 'credits', id as string), {
+          remainingBalance: newBalance,
+          status: newStatus
+        }).then(() => {
+          toast({
+            title: "Pago Registrado",
+            description: `Se han abonado ${formatCurrency(amount)} al crédito.`,
+          });
+          setPaymentAmount('');
+          setIsPaymentDialogOpen(false);
+          setIsSubmittingPayment(false);
+        });
+      })
+      .catch((err) => {
+        toast({
+          title: "Error",
+          description: "No se pudo registrar el pago.",
+          variant: "destructive"
+        });
+        setIsSubmittingPayment(false);
+      });
+  };
+
+  const handleGenerateAiSummary = async () => {
+    if (!credit || !customer) return;
+    setLoadingAi(true);
+    try {
+      const summary = await summarizeCreditStatus({
+        customerName: customer.name,
+        loanAmount: credit.initialAmount - (credit.downPayment || 0),
+        totalAmountDue: credit.totalAmount,
+        remainingBalance: credit.remainingBalance,
+        nextPaymentDate: schedule.find(s => !s.isPaid)?.dueDate.toISOString() || 'N/A',
+        paymentFrequency: 'quincenal',
+        paymentHistory: payments?.map(p => ({
+          date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : 'N/A',
+          amount: p.amount
+        })) || []
+      });
+      setAiSummary(summary);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "No se pudo generar el resumen de IA.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingAi(false);
+    }
+  };
+
+  if (loadingCredit || loadingCustomer || loadingPayments) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -74,30 +194,6 @@ export default function CreditDetailPage() {
     );
   }
 
-  const handleGenerateAiSummary = async () => {
-    setLoadingAi(true);
-    try {
-      const summary = await summarizeCreditStatus({
-        customerName: customer.name,
-        loanAmount: credit.initialAmount - (credit.downPayment || 0),
-        totalAmountDue: credit.totalAmount,
-        remainingBalance: credit.remainingBalance,
-        nextPaymentDate: 'Por definir',
-        paymentFrequency: 'quincenal',
-        paymentHistory: []
-      });
-      setAiSummary(summary);
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "No se pudo generar el resumen de IA.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingAi(false);
-    }
-  };
-
   const progress = ((credit.totalAmount - credit.remainingBalance) / credit.totalAmount) * 100;
 
   return (
@@ -112,7 +208,9 @@ export default function CreditDetailPage() {
               <h1 className="text-3xl font-bold tracking-tight">Detalle del Crédito</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="font-mono text-xs uppercase bg-slate-200 px-2 py-1 rounded">{id}</span>
-                <Badge variant={credit.status === 'activo' ? 'default' : 'secondary'}>{credit.status}</Badge>
+                <Badge variant={credit.status === 'activo' ? 'default' : credit.status === 'completado' ? 'secondary' : 'destructive'}>
+                  {credit.status}
+                </Badge>
               </div>
             </div>
           </div>
@@ -122,7 +220,53 @@ export default function CreditDetailPage() {
                  <Smartphone className="w-4 h-4" /> Ver Portal del Cliente <ExternalLink className="w-3 h-3" />
                </Link>
              </Button>
-             <Button className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20">Registrar Pago</Button>
+
+             <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="rounded-xl bg-primary text-white shadow-lg shadow-primary/20">Registrar Pago</Button>
+                </DialogTrigger>
+                <DialogContent className="rounded-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Registrar Abono</DialogTitle>
+                    <DialogDescription>
+                      Ingresa el monto recibido del cliente para este crédito.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount">Monto en Pesos (COP)</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
+                        <Input 
+                          id="amount" 
+                          type="number" 
+                          placeholder="0" 
+                          className="pl-10 h-14 text-xl font-bold rounded-2xl"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Saldo pendiente actual: {formatCurrency(credit.remainingBalance)}</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsPaymentDialogOpen(false)} 
+                      className="rounded-xl"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleRegisterPayment} 
+                      disabled={isSubmittingPayment || !paymentAmount}
+                      className="rounded-xl bg-primary text-white"
+                    >
+                      {isSubmittingPayment ? "Registrando..." : "Confirmar Pago"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+             </Dialog>
           </div>
         </div>
 
@@ -175,13 +319,16 @@ export default function CreditDetailPage() {
                   <CardTitle className="text-xl font-black">{formatCurrency(credit.remainingBalance)}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm">
-                  <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+                  <div className="flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-bold">
+                    <span>Progreso</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2">
                      <div 
-                       className="bg-primary h-1.5 rounded-full" 
+                       className="bg-primary h-2 rounded-full transition-all duration-500" 
                        style={{ width: `${progress}%` }}
                      />
                   </div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2 font-bold">Financiado: {formatCurrency(credit.totalAmount)}</p>
                 </CardContent>
               </Card>
             </div>
@@ -192,20 +339,75 @@ export default function CreditDetailPage() {
                   <Calendar className="w-4 h-4 mr-2" /> Cronograma
                 </TabsTrigger>
                 <TabsTrigger value="history" className="rounded-lg flex-1 h-full data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                  <History className="w-4 h-4 mr-2" /> Pagos
+                  <History className="w-4 h-4 mr-2" /> Historial de Pagos
                 </TabsTrigger>
               </TabsList>
               
               <TabsContent value="installments" className="mt-6">
-                <Card className="border-none shadow-sm bg-white p-8 text-center text-muted-foreground">
-                   <p>Cronograma de pagos en desarrollo...</p>
-                   <p className="text-xs mt-2">Próximamente verás las cuotas quincenales aquí.</p>
+                <Card className="border-none shadow-sm bg-white overflow-hidden">
+                  <div className="p-0 overflow-x-auto">
+                    <table className="w-full text-left text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                          <th className="px-6 py-4">Cuota #</th>
+                          <th className="px-6 py-4">Fecha Vencimiento</th>
+                          <th className="px-6 py-4">Valor Cuota</th>
+                          <th className="px-6 py-4">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {schedule.map((item) => (
+                          <tr key={item.number} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-6 py-4 font-bold text-slate-400">#{item.number}</td>
+                            <td className="px-6 py-4 font-medium">{format(item.dueDate, 'PP', { locale: es })}</td>
+                            <td className="px-6 py-4 font-bold">{formatCurrency(item.amount)}</td>
+                            <td className="px-6 py-4">
+                              {item.isPaid ? (
+                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-full flex items-center gap-1 w-fit">
+                                  <CheckCircle2 className="w-3 h-3" /> Pagado
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-slate-400 border-slate-200 rounded-full flex items-center gap-1 w-fit">
+                                  <Clock className="w-3 h-3" /> Pendiente
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
               </TabsContent>
 
               <TabsContent value="history" className="mt-6">
-                <Card className="border-none shadow-sm bg-white p-8 text-center text-muted-foreground">
-                   No hay pagos registrados aún.
+                <Card className="border-none shadow-sm bg-white">
+                  {payments && payments.length > 0 ? (
+                    <div className="divide-y divide-slate-100">
+                      {payments.map((p: any) => (
+                        <div key={p.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                              <Receipt className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-lg">{formatCurrency(p.amount)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {p.date?.toDate ? format(p.date.toDate(), 'PPPp', { locale: es }) : 'Fecha desconocida'}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="text-[10px] font-mono uppercase text-muted-foreground border-slate-200">
+                            Ref: {p.id.slice(0, 8)}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-12 text-center text-muted-foreground italic">
+                       No hay pagos registrados aún.
+                    </div>
+                  )}
                 </Card>
               </TabsContent>
             </Tabs>
@@ -254,6 +456,12 @@ export default function CreditDetailPage() {
                    <Clock className="w-4 h-4 text-orange-500 shrink-0" />
                    <p className="text-xs text-orange-700">Recuerda que los pagos son quincenales.</p>
                 </div>
+                {credit.status === 'atrasado' && (
+                  <div className="p-3 bg-red-50 rounded-xl border border-red-100 flex gap-3">
+                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                     <p className="text-xs text-red-700">El cliente presenta un retraso en sus cuotas.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

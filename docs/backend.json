@@ -98,6 +98,35 @@
         "status"
       ]
     },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Records a payment made towards a credit.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "creditId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "number"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "staffId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "creditId",
+        "amount",
+        "date"
+      ]
+    },
     "StaffUser": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StaffUser",
@@ -157,6 +186,16 @@
             "$ref": "#/backend/entities/Credit"
           },
           "description": "Root collection for all credit applications."
+        }
+      },
+      {
+        "path": "/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Global collection for all payments made."
         }
       },
       {
