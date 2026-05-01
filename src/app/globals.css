@@ -4,34 +4,34 @@
 
 @layer base {
   :root {
-    --background: 218 80% 96%; /* #EEF3FC */
-    --foreground: 221 39% 11%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 221 39% 11%;
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 221 39% 11%;
-    --primary: 225 76% 47%; /* #225CCC */
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%; /* Azul Tecnicell Profesional */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 191 84% 59%; /* #3DC9EE */
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 199 89% 48%; /* Cian Eléctrico Tecnicell */
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 225 76% 47%;
-    --radius: 0.75rem;
-    --sidebar-background: 225 76% 47%;
+    --ring: 221 83% 53%;
+    --radius: 1rem;
+    --sidebar-background: 221 83% 45%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 191 84% 59%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 225 76% 40%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 221 83% 40%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 225 76% 40%;
-    --sidebar-ring: 191 84% 59%;
+    --sidebar-border: 221 83% 40%;
+    --sidebar-ring: 199 89% 48%;
   }
   .dark {
     --background: 222.2 84% 4.9%;
