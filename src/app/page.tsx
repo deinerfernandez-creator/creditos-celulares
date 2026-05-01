@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -30,7 +31,7 @@ import {
   CheckCircle2,
   Settings,
   Trash2,
-  MoreVertical
+  History
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from '@/lib/utils';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -366,8 +368,16 @@ export default function DashboardPage() {
                                 </TableCell>
                                 <TableCell className="pr-6 text-right">
                                   <div className="flex items-center justify-end gap-2">
-                                    <Button variant="ghost" size="sm" asChild className="rounded-xl font-bold text-primary">
-                                      <Link href={`/credits?customerId=${c.id}`}>Ver créditos</Link>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      asChild 
+                                      className={cn("rounded-xl font-bold text-primary", !latestCredit && "opacity-50 pointer-events-none")}
+                                    >
+                                      <Link href={latestCredit ? `/credits/${latestCredit.id}` : '#'}>
+                                        <History className="w-4 h-4 mr-2" />
+                                        Ver historial
+                                      </Link>
                                     </Button>
                                     
                                     <AlertDialog>
