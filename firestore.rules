@@ -2,27 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    /**
-     * @description ACCESO MAESTRO INCONDICIONAL
-     * Otorga acceso TOTAL (lectura y escritura) si el usuario es el administrador maestro.
-     * Esta regla se evalúa primero y es prioritaria.
-     */
+    // Regla Maestra: Acceso total para el administrador principal por correo
     match /{document=**} {
       allow read, write: if request.auth != null && (
         request.auth.token.email == "deinerfernandez@gmail.com"
       );
     }
 
-    /**
-     * @description ACCESO PARA PERSONAL AUTORIZADO
-     * Permite acceso si el usuario existe en la colección de personal.
-     */
+    // Regla de Personal: Acceso si existe un perfil de usuario para el UID
     match /{document=**} {
       allow read, write: if request.auth != null && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Reglas individuales para redundancia y claridad
+    // Reglas explícitas para colecciones principales
     match /customers/{customerId} {
       allow read, write: if request.auth != null;
     }

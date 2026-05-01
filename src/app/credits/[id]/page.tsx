@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { 
   Card, 
@@ -41,7 +41,7 @@ import Link from 'next/link';
 import { addDays, format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: any) => {
   const num = Number(value);
   if (isNaN(num)) return '$ 0';
   return new Intl.NumberFormat('es-CO', {
@@ -58,9 +58,16 @@ export default function CreditDetailPage() {
   const { user } = useUser();
   const db = useFirestore();
 
+  const [mounted, setMounted] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch Credit Data
   const creditRef = useMemoFirebase(() => id ? doc(db, 'credits', id) : null, [db, id]);
@@ -77,9 +84,6 @@ export default function CreditDetailPage() {
   }, [db, id]);
   const { data: payments, isLoading: loadingPayments } = useCollection(paymentsQuery);
 
-  const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
-
   // Lógica segura para el progreso
   const progress = useMemo(() => {
     if (!credit || typeof credit.totalAmount !== 'number' || credit.totalAmount <= 0) return 0;
@@ -91,7 +95,7 @@ export default function CreditDetailPage() {
 
   // Cronograma Seguro
   const schedule = useMemo(() => {
-    if (!credit || !credit.installmentAmount || credit.installmentAmount <= 0) return [];
+    if (!credit || !credit.installmentAmount) return [];
     
     let baseDate: Date;
     if (credit.createdAt?.toDate) {
@@ -108,17 +112,18 @@ export default function CreditDetailPage() {
     const totalPaidAmount = payments?.reduce((acc, p) => acc + (p.amount || 0), 0) || 0;
     let accumulatedForComparison = 0;
 
-    const numInstallments = Number(credit.planType) || 6;
+    const numInstallments = Math.min(24, Math.max(1, Number(credit.planType) || 6));
+    const installmentValue = Number(credit.installmentAmount) || 0;
+
     for (let i = 1; i <= numInstallments; i++) {
       const dueDate = addDays(baseDate, i * 14);
-      accumulatedForComparison += credit.installmentAmount;
-      // Pequeño margen de error para comparaciones decimales
-      const isPaid = totalPaidAmount >= (accumulatedForComparison - 100);
+      accumulatedForComparison += installmentValue;
+      const isPaid = totalPaidAmount >= (accumulatedForComparison - 50); // Margen de 50 COP
 
       items.push({
         number: i,
-        dueDate,
-        amount: credit.installmentAmount,
+        dueDate: isValid(dueDate) ? dueDate : new Date(),
+        amount: installmentValue,
         isPaid
       });
     }
@@ -198,11 +203,11 @@ export default function CreditDetailPage() {
     }
   };
 
-  if (loadingCredit || (credit && !customer && loadingCustomer)) {
+  if (!mounted || loadingCredit) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-slate-500 font-medium">Cargando detalles del crédito...</p>
+        <p className="text-slate-500 font-medium">Sincronizando con el servidor...</p>
       </div>
     );
   }
@@ -248,7 +253,7 @@ export default function CreditDetailPage() {
             <DialogContent className="rounded-3xl border-none p-8">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black">Registrar Abono</DialogTitle>
-                <DialogDescription>Ingresa el monto recibido en COP para {customer?.name}.</DialogDescription>
+                <DialogDescription>Ingresa el monto recibido en COP para {customer?.name || 'el cliente'}.</DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-6">
                 <div className="space-y-3">
@@ -297,14 +302,14 @@ export default function CreditDetailPage() {
               <Card className="border-none shadow-sm border-l-4 border-green-500 rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Cuota Inicial</CardDescription>
-                  <CardTitle className="text-xl font-black text-green-600">{formatCurrency(credit?.downPayment || 0)}</CardTitle>
+                  <CardTitle className="text-xl font-black text-green-600">{formatCurrency(credit?.downPayment)}</CardTitle>
                 </CardHeader>
               </Card>
 
               <Card className="border-none shadow-sm border-l-4 border-primary rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="pb-2">
                   <CardDescription className="uppercase text-[10px] font-black tracking-widest text-slate-400">Saldo Pendiente</CardDescription>
-                  <CardTitle className="text-xl font-black text-primary">{formatCurrency(credit?.remainingBalance || 0)}</CardTitle>
+                  <CardTitle className="text-xl font-black text-primary">{formatCurrency(credit?.remainingBalance)}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
@@ -353,7 +358,7 @@ export default function CreditDetailPage() {
                         ) : (
                           <tr>
                             <td colSpan={4} className="px-8 py-20 text-center text-slate-400 italic">
-                              No hay información del plan disponible.
+                              Generando plan de pagos...
                             </td>
                           </tr>
                         )}
