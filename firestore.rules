@@ -1,57 +1,68 @@
 /**
  * TECNICELL CRÉDITOS - REGLAS DE SEGURIDAD DEFINITIVAS
+ * Optimizadas para acceso total del administrador maestro.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE AYUDA ---
+    // --- FUNCIONES DE SEGURIDAD ---
 
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Determina si el usuario es el Administrador Maestro.
-     * Acceso total basado en el correo electrónico del token de autenticación.
+     * @description Identifica al Administrador Maestro por su correo.
+     * Esta regla es absoluta y prioritaria.
      */
     function isMasterAdmin() {
-      return isSignedIn() && request.auth.token.email == 'deinerfernandez@gmail.com';
+      return isSignedIn() && 
+             request.auth.token.email != null && 
+             request.auth.token.email.lower() == 'deinerfernandez@gmail.com';
     }
 
     /**
-     * @description Determina si el usuario es parte del staff autorizado en la DB.
+     * @description Verifica si el usuario tiene un rol autorizado en la colección de users.
      */
-    function isAuthorizedStaff() {
-      if (!isSignedIn()) return false;
+    function hasRole(role) {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) && (get(userPath).data.role == 'admin' || get(userPath).data.role == 'vendedor');
+      return exists(userPath) && get(userPath).data.role == role;
     }
 
-    function hasStaffAccess() {
-      return isMasterAdmin() || isAuthorizedStaff();
+    function isStaff() {
+      return isSignedIn() && (
+        isMasterAdmin() || 
+        hasRole('admin') || 
+        hasRole('vendedor')
+      );
     }
 
-    // --- REGLAS POR COLECCIÓN ---
+    // --- REGLAS DE ACCESO ---
 
-    // Acceso total para staff a los datos operativos
+    // 1. EL ADMINISTRADOR MAESTRO TIENE ACCESO TOTAL A TODO EL SISTEMA
+    match /{document=**} {
+      allow read, write: if isMasterAdmin();
+    }
+
+    // 2. REGLAS PARA EL RESTO DEL PERSONAL (VENDEDORES / OTROS ADMINS)
     match /customers/{customerId} {
-      allow read, write: if hasStaffAccess();
+      allow read, write: if isStaff();
     }
 
     match /credits/{creditId} {
-      allow read, write: if hasStaffAccess();
+      allow read, write: if isStaff();
     }
 
     match /payments/{paymentId} {
-      allow read, write: if hasStaffAccess();
+      allow read, write: if isStaff();
     }
 
-    // Los perfiles de usuario pueden ser leídos por cualquiera autenticado, 
-    // pero solo el staff puede editarlos.
     match /users/{userId} {
+      // Cualquier usuario autenticado puede leer perfiles (para validar su propio rol)
       allow read: if isSignedIn();
-      allow write: if hasStaffAccess();
+      // Solo el staff con permisos puede crear o editar usuarios
+      allow write: if isStaff();
     }
   }
 }

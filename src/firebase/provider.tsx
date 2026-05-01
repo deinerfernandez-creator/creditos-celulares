@@ -59,7 +59,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // PRIORIDAD MÁXIMA: Identificar al Administrador Maestro de forma instantánea
+        // PRIORIDAD CRÍTICA: Identificar al Administrador Maestro instantáneamente por email
         if (firebaseUser.email?.toLowerCase() === 'deinerfernandez@gmail.com') {
           setUserAuthState({ 
             user: firebaseUser, 
@@ -70,14 +70,33 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
           return;
         }
 
-        // Para otros usuarios, consultar el rol en Firestore
+        // Para otros usuarios, intentar obtener el rol desde Firestore
         try {
           const userDoc = await getDoc(doc(firestore, 'users', firebaseUser.uid));
-          const role = userDoc.exists() ? (userDoc.data().role as UserRole) : 'cliente';
-          setUserAuthState({ user: firebaseUser, role, isUserLoading: false, userError: null });
+          if (userDoc.exists()) {
+            setUserAuthState({ 
+              user: firebaseUser, 
+              role: userDoc.data().role as UserRole, 
+              isUserLoading: false, 
+              userError: null 
+            });
+          } else {
+            // Si no está registrado en la colección de personal, es un cliente externo
+            setUserAuthState({ 
+              user: firebaseUser, 
+              role: 'cliente', 
+              isUserLoading: false, 
+              userError: null 
+            });
+          }
         } catch (e) {
-          // Fallback a cliente si hay error de permisos al leer el perfil propio
-          setUserAuthState({ user: firebaseUser, role: 'cliente', isUserLoading: false, userError: null });
+          // Si hay error de permisos al leer el perfil (ej. reglas restrictivas), fallback a cliente
+          setUserAuthState({ 
+            user: firebaseUser, 
+            role: 'cliente', 
+            isUserLoading: false, 
+            userError: null 
+          });
         }
       } else {
         setUserAuthState({ user: null, role: null, isUserLoading: false, userError: null });
