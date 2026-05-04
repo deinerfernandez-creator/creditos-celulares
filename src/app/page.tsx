@@ -34,7 +34,6 @@ import {
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/Table';
 import { 
   useFirestore, 
   useCollection, 
@@ -143,7 +142,7 @@ export default function DashboardPage() {
   const handleDeleteStaff = (uid: string) => {
     if (role !== 'admin') return;
     deleteDocumentNonBlocking(doc(db, 'users', uid));
-    toast({ title: "Personal removido", description: "Se han revocado los permisos de acceso." });
+    toast({ title: "Acceso removido", description: "Se han revocado los permisos de acceso." });
   };
 
   if (!mounted || authLoading) {
@@ -214,7 +213,7 @@ export default function DashboardPage() {
               {role === 'admin' && (
                 <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-xl h-11 font-bold mb-1">
                   <Shield className="w-5 h-5 mr-3" />
-                  <span>Personal Staff</span>
+                  <span>Usuarios</span>
                 </SidebarMenuButton>
               )}
               
@@ -248,7 +247,7 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-primary" />
               <div className="h-6 w-px bg-slate-200 mx-2" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : activeTab === 'credits' ? 'Control de Financiamientos' : 'Gestión de Personal Staff'}
+                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : activeTab === 'credits' ? 'Control de Financiamientos' : 'Gestión de Usuarios'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -538,11 +537,11 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                    <div>
-                     <h3 className="text-2xl font-black text-slate-900 tracking-tight">Personal de Operaciones</h3>
+                     <h3 className="text-2xl font-black text-slate-900 tracking-tight">Usuarios</h3>
                      <p className="text-sm text-slate-500 font-medium">Gestión de accesos y roles administrativos Tecnicell</p>
                    </div>
                    <Button asChild className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-primary/10">
-                     <Link href="/staff/new"><PlusCircle className="mr-2 h-4 w-4" /> Habilitar Personal</Link>
+                     <Link href="/staff/new"><PlusCircle className="mr-2 h-4 w-4" /> Habilitar Usuario</Link>
                    </Button>
                 </div>
                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
@@ -562,7 +561,7 @@ export default function DashboardPage() {
                             staff.map((s: any) => (
                               <tr key={s.id} className="hover:bg-slate-50/30 transition-colors">
                                 <td className="px-8 py-5">
-                                  <div className="font-bold text-slate-900">{s.name || 'Staff Sin Nombre'}</div>
+                                  <div className="font-bold text-slate-900">{s.name || 'Usuario Sin Nombre'}</div>
                                   <div className="text-xs text-slate-400">{s.email}</div>
                                 </td>
                                 <td className="px-4 py-5 font-mono text-[10px] text-slate-400">{s.id}</td>
@@ -596,7 +595,7 @@ export default function DashboardPage() {
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={4} className="text-center py-20 text-slate-400 italic">No hay otros miembros del staff registrados.</td>
+                              <td colSpan={4} className="text-center py-20 text-slate-400 italic">No hay otros usuarios registrados.</td>
                             </tr>
                           )}
                         </tbody>

@@ -63,7 +63,7 @@ export default function NewStaffPage() {
     setDoc(doc(db, 'users', formData.uid), staffData)
       .then(() => {
         toast({
-          title: "Personal Registrado",
+          title: "Usuario Registrado",
           description: `Se han asignado permisos de ${formData.role} a ${formData.email}.`,
         });
         router.push('/');
@@ -87,7 +87,7 @@ export default function NewStaffPage() {
           <Button variant="ghost" size="icon" asChild className="rounded-full">
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">Habilitar Nuevo Personal</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Habilitar Nuevo Usuario</h1>
         </div>
 
         <Card className="border-none shadow-xl">
