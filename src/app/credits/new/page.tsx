@@ -19,7 +19,8 @@ import {
   Search,
   User as UserIcon,
   X,
-  CreditCard as IdCardIcon
+  CreditCard as IdCardIcon,
+  Percent
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -221,6 +222,24 @@ export default function NewCreditPage() {
     }
   };
 
+  const handleSetDownPaymentPercentage = (percentage: number) => {
+    const total = parseFloat(initialAmount) || 0;
+    if (total > 0) {
+      const calculated = Math.round(total * (percentage / 100));
+      setDownPayment(calculated.toString());
+      toast({
+        title: `Cuota del ${percentage}%`,
+        description: `Se ha calculado un abono inicial de ${formatCurrency(calculated)}`,
+      });
+    } else {
+      toast({
+        title: "Precio requerido",
+        description: "Primero ingresa el precio total del equipo.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '') {
@@ -377,8 +396,39 @@ export default function NewCreditPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="downPayment" className="font-bold">Cuota Inicial (COP)</Label>
+                  <div className="space-y-3 col-span-1 md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="downPayment" className="font-bold">Cuota Inicial (COP)</Label>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 text-[10px] font-black rounded-full border-primary/20 hover:bg-primary/5"
+                          onClick={() => handleSetDownPaymentPercentage(30)}
+                        >
+                          30%
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 text-[10px] font-black rounded-full border-primary/20 hover:bg-primary/5"
+                          onClick={() => handleSetDownPaymentPercentage(40)}
+                        >
+                          40%
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 text-[10px] font-black rounded-full border-primary/20 hover:bg-primary/5"
+                          onClick={() => handleSetDownPaymentPercentage(50)}
+                        >
+                          50%
+                        </Button>
+                      </div>
+                    </div>
                     <div className="relative">
                       <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" />
                       <Input 
