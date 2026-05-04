@@ -6,12 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, Mail, Lock, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Mail, Lock, Loader2, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Image from 'next/image';
 import { firebaseConfig } from '@/firebase/config';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,6 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
   const isConfigMissing = !firebaseConfig.apiKey || firebaseConfig.apiKey === 'undefined' || firebaseConfig.apiKey === '';
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -70,7 +73,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
-        <Button variant="ghost" asChild className="rounded-xl text-slate-500">
+        <Button variant="ghost" asChild className="rounded-xl text-slate-500 hover:text-primary">
           <Link href="/portal"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Portal de Clientes</Link>
         </Button>
 
@@ -81,25 +84,31 @@ export default function LoginPage() {
           </div>
         )}
 
-        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-primary text-white text-center pb-8">
-            <div className="mx-auto bg-white/20 p-3 rounded-2xl w-fit mb-4">
-              <ShieldCheck className="w-8 h-8" />
+        <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="bg-primary text-white text-center pb-8 pt-10">
+            <div className="mx-auto bg-white p-2 rounded-2xl w-24 h-24 mb-6 flex items-center justify-center shadow-xl">
+              <Image 
+                src={logo?.imageUrl || '/logo.png'} 
+                alt="Tecnicell Logo" 
+                width={70} 
+                height={70}
+                className="object-contain"
+              />
             </div>
-            <CardTitle className="text-2xl font-bold text-white">Tecnicell Staff</CardTitle>
-            <CardDescription className="text-white/70 italic">Acceso para administradores y vendedores</CardDescription>
+            <CardTitle className="text-3xl font-black text-white tracking-tighter">Tecnicell Créditos</CardTitle>
+            <CardDescription className="text-white/80 italic font-medium">Panel Administrativo Staff</CardDescription>
           </CardHeader>
-          <CardContent className="pt-8">
+          <CardContent className="pt-8 px-8">
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
+                <Label htmlFor="email" className="text-xs font-black uppercase tracking-widest text-slate-400">Correo Electrónico</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
                     id="email" 
                     type="email" 
                     placeholder="ejemplo@correo.com"
-                    className="pl-10 h-12 rounded-xl"
+                    className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -108,14 +117,14 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password" id="pass-label" className="text-xs font-black uppercase tracking-widest text-slate-400">Contraseña</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
                     id="password" 
                     type="password" 
                     placeholder="••••••••"
-                    className="pl-10 h-12 rounded-xl"
+                    className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -123,15 +132,15 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button type="submit" disabled={loading} className="w-full h-14 rounded-xl text-lg font-bold shadow-lg shadow-primary/20 bg-primary text-white hover:bg-primary/90 transition-all">
+              <Button type="submit" disabled={loading} className="w-full h-14 rounded-2xl text-lg font-black shadow-xl shadow-primary/20 bg-primary text-white hover:bg-primary/90 transition-all">
                 {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Iniciar Sesión"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="bg-slate-50 p-6 text-center border-t">
             <div className="space-y-2 w-full">
-              <p className="text-xs text-slate-500">
-                Asegúrate de haber creado el usuario en la Consola de Firebase &gt; Authentication.
+              <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
+                Sistema Experto de Gestión de Créditos
               </p>
             </div>
           </CardFooter>
