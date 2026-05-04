@@ -33,7 +33,8 @@ import {
   ShieldAlert,
   Camera,
   X,
-  RefreshCw
+  RefreshCw,
+  FileSignature
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -110,6 +111,8 @@ export default function CreditDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [openPayment, setOpenPayment] = useState(false);
   const [openContract, setOpenContract] = useState(false);
+  const [openPromissory, setOpenPromissory] = useState(false);
+  const [activePrintDoc, setActivePrintDoc] = useState<'contract' | 'promissory' | null>(null);
 
   // Camera state for Delivery Photo
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -278,8 +281,11 @@ export default function CreditDetailPage() {
     router.push('/');
   };
 
-  const handlePrintContract = () => {
-    window.print();
+  const handlePrint = (type: 'contract' | 'promissory') => {
+    setActivePrintDoc(type);
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   const progress = useMemo(() => {
@@ -335,7 +341,7 @@ export default function CreditDetailPage() {
               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Crédito #{id.slice(0, 8)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Dialog open={openContract} onOpenChange={setOpenContract}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-xl font-bold border-primary/20 text-primary bg-white hover:bg-primary/5">
@@ -405,8 +411,60 @@ export default function CreditDetailPage() {
                 </div>
                 <DialogFooter className="print:hidden">
                   <Button variant="outline" onClick={() => setOpenContract(false)} className="rounded-xl">Cerrar</Button>
-                  <Button onClick={handlePrintContract} className="rounded-xl bg-primary">
+                  <Button onClick={() => handlePrint('contract')} className="rounded-xl bg-primary">
                     <Printer className="w-4 h-4 mr-2" /> Imprimir Contrato
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={openPromissory} onOpenChange={setOpenPromissory}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-xl font-bold border-accent/20 text-accent bg-white hover:bg-accent/5">
+                  <FileSignature className="w-4 h-4 mr-2" /> Letra de Cambio
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-2xl max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-black text-center text-xl">Letra de Cambio No. {id.slice(0, 8).toUpperCase()}</DialogTitle>
+                </DialogHeader>
+                <div id="promissory-content" className="space-y-8 py-8 text-sm text-slate-800 leading-relaxed font-medium border-y my-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <p className="text-[10px] uppercase font-black text-slate-400">Lugar y Fecha</p>
+                      <p>Santa Fé Las Claras, {contractDate}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase font-black text-slate-400">Por Valor de:</p>
+                      <p className="text-2xl font-black text-slate-900">{formatCurrency(credit.totalAmount)}</p>
+                    </div>
+                  </div>
+
+                  <p className="text-justify indent-8">
+                    Señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong>, se obliga a pagar incondicionalmente por esta <strong>LETRA DE CAMBIO</strong> a la orden de <strong>TECNICELL CRÉDITOS (Nit: 1003078186)</strong>, la suma de <strong>{formatCurrency(credit.totalAmount)}</strong> ({credit.totalAmount.toLocaleString('es-CO')} Pesos M/CTE), en cuotas quincenales según plan de pagos anexo, o a su vencimiento final.
+                  </p>
+
+                  <div className="space-y-4 text-xs italic opacity-80">
+                    <p>En caso de mora en el pago de una o más cuotas, se causarán intereses de mora a la tasa máxima legal permitida. Así mismo, la mora en cualquier obligación facultará al tenedor de este título para declarar vencidos todos los plazos y exigir el pago total de la deuda (Cláusula de Aceleración).</p>
+                    <p>Autorizo expresamente a TECNICELL CRÉDITOS para reportar mi comportamiento crediticio ante las centrales de riesgo y bases de datos financieras.</p>
+                  </div>
+
+                  <div className="pt-24 grid grid-cols-2 gap-20 items-end px-10">
+                    <div className="border-t-2 border-slate-900 pt-4 relative">
+                      <p className="font-black text-[10px] uppercase mb-1">Firma del Deudor</p>
+                      <p className="text-[10px]">{customer?.name}</p>
+                      <p className="text-[10px]">C.C. {customer?.cedula}</p>
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-20 h-28 border-2 border-slate-900 rounded-md" />
+                      <p className="text-[10px] font-black uppercase">Huella Dactilar</p>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter className="print:hidden">
+                  <Button variant="outline" onClick={() => setOpenPromissory(false)} className="rounded-xl">Cerrar</Button>
+                  <Button onClick={() => handlePrint('promissory')} className="rounded-xl bg-accent text-white">
+                    <Printer className="w-4 h-4 mr-2" /> Imprimir Letra
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -684,78 +742,153 @@ export default function CreditDetailPage() {
       </div>
 
       {/* Contract Print View */}
-      <div className="hidden print:block p-10 space-y-8 bg-white text-slate-900">
-         <div className="flex justify-between items-center border-b-2 border-slate-900 pb-6">
-            <div className="flex items-center gap-4">
-              <Image src={logo?.imageUrl || '/logo.png'} alt="Logo" width={100} height={100} />
+      {activePrintDoc === 'contract' && (
+        <div className="hidden print:block p-10 space-y-8 bg-white text-slate-900">
+           <div className="flex justify-between items-center border-b-2 border-slate-900 pb-6">
+              <div className="flex items-center gap-4">
+                <Image src={logo?.imageUrl || '/logo.png'} alt="Logo" width={100} height={100} />
+                <div>
+                  <h1 className="text-3xl font-black tracking-tighter">TECNICELL CRÉDITOS</h1>
+                  <p className="text-xs font-bold uppercase tracking-widest">Servicio Técnico y Accesorios</p>
+                  <p className="text-xs font-black">NIT: 1003078186</p>
+                </div>
+              </div>
+              <div className="text-right text-xs">
+                 <p className="font-bold">Contrato de Crédito No.</p>
+                 <p className="text-xl font-black">#{id.slice(0, 8).toUpperCase()}</p>
+              </div>
+           </div>
+
+           <div className="space-y-6 text-sm leading-relaxed">
+              <p className="text-justify">
+                 En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
+              </p>
+
+              <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-2">
+                 <h3 className="font-black border-b border-slate-300 pb-2 mb-4">ESPECIFICACIONES DEL PRODUCTO Y CRÉDITO</h3>
+                 <div className="grid grid-cols-2 gap-4">
+                    <p><strong>Equipo:</strong> {credit.deviceModel}</p>
+                    <p><strong>IMEI:</strong> {credit.imei}</p>
+                    <p><strong>Precio Venta:</strong> {formatCurrency(credit.initialAmount)}</p>
+                    <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
+                    <p><strong>Monto Financiado:</strong> {formatCurrency(credit.totalAmount)}</p>
+                    <p><strong>No. de Cuotas:</strong> {credit.planType} Quincenas</p>
+                    <p className="col-span-2"><strong>Valor Cuota Quincenal:</strong> {formatCurrency(credit.installmentAmount)}</p>
+                 </div>
+              </div>
+
+              <div className="space-y-4">
+                 <p><strong>CLÁUSULA PRIMERA. OBJETO:</strong> EL VENDEDOR entrega a EL CLIENTE el equipo celular descrito anteriormente bajo la modalidad de venta financiada.</p>
+                 
+                 <p><strong>CLÁUSULA SEGUNDA. RESERVA DE DOMINIO:</strong> EL VENDEDOR se reserva el dominio y propiedad del equipo celular hasta que EL CLIENTE haya cancelado la totalidad del monto financiado y sus intereses.</p>
+                 
+                 <div className="p-4 border-l-4 border-slate-900 bg-slate-50 font-bold italic">
+                    CLÁUSULA TERCERA. INCUMPLIMIENTO Y RETIRO DEL EQUIPO: En caso de que EL CLIENTE presente una mora superior a DOS (2) MESES (60 días calendario) en el pago de cualquiera de sus cuotas, EL VENDEDOR está facultado legalmente para RECOGER Y RETIRAR el equipo celular de manos de EL CLIENTE. En este evento, EL CLIENTE perderá la totalidad de las cuotas pagadas y la cuota inicial por concepto de arrendamiento, uso y depreciación del equipo, salvo acuerdo escrito previo.
+                 </div>
+
+                 <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 1 día después de la fecha de pago.</p>
+
+                 <div className="p-4 border-l-4 border-destructive bg-destructive/5 font-bold">
+                    CLÁUSULA QUINTA. USO INADECUADO: Si el cliente hace uso inadecuado del equipo como formateos, bypass y tratar de desbloquear el equipo será tomado como una NEGATIVA AL PAGO y se procederá a recoger dicho equipo de manera inmediata.
+                 </div>
+
+                 <p><strong>CLÁUSULA SEXTA. REPORTE A CENTRALES DE RIESGO:</strong> EL CLIENTE autoriza expresamente a EL VENDEDOR para que reporte, procese y divulgue el comportamiento de pago y el incumplimiento de las obligaciones crediticias ante las centrales de información y riesgo crediticio. La mora o negativa al pago generará reportes negativos en su historial crediticio.</p>
+
+                 <p><strong>CLÁUSULA SÉPTIMA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
+              </div>
+
+              <div className="pt-24 grid grid-cols-3 gap-10 items-end">
+                 <div className="border-t-2 border-slate-900 pt-2 text-center">
+                    <p className="font-black text-xs uppercase">EL CLIENTE</p>
+                    <p className="text-[10px]">{customer?.name}</p>
+                    <p className="text-[10px]">C.C. {customer?.cedula}</p>
+                 </div>
+                 <div className="flex flex-col items-center gap-1">
+                    <div className="w-16 h-20 border-2 border-slate-900 rounded-md" />
+                    <p className="text-[10px] font-black uppercase">Huella</p>
+                 </div>
+                 <div className="border-t-2 border-slate-900 pt-2 text-center">
+                    <p className="font-black text-xs uppercase">EL VENDEDOR</p>
+                    <p className="text-[10px]">TECNICELL CRÉDITOS</p>
+                    <p className="text-[10px]">Nit. 1003078186</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Promissory Note Print View */}
+      {activePrintDoc === 'promissory' && (
+        <div className="hidden print:block p-16 space-y-12 bg-white text-slate-900 min-h-screen">
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-black tracking-tighter border-b-4 border-slate-900 pb-4 inline-block px-10">LETRA DE CAMBIO</h1>
+            <p className="text-sm font-bold uppercase tracking-widest pt-2">Título Valor de Obligación Incondicional</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-10 border-2 border-slate-900 p-8 rounded-3xl">
+            <div className="space-y-4">
               <div>
-                <h1 className="text-3xl font-black tracking-tighter">TECNICELL CRÉDITOS</h1>
-                <p className="text-xs font-bold uppercase tracking-widest">Servicio Técnico y Accesorios</p>
-                <p className="text-xs font-black">NIT: 1003078186</p>
+                <p className="text-[10px] font-black uppercase text-slate-400">Número de Título</p>
+                <p className="text-2xl font-black">#{id.slice(0, 8).toUpperCase()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Lugar de Expedición</p>
+                <p className="font-bold">Santa Fé Las Claras (rioverde), Quindío</p>
               </div>
             </div>
-            <div className="text-right text-xs">
-               <p className="font-bold">Contrato de Crédito No.</p>
-               <p className="text-xl font-black">#{id.slice(0, 8).toUpperCase()}</p>
+            <div className="text-right space-y-4">
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Valor de la Obligación</p>
+                <p className="text-4xl font-black text-primary">{formatCurrency(credit.totalAmount)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase text-slate-400">Fecha de Expedición</p>
+                <p className="font-bold">{contractDate}</p>
+              </div>
             </div>
-         </div>
+          </div>
 
-         <div className="space-y-6 text-sm leading-relaxed">
-            <p className="text-justify">
-               En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
+          <div className="space-y-8 text-lg leading-relaxed text-justify px-4">
+            <p>
+              Yo, <strong>{customer?.name}</strong>, mayor de edad, identificado(a) con la cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, por medio del presente documento declaro que <strong>PAGARÉ INCONDICIONALMENTE</strong>, a la orden de <strong>TECNICELL CRÉDITOS</strong> (Nit: 1003078186), o a quien represente sus derechos, la suma de:
+            </p>
+            
+            <div className="bg-slate-50 border-2 border-slate-200 p-6 rounded-2xl text-center">
+              <p className="font-black text-xl italic uppercase">
+                {formatCurrency(credit.totalAmount)} ({credit.totalAmount.toLocaleString('es-CO')} PESOS M/CTE)
+              </p>
+            </div>
+
+            <p>
+              Dicha suma será cancelada en cuotas quincenales, según los plazos establecidos en el contrato de financiación anexo. En caso de mora en el pago de una o más cuotas, se causarán intereses a la tasa máxima legal permitida.
             </p>
 
-            <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-2">
-               <h3 className="font-black border-b border-slate-300 pb-2 mb-4">ESPECIFICACIONES DEL PRODUCTO Y CRÉDITO</h3>
-               <div className="grid grid-cols-2 gap-4">
-                  <p><strong>Equipo:</strong> {credit.deviceModel}</p>
-                  <p><strong>IMEI:</strong> {credit.imei}</p>
-                  <p><strong>Precio Venta:</strong> {formatCurrency(credit.initialAmount)}</p>
-                  <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
-                  <p><strong>Monto Financiado:</strong> {formatCurrency(credit.totalAmount)}</p>
-                  <p><strong>No. de Cuotas:</strong> {credit.planType} Quincenas</p>
-                  <p className="col-span-2"><strong>Valor Cuota Quincenal:</strong> {formatCurrency(credit.installmentAmount)}</p>
-               </div>
+            <p className="text-base font-medium opacity-80">
+              <strong>CLÁUSULA DE ACELERACIÓN:</strong> El incumplimiento en el pago de una sola de las cuotas pactadas facultará al tenedor de este título para declarar vencidos todos los plazos y exigir el pago total de la obligación por la vía ejecutiva. Renuncio al protesto y a las diligencias de aviso de rechazo.
+            </p>
+          </div>
+
+          <div className="pt-32 grid grid-cols-2 gap-32 items-end px-10">
+            <div className="space-y-6">
+              <div className="border-t-2 border-slate-900 pt-2">
+                <p className="font-black text-sm uppercase">FIRMA DEL DEUDOR</p>
+                <p className="text-xs">Nombre: {customer?.name}</p>
+                <p className="text-xs">C.C. {customer?.cedula}</p>
+                <p className="text-xs">Dirección: {customer?.address || '____________________'}</p>
+                <p className="text-xs">Tel: {customer?.phone}</p>
+              </div>
             </div>
-
-            <div className="space-y-4">
-               <p><strong>CLÁUSULA PRIMERA. OBJETO:</strong> EL VENDEDOR entrega a EL CLIENTE el equipo celular descrito anteriormente bajo la modalidad de venta financiada.</p>
-               
-               <p><strong>CLÁUSULA SEGUNDA. RESERVA DE DOMINIO:</strong> EL VENDEDOR se reserva el dominio y propiedad del equipo celular hasta que EL CLIENTE haya cancelado la totalidad del monto financiado y sus intereses.</p>
-               
-               <div className="p-4 border-l-4 border-slate-900 bg-slate-50 font-bold italic">
-                  CLÁUSULA TERCERA. INCUMPLIMIENTO Y RETIRO DEL EQUIPO: En caso de que EL CLIENTE presente una mora superior a DOS (2) MESES (60 días calendario) en el pago de cualquiera de sus cuotas, EL VENDEDOR está facultado legalmente para RECOGER Y RETIRAR el equipo celular de manos de EL CLIENTE. En este evento, EL CLIENTE perderá la totalidad de las cuotas pagadas y la cuota inicial por concepto de arrendamiento, uso y depreciación del equipo, salvo acuerdo escrito previo.
-               </div>
-
-               <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 1 día después de la fecha de pago.</p>
-
-               <div className="p-4 border-l-4 border-destructive bg-destructive/5 font-bold">
-                  CLÁUSULA QUINTA. USO INADECUADO: Si el cliente hace uso inadecuado del equipo como formateos, bypass y tratar de desbloquear el equipo será tomado como una NEGATIVA AL PAGO y se procederá a recoger dicho equipo de manera inmediata.
-               </div>
-
-               <p><strong>CLÁUSULA SEXTA. REPORTE A CENTRALES DE RIESGO:</strong> EL CLIENTE autoriza expresamente a EL VENDEDOR para que reporte, procese y divulgue el comportamiento de pago y el incumplimiento de las obligaciones crediticias ante las centrales de información y riesgo crediticio. La mora o negativa al pago generará reportes negativos en su historial crediticio.</p>
-
-               <p><strong>CLÁUSULA SÉPTIMA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-32 h-40 border-2 border-slate-900 rounded-xl" />
+              <p className="text-[10px] font-black uppercase">HUELLA DACTILAR</p>
             </div>
+          </div>
 
-            <div className="pt-24 grid grid-cols-3 gap-10 items-end">
-               <div className="border-t-2 border-slate-900 pt-2 text-center">
-                  <p className="font-black text-xs uppercase">EL CLIENTE</p>
-                  <p className="text-[10px]">{customer?.name}</p>
-                  <p className="text-[10px]">C.C. {customer?.cedula}</p>
-               </div>
-               <div className="flex flex-col items-center gap-1">
-                  <div className="w-16 h-20 border-2 border-slate-900 rounded-md" />
-                  <p className="text-[10px] font-black uppercase">Huella</p>
-               </div>
-               <div className="border-t-2 border-slate-900 pt-2 text-center">
-                  <p className="font-black text-xs uppercase">EL VENDEDOR</p>
-                  <p className="text-[10px]">TECNICELL CRÉDITOS</p>
-                  <p className="text-[10px]">Nit. 1003078186</p>
-               </div>
-            </div>
-         </div>
-      </div>
+          <div className="pt-20 text-center opacity-40 border-t">
+            <p className="text-[8px] font-black uppercase tracking-widest">Documento Generado por Sistema Experto Tecnicell Créditos - NIT: 1003078186</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
