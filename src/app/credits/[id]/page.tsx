@@ -98,6 +98,53 @@ const formatCurrency = (value: any) => {
   }).format(num);
 };
 
+// Función auxiliar para convertir números a letras (Pesos Colombianos)
+function numeroALetras(num: number): string {
+  const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
+  const decenas = ["DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const especiales = ["ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
+  const centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
+
+  const convertirSeccion = (n: number) => {
+    let output = "";
+    if (n === 100) return "CIEN";
+    if (n >= 100) {
+      output += centenas[Math.floor(n / 100)] + " ";
+      n %= 100;
+    }
+    if (n >= 10 && n <= 19) {
+      if (n === 10) output += "DIEZ";
+      else output += especiales[n - 11];
+      n = 0;
+    } else if (n >= 20) {
+      output += decenas[Math.floor(n / 10) - 1];
+      if (n % 10 > 0) output += " Y " + unidades[n % 10];
+      n = 0;
+    }
+    if (n > 0) output += unidades[n];
+    return output.trim();
+  };
+
+  if (num === 0) return "CERO PESOS M/CTE";
+  
+  let letras = "";
+  if (num >= 1000000) {
+    const millones = Math.floor(num / 1000000);
+    letras += (millones === 1 ? "UN MILLÓN" : convertirSeccion(millones) + " MILLONES") + " ";
+    num %= 1000000;
+  }
+  if (num >= 1000) {
+    const miles = Math.floor(num / 1000);
+    letras += (miles === 1 ? "MIL" : convertirSeccion(miles) + " MIL") + " ";
+    num %= 1000;
+  }
+  if (num > 0) {
+    letras += convertirSeccion(num) + " ";
+  }
+
+  return letras.trim() + " PESOS M/CTE";
+}
+
 export default function CreditDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -441,7 +488,7 @@ export default function CreditDetailPage() {
                   </div>
 
                   <p className="text-justify indent-8">
-                    Señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong>, se obliga a pagar incondicionalmente por esta <strong>LETRA DE CAMBIO</strong> a la orden de <strong>TECNICELL CRÉDITOS (Nit: 1003078186)</strong>, la suma de <strong>{formatCurrency(credit.totalAmount)}</strong> ({credit.totalAmount.toLocaleString('es-CO')} Pesos M/CTE), en cuotas quincenales según plan de pagos anexo, o a su vencimiento final.
+                    Señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong>, se obliga a pagar incondicionalmente por esta <strong>LETRA DE CAMBIO</strong> a la orden de <strong>TECNICELL CRÉDITOS (Nit: 1003078186)</strong>, la suma de <strong>{numeroALetras(credit.totalAmount)}</strong> ({credit.totalAmount.toLocaleString('es-CO')} Pesos M/CTE), en cuotas quincenales según plan de pagos anexo, o a su vencimiento final.
                   </p>
 
                   <div className="space-y-4 text-xs italic opacity-80">
@@ -855,7 +902,7 @@ export default function CreditDetailPage() {
             
             <div className="bg-slate-50 border-2 border-slate-200 p-6 rounded-2xl text-center">
               <p className="font-black text-xl italic uppercase">
-                {formatCurrency(credit.totalAmount)} ({credit.totalAmount.toLocaleString('es-CO')} PESOS M/CTE)
+                {numeroALetras(credit.totalAmount)} ({credit.totalAmount.toLocaleString('es-CO')} PESOS M/CTE)
               </p>
             </div>
 
