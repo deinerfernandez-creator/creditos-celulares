@@ -111,7 +111,7 @@ export default function NewCreditPage() {
   const [imei, setImei] = useState('');
   const [initialAmount, setInitialAmount] = useState('');
   const [downPayment, setDownPayment] = useState('');
-  const [planType, setPlanType] = useState<'6' | '12'>('6');
+  const [planType, setPlanType] = useState<'6' | '12' | '24'>('6');
   const [paymentFrequency, setPaymentFrequency] = useState<'semanal' | 'quincenal'>('quincenal');
   
   // Camera state
@@ -154,7 +154,10 @@ export default function NewCreditPage() {
     const amountToFinance = Math.max(0, total_price - down_pay);
     
     if (amountToFinance > 0) {
-      const interest = planType === '6' ? 0.5 : 1.0;
+      let interest = 0.5; // Default 6 cuotas
+      if (planType === '12') interest = 1.0;
+      else if (planType === '24') interest = 1.5;
+
       const totalFinanced = amountToFinance * (1 + interest);
       const installments = parseInt(planType);
       const installment = totalFinanced / installments;
@@ -466,7 +469,7 @@ export default function NewCreditPage() {
 
                   <div className="space-y-4">
                     <Label className="font-bold">Plan de Cuotas</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <button
                         type="button"
                         disabled={loading || calculation.financedAmount <= 0}
@@ -484,6 +487,15 @@ export default function NewCreditPage() {
                       >
                         <p className="font-black text-sm text-primary tracking-tight">12 Cuotas</p>
                         <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">+100%</p>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading || calculation.financedAmount <= 0}
+                        onClick={() => setPlanType('24')}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${planType === '24' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <p className="font-black text-sm text-primary tracking-tight">24 Cuotas</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">+150%</p>
                       </button>
                     </div>
                   </div>
