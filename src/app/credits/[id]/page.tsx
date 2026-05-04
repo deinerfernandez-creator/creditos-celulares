@@ -306,6 +306,8 @@ export default function CreditDetailPage() {
                        <p className="bg-destructive/5 p-4 rounded-xl border border-destructive/10">
                          <strong>CLÁUSULA CUARTA - USO INADECUADO:</strong> Si el cliente hace uso inadecuado del equipo como <strong>formateos, bypass y tratar de desbloquear el equipo</strong>, será tomado como una <strong>NEGATIVA AL PAGO</strong> y se procederá a recoger dicho equipo de manera inmediata.
                        </p>
+
+                       <p><strong>CLÁUSULA QUINTA - REPORTE A CENTRALES DE RIESGO:</strong> El CLIENTE autoriza expresamente a TECNICELL CRÉDITOS para que, en caso de mora o negativa al pago, reporte el incumplimiento de las obligaciones ante las centrales de información crediticia y de riesgo (Datacrédito, CIFIN, etc.), lo cual afectará negativamente su historial crediticio.</p>
                     </div>
                   </section>
 
@@ -588,7 +590,9 @@ export default function CreditDetailPage() {
                   CLÁUSULA QUINTA. USO INADECUADO: Si el cliente hace uso inadecuado del equipo como formateos, bypass y tratar de desbloquear el equipo será tomado como una NEGATIVA AL PAGO y se procederá a recoger dicho equipo de manera inmediata.
                </div>
 
-               <p><strong>CLÁUSULA SEXTA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
+               <p><strong>CLÁUSULA SEXTA. REPORTE A CENTRALES DE RIESGO:</strong> EL CLIENTE autoriza expresamente a EL VENDEDOR para que reporte, procese y divulgue el comportamiento de pago y el incumplimiento de las obligaciones crediticias ante las centrales de información y riesgo crediticio. La mora o negativa al pago generará reportes negativos en su historial crediticio.</p>
+
+               <p><strong>CLÁUSULA SÉPTIMA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
             </div>
 
             <div className="pt-24 grid grid-cols-2 gap-32">
