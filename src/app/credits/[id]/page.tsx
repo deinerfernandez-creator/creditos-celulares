@@ -27,7 +27,9 @@ import {
   CalendarDays,
   Clock,
   User as UserIcon,
-  DollarSign
+  DollarSign,
+  Printer,
+  FileText
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -78,6 +80,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const formatCurrency = (value: any) => {
   const num = Number(value);
@@ -101,6 +105,9 @@ export default function CreditDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [openPayment, setOpenPayment] = useState(false);
+  const [openContract, setOpenContract] = useState(false);
+
+  const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
   useEffect(() => {
     setMounted(true);
@@ -204,6 +211,10 @@ export default function CreditDetailPage() {
     router.push('/');
   };
 
+  const handlePrintContract = () => {
+    window.print();
+  };
+
   const progress = useMemo(() => {
     if (!credit?.totalAmount || !credit?.remainingBalance) return 0;
     const paid = credit.totalAmount - credit.remainingBalance;
@@ -231,9 +242,11 @@ export default function CreditDetailPage() {
     );
   }
 
+  const contractDate = credit.createdAt?.toDate ? credit.createdAt.toDate().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('es-CO');
+
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-body">
-      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-body print:p-0 print:bg-white">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 print:hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" asChild className="rounded-xl bg-white shadow-sm">
@@ -245,6 +258,71 @@ export default function CreditDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Dialog open={openContract} onOpenChange={setOpenContract}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-xl font-bold border-primary/20 text-primary bg-white hover:bg-primary/5">
+                  <FileText className="w-4 h-4 mr-2" /> Contrato
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-2xl max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-black text-center text-xl">Contrato de Financiación de Equipo Celular</DialogTitle>
+                </DialogHeader>
+                <div id="contract-content" className="space-y-6 py-6 text-sm text-slate-700 leading-relaxed font-medium">
+                  <div className="flex justify-between items-center border-b pb-4">
+                     <Image src={logo?.imageUrl || '/logo.png'} alt="Tecnicell" width={60} height={60} />
+                     <div className="text-right">
+                        <p className="font-black text-slate-900">Tecnicell Créditos</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Servicio Técnico y Accesorios</p>
+                     </div>
+                  </div>
+                  
+                  <section className="space-y-4">
+                    <p>En la ciudad de Rio Verde, a los <strong>{contractDate}</strong>, se celebra el presente contrato entre <strong>TECNICELL CRÉDITOS</strong> (El Acreedor) y <strong>{customer?.name}</strong> identificado con cédula <strong>{customer?.cedula}</strong> (El Cliente).</p>
+                    
+                    <div className="p-4 bg-slate-50 rounded-xl space-y-2">
+                       <p className="font-black text-slate-900 border-b pb-1">DATOS DEL EQUIPO Y CRÉDITO</p>
+                       <p><strong>Equipo:</strong> {credit.deviceModel}</p>
+                       <p><strong>IMEI:</strong> {credit.imei}</p>
+                       <p><strong>Precio Total:</strong> {formatCurrency(credit.initialAmount)}</p>
+                       <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
+                       <p><strong>Saldo a Financiar:</strong> {formatCurrency(credit.totalAmount)} (Incluye Recargos)</p>
+                       <p><strong>Plan:</strong> {credit.planType} Cuotas Quincenales de {formatCurrency(credit.installmentAmount)}</p>
+                    </div>
+
+                    <div className="space-y-4">
+                       <p><strong>CLÁUSULA PRIMERA - RESERVA DE DOMINIO:</strong> El equipo celular descrito anteriormente seguirá siendo propiedad de TECNICELL CRÉDITOS hasta que el saldo total sea cancelado en su totalidad.</p>
+                       
+                       <p className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                         <strong>CLÁUSULA SEGUNDA - INCUMPLIMIENTO Y MORA:</strong> El CLIENTE se compromete a realizar los pagos quincenales según el cronograma acordado. 
+                         <strong className="text-primary block mt-2">Si el CLIENTE dejare de abonar cualquier cuota por un periodo superior a DOS (2) MESES calendario, TECNICELL CRÉDITOS procederá a RECOGER EL EQUIPO CELULAR.</strong>
+                         En este caso, el CLIENTE perderá la totalidad de los abonos y la cuota inicial realizados hasta la fecha, por concepto de arrendamiento y depreciación del equipo, a menos que exista un acuerdo previo por escrito.
+                       </p>
+
+                       <p><strong>CLÁUSULA TERCERA - BLOQUEO REMOTO:</strong> El cliente acepta que el equipo cuenta con sistemas de administración remota que serán activados en caso de mora superior a 3 días, impidiendo el uso total del dispositivo hasta su puesta al día.</p>
+                    </div>
+                  </section>
+
+                  <div className="pt-20 grid grid-cols-2 gap-20">
+                     <div className="border-t border-slate-900 pt-2 text-center">
+                        <p className="font-black text-[10px] uppercase">Firma del Cliente</p>
+                        <p className="text-[10px]">{customer?.name}</p>
+                     </div>
+                     <div className="border-t border-slate-900 pt-2 text-center">
+                        <p className="font-black text-[10px] uppercase">Tecnicell Créditos</p>
+                        <p className="text-[10px]">Nit. 901.XXX.XXX-X</p>
+                     </div>
+                  </div>
+                </div>
+                <DialogFooter className="print:hidden">
+                  <Button variant="outline" onClick={() => setOpenContract(false)} className="rounded-xl">Cerrar</Button>
+                  <Button onClick={handlePrintContract} className="rounded-xl bg-primary">
+                    <Printer className="w-4 h-4 mr-2" /> Imprimir Contrato
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {role === 'admin' && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -452,6 +530,69 @@ export default function CreditDetailPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Contract Print View */}
+      <div className="hidden print:block p-10 space-y-8 bg-white text-slate-900">
+         <div className="flex justify-between items-center border-b-2 border-slate-900 pb-6">
+            <div className="flex items-center gap-4">
+              <Image src={logo?.imageUrl || '/logo.png'} alt="Logo" width={100} height={100} />
+              <div>
+                <h1 className="text-3xl font-black tracking-tighter">TECNICELL CRÉDITOS</h1>
+                <p className="text-xs font-bold uppercase tracking-widest">Servicio Técnico y Accesorios</p>
+              </div>
+            </div>
+            <div className="text-right text-xs">
+               <p className="font-bold">Contrato de Crédito No.</p>
+               <p className="text-xl font-black">#{id.slice(0, 8).toUpperCase()}</p>
+            </div>
+         </div>
+
+         <div className="space-y-6 text-sm leading-relaxed">
+            <p className="text-justify">
+               En la ciudad de Rio Verde, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
+            </p>
+
+            <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-2">
+               <h3 className="font-black border-b border-slate-300 pb-2 mb-4">ESPECIFICACIONES DEL PRODUCTO Y CRÉDITO</h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <p><strong>Equipo:</strong> {credit.deviceModel}</p>
+                  <p><strong>IMEI:</strong> {credit.imei}</p>
+                  <p><strong>Precio Venta:</strong> {formatCurrency(credit.initialAmount)}</p>
+                  <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
+                  <p><strong>Monto Financiado:</strong> {formatCurrency(credit.totalAmount)}</p>
+                  <p><strong>No. de Cuotas:</strong> {credit.planType} Quincenas</p>
+                  <p className="col-span-2"><strong>Valor Cuota Quincenal:</strong> {formatCurrency(credit.installmentAmount)}</p>
+               </div>
+            </div>
+
+            <div className="space-y-4">
+               <p><strong>CLÁUSULA PRIMERA. OBJETO:</strong> EL VENDEDOR entrega a EL CLIENTE el equipo celular descrito anteriormente bajo la modalidad de venta financiada.</p>
+               
+               <p><strong>CLÁUSULA SEGUNDA. RESERVA DE DOMINIO:</strong> EL VENDEDOR se reserva el dominio y propiedad del equipo celular hasta que EL CLIENTE haya cancelado la totalidad del monto financiado y sus intereses.</p>
+               
+               <div className="p-4 border-l-4 border-slate-900 bg-slate-50 font-bold italic">
+                  CLÁUSULA TERCERA. INCUMPLIMIENTO Y RETIRO DEL EQUIPO: En caso de que EL CLIENTE presente una mora superior a DOS (2) MESES (60 días calendario) en el pago de cualquiera de sus cuotas, EL VENDEDOR está facultado legalmente para RECOGER Y RETIRAR el equipo celular de manos de EL CLIENTE. En este evento, EL CLIENTE perderá la totalidad de las cuotas pagadas y la cuota inicial por concepto de arrendamiento, uso y depreciación del equipo, salvo acuerdo escrito previo.
+               </div>
+
+               <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 3 días.</p>
+
+               <p><strong>CLÁUSULA QUINTA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
+            </div>
+
+            <div className="pt-24 grid grid-cols-2 gap-32">
+               <div className="border-t-2 border-slate-900 pt-2 text-center">
+                  <p className="font-black text-xs uppercase">EL CLIENTE</p>
+                  <p className="text-[10px]">{customer?.name}</p>
+                  <p className="text-[10px]">C.C. {customer?.cedula}</p>
+               </div>
+               <div className="border-t-2 border-slate-900 pt-2 text-center">
+                  <p className="font-black text-xs uppercase">EL VENDEDOR</p>
+                  <p className="text-[10px]">TECNICELL CRÉDITOS</p>
+                  <p className="text-[10px]">Nit. 901.XXX.XXX-X</p>
+               </div>
+            </div>
+         </div>
       </div>
     </div>
   );

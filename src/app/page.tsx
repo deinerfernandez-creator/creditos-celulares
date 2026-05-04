@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,7 +30,9 @@ import {
   CheckCircle2,
   Trash2,
   History,
-  Shield
+  Shield,
+  DollarSign as DollarIcon,
+  Receipt
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -103,17 +106,13 @@ export default function DashboardPage() {
 
   const creditsQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
-    return query(collection(db, 'credits'));
+    return query(collection(db, 'credits'), orderBy('createdAt', 'desc'));
   }, [db, mounted]);
   const { data: creditsData, isLoading: loadingCredits } = useCollection(creditsQuery);
 
   const credits = React.useMemo(() => {
     if (!creditsData) return null;
-    return [...creditsData].sort((a, b) => {
-      const dateA = a.createdAt?.seconds || 0;
-      const dateB = b.createdAt?.seconds || 0;
-      return dateB - dateA;
-    });
+    return creditsData;
   }, [creditsData]);
 
   const staffQuery = useMemoFirebase(() => {
@@ -209,6 +208,10 @@ export default function DashboardPage() {
                 <CreditCard className="w-5 h-5 mr-3" />
                 <span>Créditos</span>
               </SidebarMenuButton>
+              <SidebarMenuButton isActive={activeTab === 'downpayments'} onClick={() => setActiveTab('downpayments')} className="rounded-xl h-11 font-bold mb-1">
+                <Receipt className="w-5 h-5 mr-3" />
+                <span>Recaudos Iniciales</span>
+              </SidebarMenuButton>
               
               {role === 'admin' && (
                 <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-xl h-11 font-bold mb-1">
@@ -247,7 +250,7 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-primary" />
               <div className="h-6 w-px bg-slate-200 mx-2" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : activeTab === 'credits' ? 'Control de Financiamientos' : 'Gestión de Usuarios'}
+                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Base de Datos de Clientes' : activeTab === 'credits' ? 'Control de Financiamientos' : activeTab === 'downpayments' ? 'Registro de Cuotas Iniciales' : 'Gestión de Usuarios'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
@@ -523,6 +526,63 @@ export default function DashboardPage() {
                           ) : (
                             <tr>
                               <td colSpan={5} className="text-center py-20 text-slate-400">No se han encontrado registros de créditos activos.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'downpayments' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">Recaudos de Cuotas Iniciales</h3>
+                  <p className="text-sm text-slate-500 font-medium">Control de dinero ingresado por enganche de equipos</p>
+                </div>
+                <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                          <tr>
+                            <th className="px-8 py-5">Fecha / Cliente</th>
+                            <th className="px-4 py-5">Equipo Financiado</th>
+                            <th className="px-4 py-5">Valor Equipo</th>
+                            <th className="px-4 py-5">Cuota Inicial Recibida</th>
+                            <th className="px-8 py-5 text-right">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {credits && credits.length > 0 ? (
+                            credits.map((cr: any) => {
+                              const customer = customersData?.find((c: any) => c.id === cr.customerId);
+                              const date = cr.createdAt?.toDate ? cr.createdAt.toDate().toLocaleDateString('es-CO') : '---';
+                              return (
+                                <tr key={cr.id} className="hover:bg-slate-50/30 transition-colors">
+                                  <td className="px-8 py-5">
+                                    <div className="text-[10px] font-black text-slate-400 uppercase">{date}</div>
+                                    <div className="font-bold text-slate-900">{customer?.name || '---'}</div>
+                                  </td>
+                                  <td className="px-4 py-5 font-bold text-primary">{cr.deviceModel}</td>
+                                  <td className="px-4 py-5 font-medium text-slate-500">{formatCurrency(cr.initialAmount)}</td>
+                                  <td className="px-4 py-5">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                                      <span className="font-black text-slate-900 text-lg">{formatCurrency(cr.downPayment)}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-8 py-5 text-right">
+                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-none rounded-full px-4 font-black text-[9px]">PAGO RECIBIDO</Badge>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="text-center py-20 text-slate-400">No hay registros de cuotas iniciales aún.</td>
                             </tr>
                           )}
                         </tbody>
