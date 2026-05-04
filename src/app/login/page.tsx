@@ -96,7 +96,7 @@ export default function LoginPage() {
               />
             </div>
             <CardTitle className="text-3xl font-black text-white tracking-tighter">Tecnicell Créditos</CardTitle>
-            <CardDescription className="text-white/80 italic font-medium">Panel Administrativo Staff</CardDescription>
+            <CardDescription className="text-white/80 italic font-medium">Panel Administrativo</CardDescription>
           </CardHeader>
           <CardContent className="pt-8 px-8">
             <form onSubmit={handleLogin} className="space-y-6">
