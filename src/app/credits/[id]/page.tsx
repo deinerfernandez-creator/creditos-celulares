@@ -299,7 +299,7 @@ export default function CreditDetailPage() {
                          En este caso, el CLIENTE perderá la totalidad de los abonos y la cuota inicial realizados hasta la fecha, por concepto de arrendamiento y depreciación del equipo, a menos que exista un acuerdo previo por escrito.
                        </p>
 
-                       <p><strong>CLÁUSULA TERCERA - BLOQUEO REMOTO:</strong> El cliente acepta que el equipo cuenta con sistemas de administración remota que serán activados en caso de mora superior a 3 días, impidiendo el uso total del dispositivo hasta su puesta al día.</p>
+                       <p><strong>CLÁUSULA TERCERA - BLOQUEO REMOTO:</strong> El cliente acepta que el equipo cuenta con sistemas de administración remota que serán activados en caso de mora superior a 1 día después de la fecha de pago, impidiendo el uso total del dispositivo hasta su puesta al día.</p>
                     </div>
                   </section>
 
@@ -310,7 +310,7 @@ export default function CreditDetailPage() {
                      </div>
                      <div className="border-t border-slate-900 pt-2 text-center">
                         <p className="font-black text-[10px] uppercase">Tecnicell Créditos</p>
-                        <p className="text-[10px]">Nit. 901.XXX.XXX-X</p>
+                        <p className="text-[10px]">Nit. 1003078186</p>
                      </div>
                   </div>
                 </div>
@@ -575,7 +575,7 @@ export default function CreditDetailPage() {
                   CLÁUSULA TERCERA. INCUMPLIMIENTO Y RETIRO DEL EQUIPO: En caso de que EL CLIENTE presente una mora superior a DOS (2) MESES (60 días calendario) en el pago de cualquiera de sus cuotas, EL VENDEDOR está facultado legalmente para RECOGER Y RETIRAR el equipo celular de manos de EL CLIENTE. En este evento, EL CLIENTE perderá la totalidad de las cuotas pagadas y la cuota inicial por concepto de arrendamiento, uso y depreciación del equipo, salvo acuerdo escrito previo.
                </div>
 
-               <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 3 días.</p>
+               <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 1 día después de la fecha de pago.</p>
 
                <p><strong>CLÁUSULA QUINTA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
             </div>
@@ -589,7 +589,7 @@ export default function CreditDetailPage() {
                <div className="border-t-2 border-slate-900 pt-2 text-center">
                   <p className="font-black text-xs uppercase">EL VENDEDOR</p>
                   <p className="text-[10px]">TECNICELL CRÉDITOS</p>
-                  <p className="text-[10px]">Nit. 901.XXX.XXX-X</p>
+                  <p className="text-[10px]">Nit. 1003078186</p>
                </div>
             </div>
          </div>
