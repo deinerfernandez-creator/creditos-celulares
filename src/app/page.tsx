@@ -32,11 +32,13 @@ import {
   History,
   Shield,
   DollarSign as DollarIcon,
-  Receipt
+  Receipt,
+  Search
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
   useFirestore, 
   useCollection, 
@@ -74,6 +76,7 @@ const formatCurrency = (value: number) => {
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState('');
   const [mounted, setMounted] = useState(false);
   const { user, role, loading: authLoading } = useUser();
   const auth = useAuth();
@@ -101,8 +104,13 @@ export default function DashboardPage() {
   
   const customers = React.useMemo(() => {
     if (!customersData) return null;
-    return [...customersData].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [customersData]);
+    const sorted = [...customersData].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    if (!searchTerm) return sorted;
+    return sorted.filter(c => 
+      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.cedula?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [customersData, searchTerm]);
 
   const creditsQuery = useMemoFirebase(() => {
     if (!db || !mounted) return null;
@@ -112,8 +120,16 @@ export default function DashboardPage() {
 
   const credits = React.useMemo(() => {
     if (!creditsData) return null;
-    return creditsData;
-  }, [creditsData]);
+    if (!searchTerm) return creditsData;
+    return creditsData.filter(cr => {
+      const customer = customersData?.find((c: any) => c.id === cr.customerId);
+      return (
+        customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        cr.deviceModel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cr.imei?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+  }, [creditsData, customersData, searchTerm]);
 
   const staffQuery = useMemoFirebase(() => {
     if (!db || !mounted || role !== 'admin') return null;
@@ -155,10 +171,10 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const stats = [
-    { title: "Créditos Activos", value: credits ? credits.filter((c: any) => c.status === 'activo').length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
-    { title: "Clientes Totales", value: customers ? customers.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
-    { title: "Equipos Bloqueados", value: credits ? credits.filter((c: any) => c.status === 'bloqueado').length.toString() : "0", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10" },
-    { title: "Pagos Completos", value: credits ? credits.filter((c: any) => c.status === 'pagado').length.toString() : "0", icon: CheckCircle2, color: "text-green-600", bg: "bg-green-100" },
+    { title: "Créditos Activos", value: creditsData ? creditsData.filter((c: any) => c.status === 'activo').length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
+    { title: "Clientes Totales", value: customersData ? customersData.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Equipos Bloqueados", value: creditsData ? creditsData.filter((c: any) => c.status === 'bloqueado').length.toString() : "0", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10" },
+    { title: "Pagos Completos", value: creditsData ? creditsData.filter((c: any) => c.status === 'pagado').length.toString() : "0", icon: CheckCircle2, color: "text-green-600", bg: "bg-green-100" },
   ];
 
   const handleLogout = async () => {
@@ -196,25 +212,25 @@ export default function DashboardPage() {
           </SidebarHeader>
           <SidebarContent className="px-3 pt-4">
             <SidebarMenu>
-              <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} className="rounded-xl h-11 font-bold mb-1">
+              <SidebarMenuButton isActive={activeTab === 'dashboard'} onClick={() => { setActiveTab('dashboard'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <LayoutDashboard className="w-5 h-5 mr-3" />
                 <span>Dashboard</span>
               </SidebarMenuButton>
-              <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => setActiveTab('customers')} className="rounded-xl h-11 font-bold mb-1">
+              <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => { setActiveTab('customers'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <Users className="w-5 h-5 mr-3" />
                 <span>Clientes</span>
               </SidebarMenuButton>
-              <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => setActiveTab('credits')} className="rounded-xl h-11 font-bold mb-1">
+              <SidebarMenuButton isActive={activeTab === 'credits'} onClick={() => { setActiveTab('credits'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <CreditCard className="w-5 h-5 mr-3" />
                 <span>Créditos</span>
               </SidebarMenuButton>
-              <SidebarMenuButton isActive={activeTab === 'downpayments'} onClick={() => setActiveTab('downpayments')} className="rounded-xl h-11 font-bold mb-1">
+              <SidebarMenuButton isActive={activeTab === 'downpayments'} onClick={() => { setActiveTab('downpayments'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <Receipt className="w-5 h-5 mr-3" />
                 <span>Recaudos Iniciales</span>
               </SidebarMenuButton>
               
               {role === 'admin' && (
-                <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => setActiveTab('staff')} className="rounded-xl h-11 font-bold mb-1">
+                <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => { setActiveTab('staff'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                   <Shield className="w-5 h-5 mr-3" />
                   <span>Usuarios</span>
                 </SidebarMenuButton>
@@ -311,8 +327,8 @@ export default function DashboardPage() {
                               <tr>
                                 <td colSpan={5} className="text-center py-20"><Loader2 className="animate-spin inline-block mr-2" /> Cargando...</td>
                               </tr>
-                            ) : credits && credits.length > 0 ? (
-                              credits.slice(0, 5).map((credit: any) => {
+                            ) : creditsData && creditsData.length > 0 ? (
+                              creditsData.slice(0, 5).map((credit: any) => {
                                 const customer = customersData?.find((c: any) => c.id === credit.customerId);
                                 return (
                                   <tr key={credit.id} className="hover:bg-slate-50/50 transition-colors">
@@ -371,14 +387,25 @@ export default function DashboardPage() {
 
             {activeTab === 'customers' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                    <div>
                      <h3 className="text-2xl font-black text-slate-900 tracking-tight">Directorio de Clientes</h3>
                      <p className="text-sm text-slate-500 font-medium">Gestión de datos de contacto y perfiles corporativos</p>
                    </div>
-                   <Button asChild className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-primary/10">
-                     <Link href="/customers/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo Cliente</Link>
-                   </Button>
+                   <div className="flex w-full sm:w-auto items-center gap-3">
+                     <div className="relative w-full sm:w-64">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                       <Input 
+                        placeholder="Buscar cliente..." 
+                        className="pl-10 rounded-xl"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                       />
+                     </div>
+                     <Button asChild className="rounded-2xl h-10 px-6 font-bold shadow-lg shadow-primary/10">
+                       <Link href="/customers/new"><PlusCircle className="mr-2 h-4 w-4" /> Nuevo</Link>
+                     </Button>
+                   </div>
                 </div>
                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
                   <CardContent className="p-0">
@@ -396,7 +423,7 @@ export default function DashboardPage() {
                         <tbody className="divide-y divide-slate-50">
                           {customers && customers.length > 0 ? (
                             customers.map((c: any) => {
-                              const latestCredit = credits?.find((cr: any) => cr.customerId === c.id);
+                              const latestCredit = creditsData?.find((cr: any) => cr.customerId === c.id);
                               return (
                                 <tr key={c.id} className="hover:bg-slate-50/30 transition-colors">
                                   <td className="px-8 py-5 font-bold text-slate-900">{c.name}</td>
@@ -445,7 +472,7 @@ export default function DashboardPage() {
                             })
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-20 text-slate-400">No hay clientes registrados en la base de datos.</td>
+                              <td colSpan={5} className="text-center py-20 text-slate-400">No se han encontrado resultados para tu búsqueda.</td>
                             </tr>
                           )}
                         </tbody>
@@ -458,14 +485,25 @@ export default function DashboardPage() {
 
             {activeTab === 'credits' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                    <div>
                      <h3 className="text-2xl font-black text-slate-900 tracking-tight">Financiamientos Vigentes</h3>
                      <p className="text-sm text-slate-500 font-medium">Control técnico de equipos y recaudos quincenales</p>
                    </div>
-                   <Button asChild className="rounded-2xl h-12 px-6 font-bold shadow-lg shadow-primary/10">
-                     <Link href="/credits/new"><PlusCircle className="mr-2 h-4 w-4" /> Nueva Solicitud</Link>
-                   </Button>
+                   <div className="flex w-full sm:w-auto items-center gap-3">
+                     <div className="relative w-full sm:w-64">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                       <Input 
+                        placeholder="Buscar por cliente o equipo..." 
+                        className="pl-10 rounded-xl"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                       />
+                     </div>
+                     <Button asChild className="rounded-2xl h-10 px-6 font-bold shadow-lg shadow-primary/10">
+                       <Link href="/credits/new"><PlusCircle className="mr-2 h-4 w-4" /> Nueva</Link>
+                     </Button>
+                   </div>
                 </div>
                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
                   <CardContent className="p-0">
@@ -525,7 +563,7 @@ export default function DashboardPage() {
                             })
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-20 text-slate-400">No se han encontrado registros de créditos activos.</td>
+                              <td colSpan={5} className="text-center py-20 text-slate-400">No se han encontrado créditos que coincidan con tu búsqueda.</td>
                             </tr>
                           )}
                         </tbody>
@@ -538,9 +576,20 @@ export default function DashboardPage() {
 
             {activeTab === 'downpayments' && (
               <div className="space-y-6">
-                <div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">Recaudos de Cuotas Iniciales</h3>
-                  <p className="text-sm text-slate-500 font-medium">Control de dinero ingresado por enganche de equipos</p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Recaudos de Cuotas Iniciales</h3>
+                    <p className="text-sm text-slate-500 font-medium">Control de dinero ingresado por enganche de equipos</p>
+                  </div>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                    placeholder="Buscar por cliente..." 
+                    className="pl-10 rounded-xl"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
                 </div>
                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
                   <CardContent className="p-0">
@@ -582,7 +631,7 @@ export default function DashboardPage() {
                             })
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-20 text-slate-400">No hay registros de cuotas iniciales aún.</td>
+                              <td colSpan={5} className="text-center py-20 text-slate-400">No se han encontrado recaudos para tu búsqueda.</td>
                             </tr>
                           )}
                         </tbody>
