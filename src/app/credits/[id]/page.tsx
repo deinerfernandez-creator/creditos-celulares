@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Card, 
@@ -30,7 +30,10 @@ import {
   DollarSign,
   Printer,
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  Camera,
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -107,6 +110,12 @@ export default function CreditDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [openPayment, setOpenPayment] = useState(false);
   const [openContract, setOpenContract] = useState(false);
+
+  // Camera state for Delivery Photo
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [hasCameraPermission, setHasCameraPermission] = useState(false);
 
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
 
@@ -187,7 +196,7 @@ export default function CreditDetailPage() {
       const newBalance = Math.max(0, credit.remainingBalance - amount);
       const updateData: any = { remainingBalance: increment(-amount) };
       
-      if (newBalance <= 100) { // Tolerancia por redondeo
+      if (newBalance <= 100) {
         updateData.status = 'pagado';
         updateData.remainingBalance = 0;
       }
@@ -201,6 +210,63 @@ export default function CreditDetailPage() {
       toast({ title: "Error", description: "No se pudo procesar el pago.", variant: "destructive" });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const startCamera = async () => {
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setHasCameraPermission(true);
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setHasCameraPermission(false);
+      setShowCamera(false);
+      toast({
+        variant: 'destructive',
+        title: 'Error de Cámara',
+        description: 'No se pudo acceder a la cámara para la foto de entrega.',
+      });
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setShowCamera(false);
+  };
+
+  const captureDeliveryPhoto = async () => {
+    if (videoRef.current && canvasRef.current && id) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+
+      if (context && video.videoWidth > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const photoData = canvas.toDataURL('image/jpeg', 0.8);
+        
+        setUpdating(true);
+        try {
+          await updateDoc(doc(db, 'credits', id), { deliveryPhoto: photoData });
+          toast({ title: "Foto Guardada", description: "La foto de entrega ha sido anexada al expediente." });
+          stopCamera();
+        } catch (err: any) {
+          toast({ title: "Error", description: "No se pudo guardar la foto.", variant: "destructive" });
+        } finally {
+          setUpdating(false);
+        }
+      }
     }
   };
 
@@ -221,6 +287,15 @@ export default function CreditDetailPage() {
     const paid = credit.totalAmount - credit.remainingBalance;
     return Math.min(100, Math.max(0, (paid / credit.totalAmount) * 100));
   }, [credit]);
+
+  useEffect(() => {
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   if (!mounted) return null;
 
@@ -247,6 +322,8 @@ export default function CreditDetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-body print:p-0 print:bg-white">
+      <canvas ref={canvasRef} className="hidden" />
+      
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 print:hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -478,6 +555,68 @@ export default function CreditDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Sección de Foto de Entrega */}
+        <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
+          <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg font-black text-slate-900">
+                <Camera className="w-6 h-6 text-primary" /> Evidencia de Entrega
+              </CardTitle>
+              <CardDescription className="text-xs uppercase font-black text-slate-400 tracking-widest">Foto del cliente con su nuevo celular</CardDescription>
+            </div>
+            {!credit.deliveryPhoto && !showCamera && (
+              <Button onClick={startCamera} className="rounded-xl font-bold bg-primary hover:bg-primary/90">
+                <Camera className="w-4 h-4 mr-2" /> Tomar Foto de Entrega
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="p-8 flex justify-center">
+             {credit.deliveryPhoto ? (
+               <div className="relative group max-w-xl w-full">
+                 <img src={credit.deliveryPhoto} alt="Foto de Entrega" className="w-full rounded-2xl border-4 border-slate-100 shadow-xl" />
+                 <Button 
+                   onClick={startCamera} 
+                   variant="secondary" 
+                   size="sm" 
+                   className="absolute bottom-4 right-4 rounded-xl font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                 >
+                   <RefreshCw className="w-4 h-4 mr-2" /> Actualizar Foto
+                 </Button>
+               </div>
+             ) : showCamera ? (
+                <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20 shadow-2xl">
+                  <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
+                  <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
+                     <Button 
+                      type="button" 
+                      onClick={captureDeliveryPhoto} 
+                      disabled={updating}
+                      className="rounded-full w-20 h-20 bg-white hover:bg-slate-100 border-8 border-primary shadow-2xl flex items-center justify-center p-0"
+                    >
+                       <div className="w-12 h-12 rounded-full bg-primary" />
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="secondary"
+                      size="icon"
+                      onClick={stopCamera}
+                      className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md"
+                    >
+                       <X className="w-6 h-6" />
+                    </Button>
+                  </div>
+                </div>
+             ) : (
+                <div className="text-center py-10 space-y-4">
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                    <Smartphone className="w-10 h-10" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Sin foto de entrega registrada.</p>
+                </div>
+             )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">

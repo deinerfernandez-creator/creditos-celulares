@@ -37,6 +37,7 @@
         "customerPhoto": { "type": "string", "description": "Base64 string of the customer photo." },
         "idFrontPhoto": { "type": "string", "description": "Base64 string of the ID front photo." },
         "idBackPhoto": { "type": "string", "description": "Base64 string of the ID back photo." },
+        "deliveryPhoto": { "type": "string", "description": "Base64 string of the customer holding the new phone." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status", "customerPhoto", "idFrontPhoto", "idBackPhoto"]
