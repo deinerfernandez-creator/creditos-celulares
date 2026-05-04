@@ -29,7 +29,8 @@ import {
   User as UserIcon,
   DollarSign,
   Printer,
-  FileText
+  FileText,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -274,11 +275,12 @@ export default function CreditDetailPage() {
                      <div className="text-right">
                         <p className="font-black text-slate-900">Tecnicell Créditos</p>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Servicio Técnico y Accesorios</p>
+                        <p className="text-[10px] font-black">NIT: 1003078186</p>
                      </div>
                   </div>
                   
                   <section className="space-y-4">
-                    <p>En la ciudad de Rio Verde, a los <strong>{contractDate}</strong>, se celebra el presente contrato entre <strong>TECNICELL CRÉDITOS</strong> (El Acreedor) y <strong>{customer?.name}</strong> identificado con cédula <strong>{customer?.cedula}</strong> (El Cliente).</p>
+                    <p>En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente contrato entre <strong>TECNICELL CRÉDITOS</strong> (El Acreedor) y <strong>{customer?.name}</strong> identificado con cédula <strong>{customer?.cedula}</strong> (El Cliente).</p>
                     
                     <div className="p-4 bg-slate-50 rounded-xl space-y-2">
                        <p className="font-black text-slate-900 border-b pb-1">DATOS DEL EQUIPO Y CRÉDITO</p>
@@ -300,6 +302,10 @@ export default function CreditDetailPage() {
                        </p>
 
                        <p><strong>CLÁUSULA TERCERA - BLOQUEO REMOTO:</strong> El cliente acepta que el equipo cuenta con sistemas de administración remota que serán activados en caso de mora superior a 1 día después de la fecha de pago, impidiendo el uso total del dispositivo hasta su puesta al día.</p>
+                       
+                       <p className="bg-destructive/5 p-4 rounded-xl border border-destructive/10">
+                         <strong>CLÁUSULA CUARTA - USO INADECUADO:</strong> Si el cliente hace uso inadecuado del equipo como <strong>formateos, bypass y tratar de desbloquear el equipo</strong>, será tomado como una <strong>NEGATIVA AL PAGO</strong> y se procederá a recoger dicho equipo de manera inmediata.
+                       </p>
                     </div>
                   </section>
 
@@ -540,6 +546,7 @@ export default function CreditDetailPage() {
               <div>
                 <h1 className="text-3xl font-black tracking-tighter">TECNICELL CRÉDITOS</h1>
                 <p className="text-xs font-bold uppercase tracking-widest">Servicio Técnico y Accesorios</p>
+                <p className="text-xs font-black">NIT: 1003078186</p>
               </div>
             </div>
             <div className="text-right text-xs">
@@ -550,7 +557,7 @@ export default function CreditDetailPage() {
 
          <div className="space-y-6 text-sm leading-relaxed">
             <p className="text-justify">
-               En la ciudad de Rio Verde, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
+               En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
             </p>
 
             <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-2">
@@ -577,7 +584,11 @@ export default function CreditDetailPage() {
 
                <p><strong>CLÁUSULA CUARTA. BLOQUEO REMOTO:</strong> El cliente autoriza expresamente la instalación y ejecución de software de administración remota que permitirá el BLOQUEO TOTAL del dispositivo en caso de mora superior a 1 día después de la fecha de pago.</p>
 
-               <p><strong>CLÁUSULA QUINTA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
+               <div className="p-4 border-l-4 border-destructive bg-destructive/5 font-bold">
+                  CLÁUSULA QUINTA. USO INADECUADO: Si el cliente hace uso inadecuado del equipo como formateos, bypass y tratar de desbloquear el equipo será tomado como una NEGATIVA AL PAGO y se procederá a recoger dicho equipo de manera inmediata.
+               </div>
+
+               <p><strong>CLÁUSULA SEXTA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
             </div>
 
             <div className="pt-24 grid grid-cols-2 gap-32">
