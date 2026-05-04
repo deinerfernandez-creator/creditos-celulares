@@ -34,10 +34,12 @@
         "installmentAmount": { "type": "number" },
         "remainingBalance": { "type": "number" },
         "status": { "type": "string", "enum": ["activo", "pagado", "bloqueado"] },
-        "customerPhoto": { "type": "string", "description": "Base64 string of the customer photo taken during registration." },
+        "customerPhoto": { "type": "string", "description": "Base64 string of the customer photo." },
+        "idFrontPhoto": { "type": "string", "description": "Base64 string of the ID front photo." },
+        "idBackPhoto": { "type": "string", "description": "Base64 string of the ID back photo." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status"]
+      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status", "customerPhoto", "idFrontPhoto", "idBackPhoto"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",

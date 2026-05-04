@@ -311,10 +311,14 @@ export default function CreditDetailPage() {
                     </div>
                   </section>
 
-                  <div className="pt-20 grid grid-cols-2 gap-20">
+                  <div className="pt-20 grid grid-cols-3 gap-10 items-end">
                      <div className="border-t border-slate-900 pt-2 text-center">
                         <p className="font-black text-[10px] uppercase">Firma del Cliente</p>
                         <p className="text-[10px]">{customer?.name}</p>
+                     </div>
+                     <div className="flex flex-col items-center gap-1">
+                        <div className="w-16 h-20 border border-slate-400 rounded-md" />
+                        <p className="text-[8px] font-black uppercase">Huella</p>
                      </div>
                      <div className="border-t border-slate-900 pt-2 text-center">
                         <p className="font-black text-[10px] uppercase">Tecnicell Créditos</p>
@@ -595,11 +599,15 @@ export default function CreditDetailPage() {
                <p><strong>CLÁUSULA SÉPTIMA. CUIDADO DEL BIEN:</strong> EL CLIENTE se obliga a mantener el equipo en buen estado. El mal funcionamiento, daño físico o pérdida del equipo no exonera a EL CLIENTE de su obligación de pago.</p>
             </div>
 
-            <div className="pt-24 grid grid-cols-2 gap-32">
+            <div className="pt-24 grid grid-cols-3 gap-10 items-end">
                <div className="border-t-2 border-slate-900 pt-2 text-center">
                   <p className="font-black text-xs uppercase">EL CLIENTE</p>
                   <p className="text-[10px]">{customer?.name}</p>
                   <p className="text-[10px]">C.C. {customer?.cedula}</p>
+               </div>
+               <div className="flex flex-col items-center gap-1">
+                  <div className="w-16 h-20 border-2 border-slate-900 rounded-md" />
+                  <p className="text-[10px] font-black uppercase">Huella</p>
                </div>
                <div className="border-t-2 border-slate-900 pt-2 text-center">
                   <p className="font-black text-xs uppercase">EL VENDEDOR</p>

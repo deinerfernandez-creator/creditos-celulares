@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -18,7 +19,7 @@ import {
   Search,
   User as UserIcon,
   X,
-  Filter
+  CreditCard as IdCardIcon
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -86,6 +87,8 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+type PhotoType = 'customer' | 'idFront' | 'idBack';
+
 export default function NewCreditPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -113,7 +116,12 @@ export default function NewCreditPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType | null>(null);
+  
+  // Captured photos
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [idFrontPhoto, setIdFrontPhoto] = useState<string | null>(null);
+  const [idBackPhoto, setIdBackPhoto] = useState<string | null>(null);
 
   const [calculation, setCalculation] = useState({
     interestRate: 0,
@@ -159,9 +167,9 @@ export default function NewCreditPage() {
     }
   }, [initialAmount, downPayment, planType]);
 
-  const startCamera = async () => {
+  const startCamera = async (type: PhotoType) => {
+    setCurrentPhotoType(type);
     setShowCamera(true);
-    setCapturedPhoto(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
@@ -183,7 +191,7 @@ export default function NewCreditPage() {
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
+    if (videoRef.current && canvasRef.current && currentPhotoType) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
@@ -193,7 +201,11 @@ export default function NewCreditPage() {
         canvas.height = video.videoHeight;
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const photoData = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedPhoto(photoData);
+        
+        if (currentPhotoType === 'customer') setCapturedPhoto(photoData);
+        if (currentPhotoType === 'idFront') setIdFrontPhoto(photoData);
+        if (currentPhotoType === 'idBack') setIdBackPhoto(photoData);
+
         stopCamera();
         setShowCamera(false);
         toast({ title: "Foto Capturada", description: "La imagen se ha guardado correctamente." });
@@ -216,8 +228,8 @@ export default function NewCreditPage() {
       return;
     }
 
-    if (!capturedPhoto) {
-      toast({ title: "Foto Requerida", description: "Debes tomar una foto del cliente para finalizar el proceso.", variant: "destructive" });
+    if (!capturedPhoto || !idFrontPhoto || !idBackPhoto) {
+      toast({ title: "Fotos Requeridas", description: "Debes tomar la foto del cliente y de la cédula (ambos lados) para finalizar.", variant: "destructive" });
       return;
     }
 
@@ -235,12 +247,14 @@ export default function NewCreditPage() {
       remainingBalance: calculation.totalAmount,
       status: 'activo',
       customerPhoto: capturedPhoto,
+      idFrontPhoto,
+      idBackPhoto,
       createdAt: serverTimestamp(),
     };
 
     addDoc(collection(db, 'credits'), creditData)
       .then(() => {
-        toast({ title: "Éxito", description: "Crédito y foto registrados correctamente." });
+        toast({ title: "Éxito", description: "Crédito y documentos registrados correctamente." });
         router.push('/');
       })
       .catch((error: any) => {
@@ -269,7 +283,7 @@ export default function NewCreditPage() {
           <Card className="lg:col-span-2 border-none shadow-xl">
             <CardHeader className="border-b bg-slate-50/50">
               <CardTitle className="text-lg font-black">Información del Crédito</CardTitle>
-              <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-widest">Detalles del cliente, equipo y fotografía obligatoria</CardDescription>
+              <CardDescription className="text-xs uppercase font-bold text-slate-400 tracking-widest">Detalles del cliente, equipo y documentos obligatorios</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -405,37 +419,76 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 border-t pt-8">
+                <div className="space-y-6 border-t pt-8">
                   <Label className="text-lg font-black flex items-center gap-2 text-slate-900">
-                    <Camera className="w-5 h-5 text-primary" /> Registro Fotográfico
+                    <Camera className="w-5 h-5 text-primary" /> Registro Fotográfico y Documentos
                   </Label>
                   
-                  {!showCamera && !capturedPhoto && (
-                    <Button 
-                      type="button" 
-                      onClick={startCamera} 
-                      className="w-full h-24 rounded-3xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 font-black gap-3 text-lg"
-                    >
-                      <Camera className="w-8 h-8" /> Iniciar Cámara
-                    </Button>
-                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    {/* Foto del Cliente */}
+                    <div className="space-y-2">
+                       <p className="text-[10px] font-black uppercase text-slate-400">1. Rostro Cliente</p>
+                       {!capturedPhoto ? (
+                         <Button type="button" onClick={() => startCamera('customer')} className="w-full h-32 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary flex-col gap-2">
+                           <UserIcon className="w-6 h-6" />
+                           <span className="text-xs font-bold">Tomar Foto</span>
+                         </Button>
+                       ) : (
+                         <div className="relative rounded-2xl overflow-hidden aspect-[3/4] border-2 border-green-500">
+                           <img src={capturedPhoto} className="w-full h-full object-cover" />
+                           <button type="button" onClick={() => startCamera('customer')} className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg text-primary">
+                             <RefreshCw className="w-4 h-4" />
+                           </button>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Foto Frontal Cédula */}
+                    <div className="space-y-2">
+                       <p className="text-[10px] font-black uppercase text-slate-400">2. Cédula (Frontal)</p>
+                       {!idFrontPhoto ? (
+                         <Button type="button" onClick={() => startCamera('idFront')} className="w-full h-32 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary flex-col gap-2">
+                           <IdCardIcon className="w-6 h-6" />
+                           <span className="text-xs font-bold">Tomar Foto</span>
+                         </Button>
+                       ) : (
+                         <div className="relative rounded-2xl overflow-hidden aspect-[4/3] border-2 border-green-500">
+                           <img src={idFrontPhoto} className="w-full h-full object-cover" />
+                           <button type="button" onClick={() => startCamera('idFront')} className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg text-primary">
+                             <RefreshCw className="w-4 h-4" />
+                           </button>
+                         </div>
+                       )}
+                    </div>
+
+                    {/* Foto Posterior Cédula */}
+                    <div className="space-y-2">
+                       <p className="text-[10px] font-black uppercase text-slate-400">3. Cédula (Posterior)</p>
+                       {!idBackPhoto ? (
+                         <Button type="button" onClick={() => startCamera('idBack')} className="w-full h-32 rounded-2xl border-2 border-dashed border-primary/20 bg-primary/5 text-primary flex-col gap-2">
+                           <IdCardIcon className="w-6 h-6" />
+                           <span className="text-xs font-bold">Tomar Foto</span>
+                         </Button>
+                       ) : (
+                         <div className="relative rounded-2xl overflow-hidden aspect-[4/3] border-2 border-green-500">
+                           <img src={idBackPhoto} className="w-full h-full object-cover" />
+                           <button type="button" onClick={() => startCamera('idBack')} className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg text-primary">
+                             <RefreshCw className="w-4 h-4" />
+                           </button>
+                         </div>
+                       )}
+                    </div>
+                  </div>
 
                   {showCamera && (
-                    <div className="space-y-6 animate-in fade-in zoom-in duration-300">
-                      <div className="relative rounded-3xl overflow-hidden bg-black aspect-video border-4 border-primary/20 shadow-2xl">
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          muted 
-                          playsInline
-                          className="w-full h-full object-cover" 
-                        />
-                        
-                        <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6">
+                    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+                      <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20 shadow-2xl">
+                        <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
+                        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
                            <Button 
                             type="button" 
                             onClick={capturePhoto} 
-                            className="rounded-full w-20 h-20 bg-white hover:bg-slate-100 border-8 border-primary shadow-2xl flex items-center justify-center p-0 transition-transform active:scale-95"
+                            className="rounded-full w-20 h-20 bg-white hover:bg-slate-100 border-8 border-primary shadow-2xl flex items-center justify-center p-0"
                           >
                              <div className="w-12 h-12 rounded-full bg-primary" />
                           </Button>
@@ -444,45 +497,22 @@ export default function NewCreditPage() {
                             variant="secondary"
                             size="icon"
                             onClick={() => { stopCamera(); setShowCamera(false); }}
-                            className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md border border-white/30"
+                            className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md"
                           >
                              <X className="w-6 h-6" />
                           </Button>
                         </div>
                       </div>
-                      
-                      {!hasCameraPermission && (
-                        <Alert variant="destructive" className="rounded-2xl">
-                          <AlertTitle className="font-black">Cámara no detectada</AlertTitle>
-                          <AlertDescription>Por favor, haz clic en "Iniciar Cámara" o revisa los permisos de tu navegador.</AlertDescription>
-                        </Alert>
-                      )}
-                    </div>
-                  )}
-
-                  {capturedPhoto && (
-                    <div className="relative rounded-3xl overflow-hidden border-4 border-green-500/20 aspect-video group shadow-xl">
-                      <img src={capturedPhoto} alt="Foto Cliente" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6">
-                        <div className="bg-green-500 text-white p-4 rounded-full shadow-2xl scale-110">
-                           <Check className="w-10 h-10" />
-                        </div>
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          onClick={startCamera} 
-                          className="rounded-2xl font-black uppercase text-xs tracking-widest h-12 px-8 bg-white text-slate-900"
-                        >
-                          <RefreshCw className="w-4 h-4 mr-3" /> Tomar Otra Foto
-                        </Button>
-                      </div>
+                      <p className="text-white font-black mt-6 uppercase tracking-widest">
+                        {currentPhotoType === 'customer' ? 'Capturando Rostro Cliente' : currentPhotoType === 'idFront' ? 'Capturando Cédula (Frontal)' : 'Capturando Cédula (Posterior)'}
+                      </p>
                     </div>
                   )}
                 </div>
 
                 <Button 
                   type="submit" 
-                  disabled={loading || calculation.financedAmount <= 0 || !capturedPhoto} 
+                  disabled={loading || calculation.financedAmount <= 0 || !capturedPhoto || !idFrontPhoto || !idBackPhoto} 
                   className="w-full h-16 rounded-2xl text-xl font-black shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 text-white tracking-tight"
                 >
                   {loading ? "Registrando expediente..." : "Finalizar y Crear Crédito"}
@@ -528,18 +558,20 @@ export default function NewCreditPage() {
               </CardContent>
             </Card>
 
-            {capturedPhoto && (
-              <Card className="border-none shadow-lg overflow-hidden rounded-[2rem]">
-                <CardHeader className="bg-slate-900 text-white py-4">
-                  <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                    <UserIcon className="w-4 h-4 text-primary" /> Foto del Registro
-                  </CardTitle>
-                </CardHeader>
-                <div className="p-3 bg-white">
-                  <img src={capturedPhoto} alt="Previsualización" className="w-full rounded-2xl aspect-[4/3] object-cover" />
-                </div>
-              </Card>
-            )}
+            <div className="grid grid-cols-2 gap-4">
+               {idFrontPhoto && (
+                 <div className="rounded-2xl border-2 border-slate-100 p-1 bg-white">
+                   <img src={idFrontPhoto} className="w-full aspect-[4/3] object-cover rounded-xl" />
+                   <p className="text-[8px] font-black text-center mt-1 text-slate-400 uppercase">Frontal</p>
+                 </div>
+               )}
+               {idBackPhoto && (
+                 <div className="rounded-2xl border-2 border-slate-100 p-1 bg-white">
+                   <img src={idBackPhoto} className="w-full aspect-[4/3] object-cover rounded-xl" />
+                   <p className="text-[8px] font-black text-center mt-1 text-slate-400 uppercase">Posterior</p>
+                 </div>
+               )}
+            </div>
           </div>
         </div>
       </div>
