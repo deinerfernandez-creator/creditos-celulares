@@ -31,6 +31,7 @@
         "downPayment": { "type": "number" },
         "totalAmount": { "type": "number" },
         "planType": { "type": "number" },
+        "paymentFrequency": { "type": "string", "enum": ["semanal", "quincenal"] },
         "installmentAmount": { "type": "number" },
         "remainingBalance": { "type": "number" },
         "status": { "type": "string", "enum": ["activo", "pagado", "bloqueado"] },
@@ -40,7 +41,7 @@
         "deliveryPhoto": { "type": "string", "description": "Base64 string of the customer holding the new phone." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status", "customerPhoto", "idFrontPhoto", "idBackPhoto"]
+      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status", "customerPhoto", "idFrontPhoto", "idBackPhoto", "paymentFrequency"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",

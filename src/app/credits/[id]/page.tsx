@@ -199,11 +199,12 @@ export default function CreditDetailPage() {
     
     const startDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
     const totalPaymentsMade = paymentsData ? paymentsData.reduce((sum, p) => sum + p.amount, 0) : 0;
+    const frequencyDays = credit.paymentFrequency === 'semanal' ? 7 : 15;
     
     const items = [];
     for (let i = 1; i <= credit.planType; i++) {
       const dueDate = new Date(startDate);
-      dueDate.setDate(dueDate.getDate() + (i * 15));
+      dueDate.setDate(dueDate.getDate() + (i * frequencyDays));
       
       const threshold = i * credit.installmentAmount;
       const isPaid = totalPaymentsMade >= threshold;
@@ -419,14 +420,14 @@ export default function CreditDetailPage() {
                        <p><strong>Precio Total:</strong> {formatCurrency(credit.initialAmount)}</p>
                        <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
                        <p><strong>Saldo a Financiar:</strong> {formatCurrency(credit.totalAmount)} (Incluye Recargos)</p>
-                       <p><strong>Plan:</strong> {credit.planType} Cuotas Quincenales de {formatCurrency(credit.installmentAmount)}</p>
+                       <p><strong>Plan:</strong> {credit.planType} Cuotas <span className="capitalize">{credit.paymentFrequency}s</span> de {formatCurrency(credit.installmentAmount)}</p>
                     </div>
 
                     <div className="space-y-4">
                        <p><strong>CLÁUSULA PRIMERA - RESERVA DE DOMINIO:</strong> El equipo celular descrito anteriormente seguirá siendo propiedad de TECNICELL CRÉDITOS hasta que el saldo total sea cancelado en su totalidad.</p>
                        
                        <p className="bg-primary/5 p-4 rounded-xl border border-primary/10">
-                         <strong>CLÁUSULA SEGUNDA - INCUMPLIMIENTO Y MORA:</strong> El CLIENTE se compromete a realizar los pagos quincenales según el cronograma acordado. 
+                         <strong>CLÁUSULA SEGUNDA - INCUMPLIMIENTO Y MORA:</strong> El CLIENTE se compromete a realizar los pagos <span className="capitalize">{credit.paymentFrequency}es</span> según el cronograma acordado. 
                          <strong className="text-primary block mt-2">Si el CLIENTE dejare de abonar cualquier cuota por un periodo superior a DOS (2) MESES calendario, TECNICELL CRÉDITOS procederá a RECOGER EL EQUIPO CELULAR.</strong>
                          En este caso, el CLIENTE perderá la totalidad de los abonos y la cuota inicial realizados hasta la fecha, por concepto de arrendamiento y depreciación del equipo, a menos que exista un acuerdo previo por escrito.
                        </p>
@@ -488,7 +489,7 @@ export default function CreditDetailPage() {
                   </div>
 
                   <p className="text-justify indent-8">
-                    Señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong>, se obliga a pagar incondicionalmente por esta <strong>LETRA DE CAMBIO</strong> a la orden de <strong>TECNICELL CRÉDITOS (Nit: 1003078186)</strong>, la suma de <strong>{numeroALetras(credit.totalAmount)}</strong> ({credit.totalAmount.toLocaleString('es-CO')} Pesos M/CTE), en cuotas quincenales según plan de pagos anexo, o a su vencimiento final.
+                    Señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong>, se obliga a pagar incondicionalmente por esta <strong>LETRA DE CAMBIO</strong> a la orden de <strong>TECNICELL CRÉDITOS (Nit: 1003078186)</strong>, la suma de <strong>{numeroALetras(credit.totalAmount)}</strong> ({credit.totalAmount.toLocaleString('es-CO')} Pesos M/CTE), en cuotas <span className="capitalize">{credit.paymentFrequency}es</span> según plan de pagos anexo, o a su vencimiento final.
                   </p>
 
                   <div className="space-y-4 text-xs italic opacity-80">
@@ -727,9 +728,9 @@ export default function CreditDetailPage() {
           <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] overflow-hidden bg-white">
             <CardHeader className="border-b border-slate-50 p-8">
               <CardTitle className="flex items-center gap-2 text-lg font-black">
-                <CalendarDays className="w-6 h-6 text-primary" /> Cronograma de Pagos
+                <CalendarDays className="w-6 h-6 text-primary" /> Cronograma de Pagos (<span className="capitalize">{credit.paymentFrequency}</span>)
               </CardTitle>
-              <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Cuotas quincenales proyectadas</CardDescription>
+              <CardDescription className="text-xs uppercase font-black tracking-widest text-slate-400">Cuotas proyectadas</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-50">
@@ -819,8 +820,8 @@ export default function CreditDetailPage() {
                     <p><strong>Precio Venta:</strong> {formatCurrency(credit.initialAmount)}</p>
                     <p><strong>Cuota Inicial:</strong> {formatCurrency(credit.downPayment)}</p>
                     <p><strong>Monto Financiado:</strong> {formatCurrency(credit.totalAmount)}</p>
-                    <p><strong>No. de Cuotas:</strong> {credit.planType} Quincenas</p>
-                    <p className="col-span-2"><strong>Valor Cuota Quincenal:</strong> {formatCurrency(credit.installmentAmount)}</p>
+                    <p><strong>No. de Cuotas:</strong> {credit.planType} <span className="capitalize">{credit.paymentFrequency}es</span></p>
+                    <p className="col-span-2"><strong>Valor Cuota <span className="capitalize">{credit.paymentFrequency}</span>:</strong> {formatCurrency(credit.installmentAmount)}</p>
                  </div>
               </div>
 
@@ -907,7 +908,7 @@ export default function CreditDetailPage() {
             </div>
 
             <p>
-              Dicha suma será cancelada en cuotas quincenales, según los plazos establecidos en el contrato de financiación anexo. En caso de mora en el pago de una o más cuotas, se causarán intereses a la tasa máxima legal permitida.
+              Dicha suma será cancelada en cuotas <span className="capitalize">{credit.paymentFrequency}es</span>, según los plazos establecidos en el contrato de financiación anexo. En caso de mora en el pago de una o más cuotas, se causarán intereses a la tasa máxima legal permitida.
             </p>
 
             <p className="text-base font-medium opacity-80">

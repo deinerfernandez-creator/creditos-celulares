@@ -20,7 +20,8 @@ import {
   User as UserIcon,
   X,
   CreditCard as IdCardIcon,
-  Percent
+  Percent,
+  CalendarClock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -111,6 +112,7 @@ export default function NewCreditPage() {
   const [initialAmount, setInitialAmount] = useState('');
   const [downPayment, setDownPayment] = useState('');
   const [planType, setPlanType] = useState<'6' | '12'>('6');
+  const [paymentFrequency, setPaymentFrequency] = useState<'semanal' | 'quincenal'>('quincenal');
   
   // Camera state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -154,7 +156,7 @@ export default function NewCreditPage() {
     if (amountToFinance > 0) {
       const interest = planType === '6' ? 0.5 : 1.0;
       const totalFinanced = amountToFinance * (1 + interest);
-      const installments = planType === '6' ? 6 : 12;
+      const installments = parseInt(planType);
       const installment = totalFinanced / installments;
 
       setCalculation({
@@ -242,7 +244,7 @@ export default function NewCreditPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '') {
+    if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '' || !paymentFrequency) {
       toast({ title: "Error", description: "Por favor completa todos los campos requeridos.", variant: "destructive" });
       return;
     }
@@ -262,6 +264,7 @@ export default function NewCreditPage() {
       downPayment: parseFloat(downPayment),
       totalAmount: calculation.totalAmount,
       planType: parseInt(planType),
+      paymentFrequency,
       installmentAmount: calculation.installmentAmount,
       remainingBalance: calculation.totalAmount,
       status: 'activo',
@@ -445,27 +448,44 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <Label className="font-bold">Plan de Pagos</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      disabled={loading || calculation.financedAmount <= 0}
-                      onClick={() => setPlanType('6')}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <p className="font-black text-lg text-primary tracking-tight">6 Cuotas</p>
-                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recargo del 50%</p>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading || calculation.financedAmount <= 0}
-                      onClick={() => setPlanType('12')}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <p className="font-black text-lg text-primary tracking-tight">12 Cuotas</p>
-                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Recargo del 100%</p>
-                    </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <Label className="font-bold flex items-center gap-2">
+                      <CalendarClock className="w-4 h-4 text-primary" /> Frecuencia de Cobro
+                    </Label>
+                    <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)} disabled={loading}>
+                      <SelectTrigger className="rounded-xl h-12">
+                        <SelectValue placeholder="Selecciona frecuencia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="semanal">Semanal (7 días)</SelectItem>
+                        <SelectItem value="quincenal">Quincenal (15 días)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label className="font-bold">Plan de Cuotas</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={loading || calculation.financedAmount <= 0}
+                        onClick={() => setPlanType('6')}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${planType === '6' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <p className="font-black text-sm text-primary tracking-tight">6 Cuotas</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">+50%</p>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={loading || calculation.financedAmount <= 0}
+                        onClick={() => setPlanType('12')}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${planType === '12' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-200'} ${calculation.financedAmount <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <p className="font-black text-sm text-primary tracking-tight">12 Cuotas</p>
+                        <p className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">+100%</p>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -601,7 +621,9 @@ export default function NewCreditPage() {
                   <h2 className="text-4xl font-black tracking-tighter">{formatCurrency(calculation.totalAmount)}</h2>
                   
                   <div className="mt-6 p-4 bg-white/10 rounded-2xl border border-white/10">
-                    <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-1">Valor de la Cuota Quincenal</p>
+                    <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-1">
+                      Valor de la Cuota {paymentFrequency === 'semanal' ? 'Semanal' : 'Quincenal'}
+                    </p>
                     <h3 className="text-2xl font-black text-accent">{formatCurrency(calculation.installmentAmount)}</h3>
                   </div>
                 </div>

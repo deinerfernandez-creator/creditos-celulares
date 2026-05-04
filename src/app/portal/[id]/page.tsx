@@ -106,11 +106,12 @@ export default function CustomerPortalDashboard() {
     
     const startDate = credit.createdAt.toDate ? credit.createdAt.toDate() : new Date(credit.createdAt);
     const totalPaymentsMade = paymentsData ? paymentsData.reduce((sum, p) => sum + p.amount, 0) : 0;
+    const frequencyDays = credit.paymentFrequency === 'semanal' ? 7 : 15;
     
     const items = [];
     for (let i = 1; i <= credit.planType; i++) {
       const dueDate = new Date(startDate);
-      dueDate.setDate(dueDate.getDate() + (i * 15));
+      dueDate.setDate(dueDate.getDate() + (i * frequencyDays));
       
       const threshold = i * credit.installmentAmount;
       const isPaid = totalPaymentsMade >= threshold;
@@ -138,8 +139,8 @@ export default function CustomerPortalDashboard() {
             loanAmount: credit.initialAmount,
             totalAmountDue: credit.totalAmount,
             remainingBalance: credit.remainingBalance,
-            nextPaymentDate: "Próxima quincena",
-            paymentFrequency: 'quincenal',
+            nextPaymentDate: "Próxima cuota",
+            paymentFrequency: credit.paymentFrequency || 'quincenal',
             paymentHistory: payments.map(p => ({
               date: p.date?.toDate ? p.date.toDate().toISOString().split('T')[0] : '---',
               amount: p.amount
@@ -269,7 +270,7 @@ export default function CustomerPortalDashboard() {
             </div>
             <div>
               <h3 className="text-lg font-black">¿Pagar con Nequi?</h3>
-              <p className="text-xs text-slate-400 font-medium mt-1">Usa nuestro QR oficial para tus abonos quincenales.</p>
+              <p className="text-xs text-slate-400 font-medium mt-1">Usa nuestro QR oficial para tus abonos {credit.paymentFrequency || 'quincenal'}es.</p>
             </div>
             <Dialog>
               <DialogTrigger asChild>
@@ -303,7 +304,7 @@ export default function CustomerPortalDashboard() {
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center">Instrucciones de Pago</p>
                         <ul className="text-xs font-medium text-slate-300 space-y-2">
                           <li className="flex gap-3"><span className="text-primary font-black">1.</span> Escanea el código desde tu app Nequi.</li>
-                          <li className="flex gap-3"><span className="text-primary font-black">2.</span> Realiza el abono de tu cuota quincenal.</li>
+                          <li className="flex gap-3"><span className="text-primary font-black">2.</span> Realiza el abono de tu cuota {credit.paymentFrequency || 'quincenal'}.</li>
                           <li className="flex gap-3"><span className="text-primary font-black">3.</span> Envía el comprobante al WhatsApp oficial.</li>
                         </ul>
                       </div>
@@ -391,7 +392,7 @@ export default function CustomerPortalDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="border-none shadow-sm bg-white rounded-[2rem] p-8 border border-slate-100">
             <CardTitle className="flex items-center gap-3 text-xl font-black text-slate-900 mb-8">
-              <CalendarDays className="w-5 h-5 text-primary" /> Cronograma de Cuotas
+              <CalendarDays className="w-5 h-5 text-primary" /> Cronograma de Cuotas (<span className="capitalize">{credit.paymentFrequency || 'Quincenal'}</span>)
             </CardTitle>
             <div className="space-y-4">
               {schedule.map((item) => (
