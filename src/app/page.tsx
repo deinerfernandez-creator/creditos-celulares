@@ -37,7 +37,9 @@ import {
   Calculator,
   Package,
   BadgeDollarSign,
-  ShoppingCart
+  ShoppingCart,
+  ShieldCheck as WarrantyIcon,
+  Filter
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -141,14 +143,40 @@ export default function DashboardPage() {
   }, [db, mounted]);
   const { data: salesData } = useCollection(salesQuery);
 
-  const sales = React.useMemo(() => {
-    if (!salesData) return null;
-    if (!searchTerm) return salesData;
-    return salesData.filter(s => 
+  // Unificamos ventas a contado y créditos en un solo registro maestro
+  const unifiedSales = React.useMemo(() => {
+    if (!creditsData && !salesData) return [];
+    
+    const cashSales = (salesData || []).map(s => ({
+      ...s,
+      type: 'contado',
+      displayDate: s.date?.toDate ? s.date.toDate() : new Date(),
+      customerName: s.customerName || 'Venta Directa',
+      amount: s.amount,
+      status: 'pagado'
+    }));
+
+    const creditSales = (creditsData || []).map(cr => {
+      const customer = customersData?.find((c: any) => c.id === cr.customerId);
+      return {
+        ...cr,
+        type: 'credito',
+        displayDate: cr.createdAt?.toDate ? cr.createdAt.toDate() : new Date(),
+        customerName: customer?.name || '---',
+        amount: cr.initialAmount, // Valor base del equipo
+        status: cr.status
+      };
+    });
+
+    const combined = [...cashSales, ...creditSales].sort((a, b) => b.displayDate - a.displayDate);
+
+    if (!searchTerm) return combined;
+    return combined.filter(s => 
       s.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      s.deviceModel?.toLowerCase().includes(searchTerm.toLowerCase())
+      s.deviceModel?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.imei?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [salesData, searchTerm]);
+  }, [creditsData, salesData, customersData, searchTerm]);
 
   const handleDeleteCustomer = (id: string) => {
     if (role !== 'admin') return;
@@ -179,11 +207,12 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const totalSalesAmount = salesData ? salesData.reduce((sum, s) => sum + s.amount, 0) : 0;
+  const totalDownPayments = creditsData ? creditsData.reduce((sum, cr) => sum + cr.downPayment, 0) : 0;
 
   const stats = [
     { title: "Créditos Activos", value: creditsData ? creditsData.filter((c: any) => c.status === 'activo').length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
-    { title: "Ventas Contado", value: salesData ? salesData.length.toString() : "0", icon: ShoppingCart, color: "text-green-600", bg: "bg-green-100" },
-    { title: "Total en Ventas", value: formatCurrency(totalSalesAmount), icon: BadgeDollarSign, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Equipos Vendidos", value: unifiedSales.length.toString(), icon: WarrantyIcon, color: "text-green-600", bg: "bg-green-100" },
+    { title: "Caja (Contado + Iniciales)", value: formatCurrency(totalSalesAmount + totalDownPayments), icon: BadgeDollarSign, color: "text-accent", bg: "bg-accent/10" },
     { title: "Clientes Totales", value: customersData ? customersData.length.toString() : "0", icon: Users, color: "text-slate-600", bg: "bg-slate-100" },
   ];
 
@@ -192,12 +221,15 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, type: string) => {
+    if (type === 'contado') {
+      return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize font-bold">Contado</Badge>;
+    }
     switch (status) {
       case 'activo':
-        return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-3 capitalize font-bold">Activo</Badge>;
+        return <Badge className="bg-green-500 hover:bg-green-600 rounded-full px-3 capitalize font-bold">Crédito Activo</Badge>;
       case 'pagado':
-        return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize font-bold">Pagado</Badge>;
+        return <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3 capitalize font-bold">PAGADO</Badge>;
       case 'bloqueado':
         return <Badge variant="destructive" className="rounded-full px-3 capitalize font-bold">Bloqueado</Badge>;
       default:
@@ -211,7 +243,7 @@ export default function DashboardPage() {
         <Sidebar className="border-r border-primary/10">
           <SidebarHeader className="p-6">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-white p-1 shadow-sm flex items-center justify-center">
+              <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-white p-1 shadow-sm flex items-center justify-center border border-slate-100">
                 <Image src={logo?.imageUrl || '/logo.png'} alt="Logo" width={24} height={24} />
               </div>
               <div>
@@ -228,7 +260,7 @@ export default function DashboardPage() {
               </SidebarMenuButton>
               <SidebarMenuButton isActive={activeTab === 'sales'} onClick={() => { setActiveTab('sales'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <ShoppingCart className="w-5 h-5 mr-3" />
-                <span>Ventas</span>
+                <span>Portal de Ventas</span>
               </SidebarMenuButton>
               <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => { setActiveTab('customers'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <Users className="w-5 h-5 mr-3" />
@@ -281,17 +313,22 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-primary" />
               <div className="h-6 w-px bg-slate-200 mx-2" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Clientes' : activeTab === 'credits' ? 'Financiamientos' : activeTab === 'sales' ? 'Ventas a Contado' : activeTab === 'downpayments' ? 'Recaudos Iniciales' : 'Gestión de Usuarios'}
+                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : 
+                 activeTab === 'sales' ? 'Portal de Ventas Unificado' :
+                 activeTab === 'customers' ? 'Maestro de Clientes' : 
+                 activeTab === 'credits' ? 'Gestión de Financiamientos' : 
+                 activeTab === 'downpayments' ? 'Registro de Recaudos' : 
+                 'Gestión de Usuarios'}
               </h2>
             </div>
             <div className="flex items-center gap-4">
-               {activeTab === 'dashboard' && (
+               {(activeTab === 'dashboard' || activeTab === 'sales') && (
                  <div className="flex gap-2">
                    <Button size="sm" asChild className="rounded-xl font-bold bg-green-600 hover:bg-green-700">
-                     <Link href="/sales/new"><ShoppingCart className="w-4 h-4 mr-2" /> Nueva Venta</Link>
+                     <Link href="/sales/new"><ShoppingCart className="w-4 h-4 mr-2" /> Venta Contado</Link>
                    </Button>
                    <Button size="sm" asChild className="rounded-xl font-bold bg-primary hover:bg-primary/90">
-                     <Link href="/credits/new"><PlusCircle className="w-4 h-4 mr-2" /> Nuevo Crédito</Link>
+                     <Link href="/credits/new"><PlusCircle className="w-4 h-4 mr-2" /> Venta Crédito</Link>
                    </Button>
                  </div>
                )}
@@ -321,11 +358,11 @@ export default function DashboardPage() {
                   <Card className="lg:col-span-2 border-none shadow-sm rounded-[2rem] border border-slate-100 overflow-hidden bg-white">
                     <CardHeader className="p-8 border-b border-slate-50 flex flex-row items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg font-black text-slate-900">Actividad Reciente</CardTitle>
-                        <CardDescription className="text-xs font-medium">Créditos procesados últimamente</CardDescription>
+                        <CardTitle className="text-lg font-black text-slate-900">Registro General de Equipos Vendidos</CardTitle>
+                        <CardDescription className="text-xs font-medium">Control unificado para garantías y ventas</CardDescription>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => setActiveTab('credits')} className="rounded-full text-primary font-bold">
-                        Ver todo
+                      <Button variant="ghost" size="sm" onClick={() => setActiveTab('sales')} className="rounded-full text-primary font-bold">
+                        Ver todas
                       </Button>
                     </CardHeader>
                     <CardContent className="p-0">
@@ -333,42 +370,36 @@ export default function DashboardPage() {
                         <table className="w-full text-sm text-left">
                           <thead className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-400">
                             <tr>
-                              <th className="px-8 py-4">Cliente</th>
-                              <th className="px-4 py-4">Equipo</th>
-                              <th className="px-4 py-4">Saldo</th>
-                              <th className="px-4 py-4">Estado</th>
+                              <th className="px-8 py-4">Fecha</th>
+                              <th className="px-4 py-4">Cliente</th>
+                              <th className="px-4 py-4">Equipo / IMEI</th>
+                              <th className="px-4 py-4">Tipo</th>
                               <th className="px-8 py-4 text-right">Acción</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                            {loadingCredits ? (
-                              <tr>
-                                <td colSpan={5} className="text-center py-20"><Loader2 className="animate-spin inline-block mr-2" /></td>
-                              </tr>
-                            ) : creditsData && creditsData.length > 0 ? (
-                              creditsData.slice(0, 5).map((credit: any) => {
-                                const customer = customersData?.find((c: any) => c.id === credit.customerId);
-                                return (
-                                  <tr key={credit.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <td className="px-8 py-4">
-                                      <div className="font-bold text-slate-900">{customer?.name || '---'}</div>
-                                    </td>
-                                    <td className="px-4 py-4">
-                                      <div className="text-sm font-bold text-primary">{credit.deviceModel}</div>
-                                    </td>
-                                    <td className="px-4 py-4 font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</td>
-                                    <td className="px-4 py-4">{getStatusBadge(credit.status)}</td>
-                                    <td className="px-8 py-4 text-right">
-                                      <Button variant="outline" size="sm" asChild className="rounded-xl font-bold border-primary/20 text-primary">
-                                        <Link href={`/credits/${credit.id}`}>Ver</Link>
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                );
-                              })
+                            {unifiedSales.length > 0 ? (
+                              unifiedSales.slice(0, 8).map((sale: any) => (
+                                <tr key={sale.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-8 py-4 text-xs font-bold text-slate-400">
+                                    {sale.displayDate.toLocaleDateString('es-CO')}
+                                  </td>
+                                  <td className="px-4 py-4 font-black text-slate-900">{sale.customerName}</td>
+                                  <td className="px-4 py-4">
+                                    <div className="font-bold text-primary">{sale.deviceModel}</div>
+                                    <div className="text-[10px] font-mono text-slate-400">{sale.imei}</div>
+                                  </td>
+                                  <td className="px-4 py-4">{getStatusBadge(sale.status, sale.type)}</td>
+                                  <td className="px-8 py-4 text-right">
+                                    <Button variant="outline" size="sm" asChild className="rounded-xl font-bold border-primary/20 text-primary">
+                                      <Link href={sale.type === 'credito' ? `/credits/${sale.id}` : '#'}>Ver</Link>
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))
                             ) : (
                               <tr>
-                                <td colSpan={5} className="text-center py-20 text-slate-400 italic">Sin créditos registrados.</td>
+                                <td colSpan={5} className="text-center py-20 text-slate-400 italic">Sin actividad registrada.</td>
                               </tr>
                             )}
                           </tbody>
@@ -385,19 +416,25 @@ export default function DashboardPage() {
                       <Button className="w-full justify-start h-14 bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-xl shadow-green-600/10 font-bold" asChild>
                         <Link href="/sales/new">
                           <ShoppingCart className="w-5 h-5 mr-3" />
-                          Registrar Venta Directa
+                          Venta Directa
                         </Link>
                       </Button>
                       <Button className="w-full justify-start h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-xl shadow-primary/10 font-bold" asChild>
                         <Link href="/credits/new">
                           <PlusCircle className="w-5 h-5 mr-3" />
-                          Nueva Solicitud Crédito
+                          Nuevo Crédito
                         </Link>
                       </Button>
                       <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
                         <Link href="/inventory">
                           <Package className="w-5 h-5 mr-3 text-primary" />
-                          Inventario
+                          Catálogo / Inventario
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
+                        <Link href="/quotations">
+                          <Calculator className="w-5 h-5 mr-3 text-accent" />
+                          Cotizador Rápido
                         </Link>
                       </Button>
                     </CardContent>
@@ -408,72 +445,93 @@ export default function DashboardPage() {
 
             {activeTab === 'sales' && (
               <div className="space-y-6">
-                <div className="flex justify-between items-center gap-4">
-                  <div className="relative w-full sm:w-64">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="relative w-full sm:w-1/2">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input 
-                      placeholder="Buscar venta..." 
-                      className="pl-10 rounded-xl"
+                      placeholder="Buscar por IMEI, Cliente o Equipo (Para garantías)..." 
+                      className="pl-10 rounded-xl h-12 shadow-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button asChild className="rounded-2xl font-bold bg-green-600 hover:bg-green-700">
-                    <Link href="/sales/new"><ShoppingCart className="mr-2 h-4 w-4" /> Registrar Venta</Link>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="rounded-full px-4 py-1 font-bold text-slate-400">Total: {unifiedSales.length} Equipos</Badge>
+                  </div>
                 </div>
+                
                 <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
+                  <CardHeader className="p-8 border-b bg-slate-50/30">
+                    <CardTitle className="text-xl font-black">Maestro Unificado de Ventas</CardTitle>
+                    <CardDescription>Registro completo de todos los equipos entregados por Tecnicell</CardDescription>
+                  </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-400">
                           <tr>
-                            <th className="px-8 py-5">Fecha</th>
-                            <th className="px-4 py-5">Cliente / Concepto</th>
-                            <th className="px-4 py-5">Equipo / IMEI</th>
-                            <th className="px-4 py-5">Monto Cobrado</th>
+                            <th className="px-8 py-5">Fecha de Venta</th>
+                            <th className="px-4 py-5">Cliente / Documento</th>
+                            <th className="px-4 py-5">Equipo / Modelo</th>
+                            <th className="px-4 py-5">IMEI (Garantía)</th>
+                            <th className="px-4 py-5">Modalidad</th>
                             <th className="px-8 py-5 text-right">Acciones</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {sales && sales.length > 0 ? (
-                            sales.map((s: any) => (
+                          {unifiedSales.length > 0 ? (
+                            unifiedSales.map((s: any) => (
                               <tr key={s.id} className="hover:bg-slate-50/30 transition-colors">
                                 <td className="px-8 py-5 font-bold text-slate-400 text-xs">
-                                  {s.date?.toDate ? s.date.toDate().toLocaleDateString('es-CO') : '---'}
+                                  {s.displayDate.toLocaleDateString('es-CO')}
                                 </td>
-                                <td className="px-4 py-5 font-black text-slate-900">{s.customerName}</td>
                                 <td className="px-4 py-5">
-                                  <div className="font-bold text-primary">{s.deviceModel}</div>
-                                  <div className="text-[10px] font-mono text-slate-400">{s.imei}</div>
+                                  <div className="font-black text-slate-900">{s.customerName}</div>
+                                  <div className="text-[10px] text-slate-400">{s.cedula || '---'}</div>
                                 </td>
-                                <td className="px-4 py-5 font-black text-green-600 text-lg">{formatCurrency(s.amount)}</td>
+                                <td className="px-4 py-5 font-bold text-primary">{s.deviceModel}</td>
+                                <td className="px-4 py-5 font-mono text-xs font-black text-slate-600 bg-slate-100 px-2 py-1 rounded-lg inline-block my-4">
+                                  {s.imei}
+                                </td>
+                                <td className="px-4 py-5">{getStatusBadge(s.status, s.type)}</td>
                                 <td className="px-8 py-5 text-right">
-                                  {role === 'admin' && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive rounded-xl">
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>¿Eliminar Venta?</AlertDialogTitle>
-                                          <AlertDialogDescription>Esto borrará el registro de ingreso de forma permanente.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteSale(s.id)} className="bg-destructive text-white">Eliminar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  )}
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button variant="ghost" size="sm" asChild className="rounded-xl font-bold text-primary hover:bg-primary/5">
+                                      <Link href={s.type === 'credito' ? `/credits/${s.id}` : '#'}>
+                                        <WarrantyIcon className="w-4 h-4 mr-1" /> Detalles
+                                      </Link>
+                                    </Button>
+                                    {role === 'admin' && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="text-destructive rounded-xl">
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>¿Eliminar Registro?</AlertDialogTitle>
+                                            <AlertDialogDescription>Esto borrará el registro de la venta o el crédito de forma permanente.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction 
+                                              onClick={() => s.type === 'credito' ? handleDeleteCredit(s.id) : handleDeleteSale(s.id)} 
+                                              className="bg-destructive text-white"
+                                            >
+                                              Eliminar Registro
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={5} className="text-center py-20 text-slate-400">Sin ventas a contado.</td>
+                              <td colSpan={6} className="text-center py-20 text-slate-400">Sin registros que coincidan con la búsqueda.</td>
                             </tr>
                           )}
                         </tbody>
@@ -603,7 +661,7 @@ export default function DashboardPage() {
                                   </td>
                                   <td className="px-4 py-5 font-mono text-xs text-slate-500">{cr.imei}</td>
                                   <td className="px-4 py-5 font-black text-slate-900">{formatCurrency(cr.remainingBalance)}</td>
-                                  <td className="px-4 py-5">{getStatusBadge(cr.status)}</td>
+                                  <td className="px-4 py-5">{getStatusBadge(cr.status, 'credito')}</td>
                                   <td className="px-8 py-5 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                       <Button variant="outline" size="sm" asChild className="rounded-xl font-bold border-primary/20 text-primary">
