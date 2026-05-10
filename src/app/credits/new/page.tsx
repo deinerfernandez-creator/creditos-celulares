@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -86,17 +87,23 @@ export default function NewCreditPage() {
     return Array.from(brands).sort();
   }, [inventoryPhones]);
 
-  const filteredModels = useMemo(() => {
+  const filteredModelsData = useMemo(() => {
     if (!inventoryPhones) return [];
     let list = inventoryPhones;
     if (selectedBrand !== 'all') {
       list = list.filter(p => p.brand === selectedBrand);
     }
-    return list
-      .filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()))
-      .map(p => `${p.brand} ${p.model}`)
-      .sort();
+    return list.filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [inventoryPhones, selectedBrand, searchTerm]);
+
+  const handleModelSelect = (modelName: string) => {
+    setDeviceModel(modelName);
+    // Buscar si el modelo seleccionado tiene un IMEI en el inventario
+    const foundPhone = inventoryPhones?.find(p => `${p.brand} ${p.model}` === modelName);
+    if (foundPhone && foundPhone.imei) {
+      setImei(foundPhone.imei);
+    }
+  };
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -292,15 +299,15 @@ export default function NewCreditPage() {
                         </div>
                       </div>
                       
-                      <Select onValueChange={setDeviceModel} value={deviceModel} disabled={loading} required>
+                      <Select onValueChange={handleModelSelect} value={deviceModel} disabled={loading} required>
                         <SelectTrigger className="rounded-xl h-12">
                           <SelectValue placeholder="Selecciona el modelo..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
-                          {filteredModels.map((m) => (
-                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          {filteredModelsData.map((p) => (
+                            <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.imei ? `(IMEI: ${p.imei})` : ''}</SelectItem>
                           ))}
-                          {searchTerm && !filteredModels.includes(searchTerm) && (
+                          {searchTerm && !filteredModelsData.some(p => `${p.brand} ${p.model}` === searchTerm) && (
                              <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
                           )}
                         </SelectContent>
@@ -387,7 +394,6 @@ export default function NewCreditPage() {
                 <div className="space-y-6 border-t pt-8">
                   <Label className="text-lg font-black">Documentos Fotográficos</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    {/* Botones de cámara similares al anterior pero con los hooks correspondientes */}
                     {[
                       { label: 'Rostro Cliente', type: 'customer', data: capturedPhoto },
                       { label: 'Cédula (Frontal)', type: 'idFront', data: idFrontPhoto },

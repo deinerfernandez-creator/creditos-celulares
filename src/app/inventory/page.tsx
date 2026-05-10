@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -19,7 +20,8 @@ import {
   Search, 
   Trash2, 
   Package,
-  Loader2
+  Loader2,
+  Hash
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
@@ -46,6 +48,7 @@ export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
+  const [newImei, setNewImei] = useState('');
 
   const phonesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -66,16 +69,18 @@ export default function InventoryPage() {
   const filteredPhones = useMemo(() => {
     if (!sortedPhones) return [];
     if (!searchTerm) return sortedPhones;
+    const term = searchTerm.toLowerCase();
     return sortedPhones.filter(p => 
-      p.brand.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.model.toLowerCase().includes(searchTerm.toLowerCase())
+      p.brand.toLowerCase().includes(term) || 
+      p.model.toLowerCase().includes(term) ||
+      (p.imei && p.imei.toLowerCase().includes(term))
     );
   }, [sortedPhones, searchTerm]);
 
   const handleAddPhone = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBrand || !newModel) {
-      toast({ title: "Error", description: "Marca y Modelo son requeridos.", variant: "destructive" });
+    if (!newBrand || !newModel || !newImei) {
+      toast({ title: "Error", description: "Todos los campos (Marca, Modelo e IMEI) son requeridos.", variant: "destructive" });
       return;
     }
 
@@ -84,11 +89,13 @@ export default function InventoryPage() {
       await addDoc(collection(db, 'phones'), {
         brand: newBrand,
         model: newModel,
+        imei: newImei,
         createdAt: serverTimestamp()
       });
       toast({ title: "Equipo Registrado", description: `${newBrand} ${newModel} añadido al inventario.` });
       setNewBrand('');
       setNewModel('');
+      setNewImei('');
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo registrar el equipo.", variant: "destructive" });
     } finally {
@@ -143,6 +150,16 @@ export default function InventoryPage() {
                     className="rounded-xl"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label className="font-bold">IMEI</Label>
+                  <Input 
+                    placeholder="15 dígitos" 
+                    value={newImei}
+                    onChange={(e) => setNewImei(e.target.value)}
+                    className="rounded-xl font-mono"
+                    maxLength={15}
+                  />
+                </div>
                 <Button type="submit" disabled={loading} className="w-full rounded-xl font-bold bg-primary">
                   {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <PlusCircle className="w-4 h-4 mr-2" />}
                   Registrar Equipo
@@ -160,7 +177,7 @@ export default function InventoryPage() {
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
-                    placeholder="Buscar marca o modelo..." 
+                    placeholder="Buscar marca, modelo o IMEI..." 
                     className="pl-10 rounded-xl h-9 text-xs"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -178,6 +195,11 @@ export default function InventoryPage() {
                       <div>
                         <p className="text-[10px] font-black text-primary uppercase tracking-widest">{phone.brand}</p>
                         <p className="font-black text-slate-900 text-lg tracking-tight">{phone.model}</p>
+                        {phone.imei && (
+                          <p className="text-[10px] font-mono text-slate-400 mt-1 flex items-center gap-1">
+                            <Hash className="w-3 h-3" /> IMEI: {phone.imei}
+                          </p>
+                        )}
                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
