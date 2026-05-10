@@ -103,9 +103,9 @@ export default function NewCreditPage() {
       if (planType === '12') interest = 1.0;
       else if (planType === '24') interest = 1.5;
 
-      // Reduce interest by 10% if frequency is weekly
+      // Reduce interest by 20% if frequency is weekly (10% + 10% more)
       if (paymentFrequency === 'semanal') {
-        interest = Math.max(0, interest - 0.1);
+        interest = Math.max(0, interest - 0.2);
       }
 
       const totalFinanced = amountToFinance * (1 + interest);

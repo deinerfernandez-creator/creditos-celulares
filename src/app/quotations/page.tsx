@@ -91,12 +91,12 @@ export default function QuotationPage() {
     
     if (amountToFinance > 0) {
       let interest = 0.5; // 50% for 6 installments
-      if (planType === '12') interest = 1.0; // 100% for 12 months
-      else if (planType === '24') interest = 1.5; // 150% for 24 months
+      if (planType === '12') interest = 1.0; // 100% for 12 units
+      else if (planType === '24') interest = 1.5; // 150% for 24 units
 
-      // Reduce interest by 10% if frequency is weekly
+      // Reduce interest by 20% if frequency is weekly (10% more reduction)
       if (paymentFrequency === 'semanal') {
-        interest = Math.max(0, interest - 0.1);
+        interest = Math.max(0, interest - 0.2);
       }
 
       const totalFinanced = amountToFinance * (1 + interest);
