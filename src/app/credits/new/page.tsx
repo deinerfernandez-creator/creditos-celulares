@@ -15,18 +15,16 @@ import {
   DollarSign, 
   Camera, 
   RefreshCw, 
-  Check, 
   Search,
   User as UserIcon,
   X,
   CreditCard as IdCardIcon,
-  Percent,
-  CalendarClock
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -43,20 +41,9 @@ export default function NewCreditPage() {
   const { toast } = useToast();
   const db = useFirestore();
   
-  const customersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'customers'), orderBy('name', 'asc'));
-  }, [db]);
-  const { data: customers } = useCollection(customersQuery);
-
-  const phonesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
-  }, [db]);
-  const { data: inventoryPhones } = useCollection(phonesQuery);
-
   const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState('');
+  const [selectedInventoryId, setSelectedInventoryId] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | 'all'>('all');
   const [deviceModel, setDeviceModel] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,9 +68,21 @@ export default function NewCreditPage() {
     installmentAmount: 0
   });
 
+  const customersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'customers'), orderBy('name', 'asc'));
+  }, [db]);
+  const { data: customers } = useCollection(customersQuery);
+
+  const phonesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
+  }, [db]);
+  const { data: inventoryPhones } = useCollection(phonesQuery);
+
   const availableBrands = useMemo(() => {
     if (!inventoryPhones) return [];
-    const brands = new Set(inventoryPhones.map(p => p.brand));
+    const brands = new Set(inventoryPhones.map(p => p.brand).filter(Boolean));
     return Array.from(brands).sort();
   }, [inventoryPhones]);
 
@@ -96,15 +95,20 @@ export default function NewCreditPage() {
     return list.filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [inventoryPhones, selectedBrand, searchTerm]);
 
-  const handleModelSelect = (modelName: string) => {
-    setDeviceModel(modelName);
-    // Buscar si el modelo seleccionado tiene un IMEI y precio en el inventario
-    const foundPhone = inventoryPhones?.find(p => `${p.brand} ${p.model}` === modelName);
+  const handleInventorySelect = (id: string) => {
+    const foundPhone = inventoryPhones?.find(p => p.id === id);
     if (foundPhone) {
-      if (foundPhone.imei) setImei(foundPhone.imei);
-      if (foundPhone.salePrice) setInitialAmount(foundPhone.salePrice.toString());
+      setSelectedInventoryId(id);
+      setDeviceModel(`${foundPhone.brand} ${foundPhone.model}`);
+      setInitialAmount(foundPhone.salePrice.toString());
+      setImei(''); // Reset IMEI to force picking from the selected phone's list
     }
   };
+
+  const selectedPhoneData = useMemo(() => {
+    if (!selectedInventoryId || !inventoryPhones) return null;
+    return inventoryPhones.find(p => p.id === selectedInventoryId);
+  }, [selectedInventoryId, inventoryPhones]);
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -190,15 +194,15 @@ export default function NewCreditPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerId || !deviceModel || !imei || !initialAmount || downPayment === '' || !paymentFrequency) {
-      toast({ title: "Error", description: "Completa todos los campos.", variant: "destructive" });
+      toast({ title: "Error", description: "Completa todos los campos obligatorios.", variant: "destructive" });
       return;
     }
 
     if (!capturedPhoto || !idFrontPhoto || !idBackPhoto) {
-      toast({ title: "Fotos Requeridas", description: "Faltan documentos fotográficos.", variant: "destructive" });
+      toast({ title: "Fotos Requeridas", description: "Faltan documentos fotográficos del cliente.", variant: "destructive" });
       return;
     }
 
@@ -222,15 +226,24 @@ export default function NewCreditPage() {
       createdAt: serverTimestamp(),
     };
 
-    addDoc(collection(db, 'credits'), creditData)
-      .then(() => {
-        toast({ title: "Éxito", description: "Crédito registrado." });
-        router.push('/');
-      })
-      .catch((error: any) => {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        setLoading(false);
-      });
+    try {
+      // Registrar el crédito
+      await addDoc(collection(db, 'credits'), creditData);
+
+      // Si se seleccionó de un stock existente, descontar el IMEI
+      if (selectedInventoryId) {
+        await updateDoc(doc(db, 'phones', selectedInventoryId), {
+          imeis: arrayRemove(imei),
+          quantity: increment(-1)
+        });
+      }
+
+      toast({ title: "Crédito Registrado", description: "El expediente ha sido creado y el stock actualizado." });
+      router.push('/');
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -272,7 +285,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Marca y Modelo</Label>
+                    <Label className="font-bold">Selección de Equipo</Label>
                     <div className="grid grid-cols-1 gap-2">
                       <div className="flex gap-2">
                         <div className="w-1/3">
@@ -300,39 +313,48 @@ export default function NewCreditPage() {
                         </div>
                       </div>
                       
-                      <Select onValueChange={handleModelSelect} value={deviceModel} disabled={loading} required>
-                        <SelectTrigger className="rounded-xl h-12">
-                          <SelectValue placeholder="Selecciona el modelo..." />
+                      <Select onValueChange={handleInventorySelect} disabled={loading} required>
+                        <SelectTrigger className="rounded-xl h-12 font-bold">
+                          <SelectValue placeholder="Elegir del inventario..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {filteredModelsData.map((p) => (
-                            <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.color ? `(${p.color})` : ''} {p.imei ? `(IMEI: ${p.imei})` : ''}</SelectItem>
+                            <SelectItem key={p.id} value={p.id} disabled={!p.imeis || p.imeis.length === 0}>
+                              {p.brand} {p.model} {p.color ? `(${p.color})` : ''} - Stock: {p.imeis?.length || 0}
+                            </SelectItem>
                           ))}
-                          {searchTerm && !filteredModelsData.some(p => `${p.brand} ${p.model}` === searchTerm) && (
-                             <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
-                          )}
                         </SelectContent>
                       </Select>
-                      <Link href="/inventory" className="text-[10px] font-black text-primary uppercase text-right hover:underline">
-                        + Añadir al inventario
-                      </Link>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">IMEI</Label>
-                    <Input 
-                      placeholder="15 dígitos" 
-                      className="rounded-xl h-12 font-mono"
-                      value={imei}
-                      onChange={(e) => setImei(e.target.value)}
-                      disabled={loading}
-                      required
-                    />
+                    <Label className="font-bold">IMEI del Equipo</Label>
+                    {selectedPhoneData && selectedPhoneData.imeis?.length > 0 ? (
+                      <Select onValueChange={setImei} value={imei} disabled={loading} required>
+                        <SelectTrigger className="rounded-xl h-12 font-mono">
+                          <SelectValue placeholder="Elegir IMEI disponible..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedPhoneData.imeis.map((item: string) => (
+                            <SelectItem key={item} value={item} className="font-mono">{item}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input 
+                        placeholder="Ingresa IMEI manualmente" 
+                        className="rounded-xl h-12 font-mono"
+                        value={imei}
+                        onChange={(e) => setImei(e.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Precio (COP)</Label>
+                    <Label className="font-bold">Precio del Equipo (COP)</Label>
                     <Input 
                       type="number" 
                       placeholder="Ej: 3500000" 
@@ -346,7 +368,7 @@ export default function NewCreditPage() {
 
                   <div className="space-y-3 col-span-1 md:col-span-2">
                     <div className="flex items-center justify-between">
-                      <Label className="font-bold">Cuota Inicial (COP)</Label>
+                      <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
                       <div className="flex gap-2">
                         {[30, 40, 50].map(p => (
                           <Button key={p} type="button" variant="outline" size="sm" className="h-7 text-[10px] font-black rounded-full" onClick={() => handleSetDownPaymentPercentage(p)}>
@@ -357,7 +379,7 @@ export default function NewCreditPage() {
                     </div>
                     <Input 
                       type="number" 
-                      className="rounded-xl h-12 text-lg font-bold text-green-700 bg-green-50/30"
+                      className="rounded-xl h-12 text-lg font-black text-green-700 bg-green-50/30"
                       value={downPayment}
                       onChange={(e) => setDownPayment(e.target.value)}
                       disabled={loading}
@@ -368,7 +390,7 @@ export default function NewCreditPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
-                    <Label className="font-bold">Frecuencia</Label>
+                    <Label className="font-bold">Frecuencia de Pago</Label>
                     <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)} disabled={loading}>
                       <SelectTrigger className="rounded-xl h-12">
                         <SelectValue />
@@ -381,7 +403,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="font-bold">Meses</Label>
+                    <Label className="font-bold">Plazo de Financiación</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {['6', '12', '24'].map(num => (
                         <button key={num} type="button" onClick={() => setPlanType(num as any)} className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}>
@@ -393,7 +415,7 @@ export default function NewCreditPage() {
                 </div>
 
                 <div className="space-y-6 border-t pt-8">
-                  <Label className="text-lg font-black">Documentos Fotográficos</Label>
+                  <Label className="text-lg font-black">Expediente Fotográfico</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     {[
                       { label: 'Rostro Cliente', type: 'customer', data: capturedPhoto },
@@ -405,7 +427,7 @@ export default function NewCreditPage() {
                         {!btn.data ? (
                           <Button type="button" onClick={() => startCamera(btn.type as PhotoType)} className="w-full h-32 rounded-2xl border-2 border-dashed bg-primary/5 text-primary flex-col gap-2">
                             <Camera className="w-6 h-6" />
-                            <span className="text-[10px] font-bold">Tomar Foto</span>
+                            <span className="text-[10px] font-bold">Capturar</span>
                           </Button>
                         ) : (
                           <div className="relative rounded-2xl overflow-hidden aspect-[3/4] border-2 border-green-500">
@@ -424,8 +446,8 @@ export default function NewCreditPage() {
                       <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20">
                         <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
                         <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
-                           <Button onClick={capturePhoto} className="rounded-full w-20 h-20 bg-white border-8 border-primary" />
-                           <Button variant="secondary" onClick={() => { stopCamera(); setShowCamera(false); }} className="rounded-full w-12 h-12">
+                           <Button onClick={capturePhoto} className="rounded-full w-20 h-20 bg-white border-8 border-primary shadow-2xl" />
+                           <Button variant="secondary" onClick={() => { stopCamera(); setShowCamera(false); }} className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md">
                              <X className="w-6 h-6" />
                            </Button>
                         </div>
@@ -434,28 +456,34 @@ export default function NewCreditPage() {
                   )}
                 </div>
 
-                <Button type="submit" disabled={loading || !capturedPhoto} className="w-full h-16 rounded-2xl text-xl font-black bg-primary">
-                  {loading ? "Registrando..." : "Crear Crédito"}
+                <Button type="submit" disabled={loading || !capturedPhoto} className="w-full h-16 rounded-2xl text-xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
+                  {loading ? "Registrando Expediente..." : "Habilitar Crédito"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-2xl bg-primary text-white rounded-[2rem]">
-            <CardHeader><CardTitle className="font-black">Resumen</CardTitle></CardHeader>
+          <Card className="border-none shadow-2xl bg-primary text-white rounded-[2rem] h-fit">
+            <CardHeader><CardTitle className="font-black">Resumen del Plan</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-xs font-bold opacity-70">Precio</span>
+                <span className="text-xs font-bold opacity-70">Precio del Equipo</span>
                 <span className="font-black">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
               </div>
               <div className="flex justify-between border-b border-white/10 pb-2 text-accent">
-                <span className="text-xs font-bold">Cuota Inicial (-)</span>
+                <span className="text-xs font-bold">Abono Inicial (-)</span>
                 <span className="font-black">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
               </div>
               <div className="pt-4 text-center">
-                <p className="text-[10px] opacity-60 font-black uppercase">Cuota {paymentFrequency}</p>
+                <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Valor Cuota {paymentFrequency}</p>
                 <h2 className="text-4xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
                 <p className="text-xs font-bold text-accent mt-2">{planType} Meses (+{calculation.interestRate}%)</p>
+              </div>
+              <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10 flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-accent shrink-0" />
+                <p className="text-[10px] leading-relaxed opacity-70 italic font-medium">
+                  El sistema descontará automáticamente el equipo del inventario una vez sea registrado el crédito.
+                </p>
               </div>
             </CardContent>
           </Card>

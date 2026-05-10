@@ -13,7 +13,8 @@ import {
   Search,
   Calculator,
   MessageCircle,
-  Package
+  Package,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -54,7 +55,7 @@ export default function QuotationPage() {
 
   const availableBrands = useMemo(() => {
     if (!inventoryPhones) return [];
-    const brands = new Set(inventoryPhones.map(p => p.brand));
+    const brands = new Set(inventoryPhones.map(p => p.brand).filter(Boolean));
     return Array.from(brands).sort();
   }, [inventoryPhones]);
 
@@ -76,6 +77,12 @@ export default function QuotationPage() {
       setInitialAmount(phone.salePrice.toString());
     }
   };
+
+  const selectedStock = useMemo(() => {
+    if (!deviceModel || !inventoryPhones) return 0;
+    const phone = inventoryPhones.find(p => `${p.brand} ${p.model}` === deviceModel);
+    return phone?.imeis?.length || 0;
+  }, [deviceModel, inventoryPhones]);
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -145,9 +152,16 @@ export default function QuotationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-2 border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white">
             <CardHeader className="bg-slate-900 text-white p-8">
-              <CardTitle className="text-lg font-black flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-accent" /> Datos de la Cotización
-              </CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Smartphone className="w-5 h-5 text-accent" /> Datos de la Cotización
+                </CardTitle>
+                {deviceModel && (
+                  <Badge className={`rounded-full px-4 ${selectedStock > 0 ? 'bg-green-500' : 'bg-destructive'}`}>
+                    Stock: {selectedStock}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -258,9 +272,18 @@ export default function QuotationPage() {
                 <h2 className="text-5xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
                 <p className="text-xs font-bold text-accent mt-2">Por {planType} meses</p>
               </div>
-              <Button onClick={handleShareWhatsApp} className="w-full h-14 rounded-2xl bg-green-500 font-black hover:bg-green-600">
-                <MessageCircle className="w-5 h-5 mr-2" /> Compartir WhatsApp
-              </Button>
+              
+              <div className="space-y-4">
+                <Button onClick={handleShareWhatsApp} className="w-full h-14 rounded-2xl bg-green-500 font-black hover:bg-green-600 shadow-xl shadow-green-500/10">
+                  <MessageCircle className="w-5 h-5 mr-2" /> Compartir WhatsApp
+                </Button>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-accent shrink-0" />
+                  <p className="text-[10px] leading-relaxed opacity-70 italic font-medium">
+                    Esta es una simulación informativa. El stock real se valida al momento de legalizar el crédito.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

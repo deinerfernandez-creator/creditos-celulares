@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { 
   Smartphone, 
@@ -22,9 +23,9 @@ import {
   Package,
   Loader2,
   Hash,
-  DollarSign,
   Palette,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
@@ -64,7 +65,7 @@ export default function InventoryPage() {
   // Form states
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
-  const [newImei, setNewImei] = useState('');
+  const [newImeisText, setNewImeisText] = useState('');
   const [newColor, setNewColor] = useState('');
   const [newCostPrice, setNewCostPrice] = useState('');
   const [newSalePrice, setNewSalePrice] = useState('');
@@ -79,9 +80,9 @@ export default function InventoryPage() {
   const sortedPhones = useMemo(() => {
     if (!phones) return [];
     return [...phones].sort((a, b) => {
-      const brandCmp = a.brand.localeCompare(b.brand);
+      const brandCmp = (a.brand || '').localeCompare(b.brand || '');
       if (brandCmp !== 0) return brandCmp;
-      return a.model.localeCompare(b.model);
+      return (a.model || '').localeCompare(b.model || '');
     });
   }, [phones]);
 
@@ -90,17 +91,19 @@ export default function InventoryPage() {
     if (!searchTerm) return sortedPhones;
     const term = searchTerm.toLowerCase();
     return sortedPhones.filter(p => 
-      p.brand.toLowerCase().includes(term) || 
-      p.model.toLowerCase().includes(term) ||
-      (p.imei && p.imei.toLowerCase().includes(term)) ||
-      (p.color && p.color.toLowerCase().includes(term))
+      (p.brand || '').toLowerCase().includes(term) || 
+      (p.model || '').toLowerCase().includes(term) ||
+      (p.imeis && p.imeis.some((i: string) => i.toLowerCase().includes(term))) ||
+      (p.color || '').toLowerCase().includes(term)
     );
   }, [sortedPhones, searchTerm]);
 
   const handleAddPhone = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBrand || !newModel || !newImei) {
-      toast({ title: "Error", description: "Marca, Modelo e IMEI son requeridos.", variant: "destructive" });
+    const imeis = newImeisText.split('\n').map(i => i.trim()).filter(i => i !== '');
+    
+    if (!newBrand || !newModel || imeis.length === 0) {
+      toast({ title: "Error", description: "Marca, Modelo y al menos un IMEI son requeridos.", variant: "destructive" });
       return;
     }
 
@@ -109,23 +112,24 @@ export default function InventoryPage() {
       await addDoc(collection(db, 'phones'), {
         brand: newBrand,
         model: newModel,
-        imei: newImei,
+        imeis: imeis,
+        quantity: imeis.length,
         color: newColor,
         costPrice: parseFloat(newCostPrice) || 0,
         salePrice: parseFloat(newSalePrice) || 0,
         createdAt: serverTimestamp()
       });
-      toast({ title: "Equipo Registrado", description: `${newBrand} ${newModel} añadido al inventario.` });
+      toast({ title: "Stock Registrado", description: `${newBrand} ${newModel} (${imeis.length} unidades) añadidas.` });
       
       // Reset form
       setNewBrand('');
       setNewModel('');
-      setNewImei('');
+      setNewImeisText('');
       setNewColor('');
       setNewCostPrice('');
       setNewSalePrice('');
     } catch (err: any) {
-      toast({ title: "Error", description: "No se pudo registrar el equipo.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo registrar el stock.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -133,7 +137,7 @@ export default function InventoryPage() {
 
   const handleDeletePhone = (id: string) => {
     deleteDocumentNonBlocking(doc(db, 'phones', id));
-    toast({ title: "Equipo Eliminado", description: "El modelo ha sido removido del catálogo." });
+    toast({ title: "Registro Eliminado", description: "El lote ha sido removido del catálogo." });
   };
 
   return (
@@ -145,8 +149,8 @@ export default function InventoryPage() {
               <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Inventario de Equipos</h1>
-              <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Gestión de stock y rentabilidad</p>
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Gestión de Stock e Inventario</h1>
+              <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Control de IMEIs y existencias</p>
             </div>
           </div>
           <Package className="w-8 h-8 text-primary opacity-20" />
@@ -155,8 +159,8 @@ export default function InventoryPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-1 border-none shadow-xl rounded-[2rem] h-fit">
             <CardHeader>
-              <CardTitle className="text-lg font-black">Registrar Equipo</CardTitle>
-              <CardDescription>Añadir nuevo terminal al sistema</CardDescription>
+              <CardTitle className="text-lg font-black">Cargar Nuevo Lote</CardTitle>
+              <CardDescription>Ingresa los equipos y sus IMEIs correspondientes</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddPhone} className="space-y-4">
@@ -185,7 +189,7 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs">Modelo</Label>
+                  <Label className="font-bold text-xs">Modelo Comercial</Label>
                   <Input 
                     placeholder="iPhone 15 Pro Max" 
                     value={newModel}
@@ -195,19 +199,22 @@ export default function InventoryPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="font-bold text-xs">IMEI</Label>
-                  <Input 
-                    placeholder="15 dígitos" 
-                    value={newImei}
-                    onChange={(e) => setNewImei(e.target.value)}
-                    className="rounded-xl font-mono h-10"
-                    maxLength={15}
+                  <div className="flex justify-between items-center">
+                    <Label className="font-bold text-xs">Listado de IMEIs</Label>
+                    <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">UNO POR LÍNEA</span>
+                  </div>
+                  <Textarea 
+                    placeholder="Ingresa cada IMEI en una línea diferente..." 
+                    value={newImeisText}
+                    onChange={(e) => setNewImeisText(e.target.value)}
+                    className="rounded-xl font-mono text-xs min-h-[120px] resize-none"
                   />
+                  <p className="text-[9px] text-slate-400 font-bold italic">Se registrarán {newImeisText.split('\n').filter(i => i.trim() !== '').length} equipos en total.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-bold text-xs">Precio Costo (COP)</Label>
+                    <Label className="font-bold text-xs">Costo Unitario (COP)</Label>
                     <Input 
                       type="number"
                       placeholder="0" 
@@ -217,7 +224,7 @@ export default function InventoryPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold text-xs">Precio Venta (COP)</Label>
+                    <Label className="font-bold text-xs">Venta Unitario (COP)</Label>
                     <Input 
                       type="number"
                       placeholder="0" 
@@ -230,7 +237,7 @@ export default function InventoryPage() {
 
                 <Button type="submit" disabled={loading} className="w-full rounded-xl font-bold bg-primary h-12 shadow-lg shadow-primary/20">
                   {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <PlusCircle className="w-5 h-5 mr-2" />}
-                  Añadir al Stock
+                  Cargar al Inventario
                 </Button>
               </form>
             </CardContent>
@@ -240,12 +247,12 @@ export default function InventoryPage() {
             <CardHeader className="border-b bg-slate-50/50 p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <Smartphone className="w-5 h-5 text-primary" /> Equipos en Stock
+                  <Smartphone className="w-5 h-5 text-primary" /> Existencias en Tiempo Real
                 </CardTitle>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input 
-                    placeholder="Buscar marca, modelo o IMEI..." 
+                    placeholder="Buscar por marca, modelo o IMEI..." 
                     className="pl-10 rounded-xl h-10 text-xs"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -258,10 +265,10 @@ export default function InventoryPage() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50 text-[10px] uppercase font-black tracking-widest text-slate-400">
                     <tr>
-                      <th className="px-6 py-4">Equipo / IMEI</th>
-                      <th className="px-4 py-4">Color</th>
-                      <th className="px-4 py-4">Venta</th>
-                      <th className="px-4 py-4">Ganancia</th>
+                      <th className="px-6 py-4">Equipo / Marca</th>
+                      <th className="px-4 py-4 text-center">Stock</th>
+                      <th className="px-4 py-4">Precio Venta</th>
+                      <th className="px-4 py-4">Ganancia Est.</th>
                       <th className="px-6 py-4 text-right">Acción</th>
                     </tr>
                   </thead>
@@ -271,18 +278,17 @@ export default function InventoryPage() {
                     ) : filteredPhones.length > 0 ? (
                       filteredPhones.map((phone) => {
                         const profit = (phone.salePrice || 0) - (phone.costPrice || 0);
+                        const isOutOfStock = !phone.imeis || phone.imeis.length === 0;
                         return (
                           <tr key={phone.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-6 py-5">
                               <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-0.5">{phone.brand}</p>
                               <p className="font-black text-slate-900 leading-none">{phone.model}</p>
-                              <p className="text-[10px] font-mono text-slate-400 mt-1 flex items-center gap-1">
-                                <Hash className="w-3 h-3" /> {phone.imei}
-                              </p>
+                              <p className="text-[10px] font-bold text-slate-400 mt-1 capitalize">{phone.color || 'Sin color'}</p>
                             </td>
-                            <td className="px-4 py-5">
-                              <Badge variant="outline" className="rounded-full text-[10px] font-bold capitalize">
-                                {phone.color || '---'}
+                            <td className="px-4 py-5 text-center">
+                              <Badge variant={isOutOfStock ? "destructive" : "default"} className={`rounded-full px-3 font-black ${!isOutOfStock ? 'bg-green-500' : ''}`}>
+                                {phone.imeis?.length || 0}
                               </Badge>
                             </td>
                             <td className="px-4 py-5">
@@ -295,23 +301,25 @@ export default function InventoryPage() {
                               </div>
                             </td>
                             <td className="px-6 py-5 text-right">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-xl">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-2xl">
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle className="font-black">¿Eliminar del Catálogo?</AlertDialogTitle>
-                                    <AlertDialogDescription>Esto quitará el modelo de las opciones de crédito y venta definitiva.</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeletePhone(phone.id)} className="bg-destructive text-white rounded-xl font-bold">Eliminar</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <div className="flex items-center justify-end gap-2">
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-xl">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-2xl">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="font-black">¿Eliminar del Catálogo?</AlertDialogTitle>
+                                      <AlertDialogDescription>Esto quitará este lote completo del inventario. Esta acción es definitiva.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-xl font-bold">Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeletePhone(phone.id)} className="bg-destructive text-white rounded-xl font-bold">Eliminar Lote</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -319,7 +327,7 @@ export default function InventoryPage() {
                     ) : (
                       <tr>
                         <td colSpan={5} className="p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
-                          No se han registrado equipos aún.
+                          No se han encontrado equipos con esos criterios.
                         </td>
                       </tr>
                     )}
@@ -328,6 +336,14 @@ export default function InventoryPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
+          <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+          <p className="text-xs text-amber-800 font-medium leading-relaxed">
+            <strong>Tip Pro:</strong> Al registrar un crédito o una venta a contado, podrás elegir uno de los IMEIs que hayas cargado aquí. 
+            El sistema restará automáticamente una unidad del stock una vez se complete la operación.
+          </p>
         </div>
       </div>
     </div>

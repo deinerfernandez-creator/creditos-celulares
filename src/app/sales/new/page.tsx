@@ -12,16 +12,15 @@ import {
   Smartphone, 
   ChevronLeft, 
   DollarSign, 
-  Check, 
   Search,
-  User as UserIcon,
   Package,
-  Receipt
+  Receipt,
+  AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 
 export default function NewSalePage() {
   const router = useRouter();
@@ -30,6 +29,7 @@ export default function NewSalePage() {
   
   const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState('contado');
+  const [selectedInventoryId, setSelectedInventoryId] = useState<string | null>(null);
   const [deviceModel, setDeviceModel] = useState('');
   const [imei, setImei] = useState('');
   const [amount, setAmount] = useState('');
@@ -54,22 +54,33 @@ export default function NewSalePage() {
     );
   }, [inventoryPhones, searchTerm]);
 
-  const handleModelSelect = (val: string) => {
-    setDeviceModel(val);
-    const phone = inventoryPhones?.find(p => `${p.brand} ${p.model}` === val);
-    if (phone?.imei) setImei(phone.imei);
+  const handleInventorySelect = (id: string) => {
+    const foundPhone = inventoryPhones?.find(p => p.id === id);
+    if (foundPhone) {
+      setSelectedInventoryId(id);
+      setDeviceModel(`${foundPhone.brand} ${foundPhone.model}`);
+      setAmount(foundPhone.salePrice.toString());
+      setImei(''); // Reset imei to force pick from list
+    }
   };
+
+  const selectedPhoneData = useMemo(() => {
+    if (!selectedInventoryId || !inventoryPhones) return null;
+    return inventoryPhones.find(p => p.id === selectedInventoryId);
+  }, [selectedInventoryId, inventoryPhones]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deviceModel || !amount) {
-      toast({ title: "Faltan datos", description: "El modelo y el monto son requeridos.", variant: "destructive" });
+    if (!deviceModel || !amount || !imei) {
+      toast({ title: "Faltan datos", description: "El equipo, IMEI y el monto son requeridos.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
       const selectedCustomer = customers?.find(c => c.id === customerId);
+      
+      // Registrar la venta
       await addDoc(collection(db, 'sales'), {
         customerId: customerId === 'contado' ? null : customerId,
         customerName: customerId === 'contado' ? 'Venta Directa' : selectedCustomer?.name,
@@ -78,7 +89,16 @@ export default function NewSalePage() {
         amount: parseFloat(amount),
         date: serverTimestamp()
       });
-      toast({ title: "Venta Registrada", description: "La venta a contado se ha guardado exitosamente." });
+
+      // Descontar del inventario si corresponde
+      if (selectedInventoryId) {
+        await updateDoc(doc(db, 'phones', selectedInventoryId), {
+          imeis: arrayRemove(imei),
+          quantity: increment(-1)
+        });
+      }
+
+      toast({ title: "Venta Registrada", description: "La venta a contado se ha guardado y el stock actualizado." });
       router.push('/');
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo registrar la venta.", variant: "destructive" });
@@ -95,15 +115,15 @@ export default function NewSalePage() {
             <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Nueva Venta a Contado</h1>
-            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Pago inmediato sin financiamiento</p>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Venta Directa a Contado</h1>
+            <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Salida inmediata de inventario</p>
           </div>
         </div>
 
         <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden bg-white">
           <CardHeader className="bg-slate-900 text-white p-8">
             <CardTitle className="flex items-center gap-3">
-              <Receipt className="w-6 h-6 text-accent" /> Datos de Venta
+              <Receipt className="w-6 h-6 text-accent" /> Datos de Transacción
             </CardTitle>
           </CardHeader>
           <CardContent className="p-8">
@@ -125,39 +145,52 @@ export default function NewSalePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="font-bold">Equipo</Label>
-                  <div className="relative">
+                  <Label className="font-bold">Equipo en Stock</Label>
+                  <div className="relative mb-2">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input 
-                      placeholder="Buscar modelo..." 
-                      className="pl-10 rounded-xl h-12"
+                      placeholder="Filtrar inventario..." 
+                      className="pl-10 rounded-xl h-10 text-xs"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Select onValueChange={handleModelSelect} value={deviceModel}>
+                  <Select onValueChange={handleInventorySelect} value={selectedInventoryId || ''}>
                     <SelectTrigger className="rounded-xl h-12 bg-slate-50 font-bold">
                       <SelectValue placeholder="Seleccionar del inventario" />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredModels.map(p => (
-                        <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model}</SelectItem>
+                        <SelectItem key={p.id} value={p.id} disabled={!p.imeis || p.imeis.length === 0}>
+                          {p.brand} {p.model} - Stock: {p.imeis?.length || 0}
+                        </SelectItem>
                       ))}
-                      {searchTerm && (
-                        <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
-                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="font-bold">IMEI</Label>
-                  <Input 
-                    placeholder="15 dígitos" 
-                    className="rounded-xl h-12 font-mono"
-                    value={imei}
-                    onChange={(e) => setImei(e.target.value)}
-                  />
+                  <Label className="font-bold">IMEI del Dispositivo</Label>
+                  {selectedPhoneData && selectedPhoneData.imeis?.length > 0 ? (
+                    <Select onValueChange={setImei} value={imei} required>
+                      <SelectTrigger className="rounded-xl h-12 font-mono bg-slate-50">
+                        <SelectValue placeholder="Elegir IMEI disponible..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedPhoneData.imeis.map((i: string) => (
+                          <SelectItem key={i} value={i} className="font-mono">{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input 
+                      placeholder="15 dígitos" 
+                      className="rounded-xl h-12 font-mono bg-slate-50"
+                      value={imei}
+                      onChange={(e) => setImei(e.target.value)}
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
@@ -168,7 +201,7 @@ export default function NewSalePage() {
                   <Input 
                     type="number"
                     placeholder="Ej: 1500000"
-                    className="pl-10 rounded-xl h-16 text-2xl font-black text-green-700 bg-green-50/20"
+                    className="pl-10 rounded-xl h-16 text-2xl font-black text-green-700 bg-green-50/20 border-green-100"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
@@ -176,8 +209,15 @@ export default function NewSalePage() {
                 </div>
               </div>
 
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-primary shrink-0" />
+                <p className="text-[10px] leading-relaxed text-slate-500 font-medium">
+                  Al registrar esta venta, el IMEI seleccionado se retirará automáticamente del stock disponible.
+                </p>
+              </div>
+
               <Button type="submit" disabled={loading} className="w-full h-16 rounded-2xl text-xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
-                {loading ? "Procesando..." : "Registrar Venta Directa"}
+                {loading ? "Procesando Venta..." : "Completar Venta Directa"}
               </Button>
             </form>
           </CardContent>

@@ -47,7 +47,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PhoneModel",
       "type": "object",
-      "description": "Available phone models for sale and financing.",
+      "description": "Available phone models for sale and financing with stock management.",
       "properties": {
         "id": { "type": "string" },
         "brand": { "type": "string" },
@@ -55,10 +55,11 @@
         "color": { "type": "string" },
         "costPrice": { "type": "number" },
         "salePrice": { "type": "number" },
-        "imei": { "type": "string" },
+        "imeis": { "type": "array", "items": { "type": "string" } },
+        "quantity": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["brand", "model", "imei"]
+      "required": ["brand", "model", "imeis"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -119,7 +120,7 @@
     },
     "/phones/{phoneId}": {
       "schema": "PhoneModel",
-      "description": "Catalog of available phone models."
+      "description": "Catalog of available phone models and stock."
     },
     "/payments/{paymentId}": {
       "schema": "Payment",
