@@ -98,10 +98,11 @@ export default function NewCreditPage() {
 
   const handleModelSelect = (modelName: string) => {
     setDeviceModel(modelName);
-    // Buscar si el modelo seleccionado tiene un IMEI en el inventario
+    // Buscar si el modelo seleccionado tiene un IMEI y precio en el inventario
     const foundPhone = inventoryPhones?.find(p => `${p.brand} ${p.model}` === modelName);
-    if (foundPhone && foundPhone.imei) {
-      setImei(foundPhone.imei);
+    if (foundPhone) {
+      if (foundPhone.imei) setImei(foundPhone.imei);
+      if (foundPhone.salePrice) setInitialAmount(foundPhone.salePrice.toString());
     }
   };
 
@@ -305,7 +306,7 @@ export default function NewCreditPage() {
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {filteredModelsData.map((p) => (
-                            <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.imei ? `(IMEI: ${p.imei})` : ''}</SelectItem>
+                            <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.color ? `(${p.color})` : ''} {p.imei ? `(IMEI: ${p.imei})` : ''}</SelectItem>
                           ))}
                           {searchTerm && !filteredModelsData.some(p => `${p.brand} ${p.model}` === searchTerm) && (
                              <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>

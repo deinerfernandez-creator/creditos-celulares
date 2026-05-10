@@ -52,10 +52,13 @@
         "id": { "type": "string" },
         "brand": { "type": "string" },
         "model": { "type": "string" },
+        "color": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "salePrice": { "type": "number" },
         "imei": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["brand", "model"]
+      "required": ["brand", "model", "imei"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",

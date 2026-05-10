@@ -66,9 +66,16 @@ export default function QuotationPage() {
     }
     return list
       .filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()))
-      .map(p => `${p.brand} ${p.model}`)
-      .sort();
+      .sort((a, b) => a.model.localeCompare(b.model));
   }, [inventoryPhones, selectedBrand, searchTerm]);
+
+  const handleModelSelect = (val: string) => {
+    setDeviceModel(val);
+    const phone = inventoryPhones?.find(p => `${p.brand} ${p.model}` === val);
+    if (phone?.salePrice) {
+      setInitialAmount(phone.salePrice.toString());
+    }
+  };
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -170,15 +177,15 @@ export default function QuotationPage() {
                       />
                     </div>
                   </div>
-                  <Select onValueChange={setDeviceModel} value={deviceModel}>
+                  <Select onValueChange={handleModelSelect} value={deviceModel}>
                     <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200 font-bold">
                       <SelectValue placeholder="Modelo" />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredModels.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      {filteredModels.map((p) => (
+                        <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.color ? `(${p.color})` : ''}</SelectItem>
                       ))}
-                      {searchTerm && !filteredModels.includes(searchTerm) && (
+                      {searchTerm && !filteredModels.some(p => `${p.brand} ${p.model}` === searchTerm) && (
                         <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
                       )}
                     </SelectContent>
