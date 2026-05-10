@@ -49,6 +49,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    match /sales/{saleId} {
+      allow read: if true; 
+      allow create: if isStaff();
+      allow update, delete: if isAdmin();
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();

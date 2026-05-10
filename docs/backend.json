@@ -71,6 +71,22 @@
       },
       "required": ["creditId", "amount", "date"]
     },
+    "Sale": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Sale",
+      "type": "object",
+      "description": "Records a cash sale (paid in full).",
+      "properties": {
+        "id": { "type": "string" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "deviceModel": { "type": "string" },
+        "imei": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["deviceModel", "amount", "date"]
+    },
     "StaffUser": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StaffUser",
@@ -105,6 +121,10 @@
     "/payments/{paymentId}": {
       "schema": "Payment",
       "description": "Global collection for all payments made."
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Records of cash sales (paid in full)."
     },
     "/users/{userId}": {
       "schema": "StaffUser",

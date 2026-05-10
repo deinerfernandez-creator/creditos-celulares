@@ -35,7 +35,9 @@ import {
   Receipt,
   Search,
   Calculator,
-  Package
+  Package,
+  BadgeDollarSign,
+  ShoppingCart
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,6 +135,21 @@ export default function DashboardPage() {
     });
   }, [creditsData, customersData, searchTerm]);
 
+  const salesQuery = useMemoFirebase(() => {
+    if (!db || !mounted) return null;
+    return query(collection(db, 'sales'), orderBy('date', 'desc'));
+  }, [db, mounted]);
+  const { data: salesData } = useCollection(salesQuery);
+
+  const sales = React.useMemo(() => {
+    if (!salesData) return null;
+    if (!searchTerm) return salesData;
+    return salesData.filter(s => 
+      s.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      s.deviceModel?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [salesData, searchTerm]);
+
   const handleDeleteCustomer = (id: string) => {
     if (role !== 'admin') return;
     deleteDocumentNonBlocking(doc(db, 'customers', id));
@@ -145,6 +162,12 @@ export default function DashboardPage() {
     toast({ title: "Crédito eliminado", description: "El expediente ha sido removido." });
   };
 
+  const handleDeleteSale = (id: string) => {
+    if (role !== 'admin') return;
+    deleteDocumentNonBlocking(doc(db, 'sales', id));
+    toast({ title: "Venta eliminada", description: "El registro de venta ha sido removido." });
+  };
+
   if (!mounted || authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
@@ -155,11 +178,13 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
+  const totalSalesAmount = salesData ? salesData.reduce((sum, s) => sum + s.amount, 0) : 0;
+
   const stats = [
     { title: "Créditos Activos", value: creditsData ? creditsData.filter((c: any) => c.status === 'activo').length.toString() : "0", icon: LayoutDashboard, color: "text-primary", bg: "bg-primary/10" },
-    { title: "Clientes Totales", value: customersData ? customersData.length.toString() : "0", icon: Users, color: "text-accent", bg: "bg-accent/10" },
-    { title: "Equipos Bloqueados", value: creditsData ? creditsData.filter((c: any) => c.status === 'bloqueado').length.toString() : "0", icon: ShieldAlert, color: "text-destructive", bg: "bg-destructive/10" },
-    { title: "Pagos Completos", value: creditsData ? creditsData.filter((c: any) => c.status === 'pagado').length.toString() : "0", icon: CheckCircle2, color: "text-green-600", bg: "bg-green-100" },
+    { title: "Ventas Contado", value: salesData ? salesData.length.toString() : "0", icon: ShoppingCart, color: "text-green-600", bg: "bg-green-100" },
+    { title: "Total en Ventas", value: formatCurrency(totalSalesAmount), icon: BadgeDollarSign, color: "text-accent", bg: "bg-accent/10" },
+    { title: "Clientes Totales", value: customersData ? customersData.length.toString() : "0", icon: Users, color: "text-slate-600", bg: "bg-slate-100" },
   ];
 
   const handleLogout = async () => {
@@ -201,6 +226,10 @@ export default function DashboardPage() {
                 <LayoutDashboard className="w-5 h-5 mr-3" />
                 <span>Dashboard</span>
               </SidebarMenuButton>
+              <SidebarMenuButton isActive={activeTab === 'sales'} onClick={() => { setActiveTab('sales'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
+                <ShoppingCart className="w-5 h-5 mr-3" />
+                <span>Ventas</span>
+              </SidebarMenuButton>
               <SidebarMenuButton isActive={activeTab === 'customers'} onClick={() => { setActiveTab('customers'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
                 <Users className="w-5 h-5 mr-3" />
                 <span>Clientes</span>
@@ -232,17 +261,6 @@ export default function DashboardPage() {
                   <span>Usuarios</span>
                 </SidebarMenuButton>
               )}
-              
-              <div className="my-6 border-t border-white/10 px-3 pt-6">
-                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Acceso Público</p>
-                <SidebarMenuButton asChild className="rounded-xl h-11 text-accent hover:text-accent font-bold">
-                  <Link href="/portal" target="_blank">
-                    <Smartphone className="w-5 h-5 mr-3" />
-                    <span>Portal Clientes</span>
-                    <ExternalLink className="w-4 h-4 ml-auto opacity-50" />
-                  </Link>
-                </SidebarMenuButton>
-              </div>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-4">
@@ -263,8 +281,20 @@ export default function DashboardPage() {
               <SidebarTrigger className="text-primary" />
               <div className="h-6 w-px bg-slate-200 mx-2" />
               <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Clientes' : activeTab === 'credits' ? 'Financiamientos' : activeTab === 'downpayments' ? 'Recaudos Iniciales' : 'Gestión de Usuarios'}
+                {activeTab === 'dashboard' ? 'Resumen Ejecutivo' : activeTab === 'customers' ? 'Clientes' : activeTab === 'credits' ? 'Financiamientos' : activeTab === 'sales' ? 'Ventas a Contado' : activeTab === 'downpayments' ? 'Recaudos Iniciales' : 'Gestión de Usuarios'}
               </h2>
+            </div>
+            <div className="flex items-center gap-4">
+               {activeTab === 'dashboard' && (
+                 <div className="flex gap-2">
+                   <Button size="sm" asChild className="rounded-xl font-bold bg-green-600 hover:bg-green-700">
+                     <Link href="/sales/new"><ShoppingCart className="w-4 h-4 mr-2" /> Nueva Venta</Link>
+                   </Button>
+                   <Button size="sm" asChild className="rounded-xl font-bold bg-primary hover:bg-primary/90">
+                     <Link href="/credits/new"><PlusCircle className="w-4 h-4 mr-2" /> Nuevo Crédito</Link>
+                   </Button>
+                 </div>
+               )}
             </div>
           </header>
 
@@ -281,7 +311,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                        <h3 className="text-3xl font-black mt-1 text-slate-900 tracking-tighter">{stat.value}</h3>
+                        <h3 className="text-xl font-black mt-1 text-slate-900 tracking-tighter truncate">{stat.value}</h3>
                       </CardContent>
                     </Card>
                   ))}
@@ -304,7 +334,7 @@ export default function DashboardPage() {
                           <thead className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-400">
                             <tr>
                               <th className="px-8 py-4">Cliente</th>
-                              <th className="px-4 py-4">Equipo / IMEI</th>
+                              <th className="px-4 py-4">Equipo</th>
                               <th className="px-4 py-4">Saldo</th>
                               <th className="px-4 py-4">Estado</th>
                               <th className="px-8 py-4 text-right">Acción</th>
@@ -313,7 +343,7 @@ export default function DashboardPage() {
                           <tbody className="divide-y divide-slate-50">
                             {loadingCredits ? (
                               <tr>
-                                <td colSpan={5} className="text-center py-20"><Loader2 className="animate-spin inline-block mr-2" /> Cargando...</td>
+                                <td colSpan={5} className="text-center py-20"><Loader2 className="animate-spin inline-block mr-2" /></td>
                               </tr>
                             ) : creditsData && creditsData.length > 0 ? (
                               creditsData.slice(0, 5).map((credit: any) => {
@@ -325,13 +355,12 @@ export default function DashboardPage() {
                                     </td>
                                     <td className="px-4 py-4">
                                       <div className="text-sm font-bold text-primary">{credit.deviceModel}</div>
-                                      <div className="text-[10px] font-mono text-slate-400">{credit.imei}</div>
                                     </td>
                                     <td className="px-4 py-4 font-black text-slate-900">{formatCurrency(credit.remainingBalance)}</td>
                                     <td className="px-4 py-4">{getStatusBadge(credit.status)}</td>
                                     <td className="px-8 py-4 text-right">
                                       <Button variant="outline" size="sm" asChild className="rounded-xl font-bold border-primary/20 text-primary">
-                                        <Link href={`/credits/${credit.id}`}>Expediente</Link>
+                                        <Link href={`/credits/${credit.id}`}>Ver</Link>
                                       </Button>
                                     </td>
                                   </tr>
@@ -339,7 +368,7 @@ export default function DashboardPage() {
                               })
                             ) : (
                               <tr>
-                                <td colSpan={5} className="text-center py-20 text-slate-400 italic">No hay registros aún.</td>
+                                <td colSpan={5} className="text-center py-20 text-slate-400 italic">Sin créditos registrados.</td>
                               </tr>
                             )}
                           </tbody>
@@ -351,31 +380,108 @@ export default function DashboardPage() {
                   <Card className="border-none shadow-sm rounded-[2rem] border border-slate-100 bg-white p-2">
                     <CardHeader className="p-6">
                       <CardTitle className="text-base font-black">Accesos Directos</CardTitle>
-                      <CardDescription className="text-xs">Operaciones rápidas de tienda</CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 pt-0 space-y-4">
-                      <Button className="w-full justify-start h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-xl shadow-primary/20 font-bold" asChild>
+                      <Button className="w-full justify-start h-14 bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-xl shadow-green-600/10 font-bold" asChild>
+                        <Link href="/sales/new">
+                          <ShoppingCart className="w-5 h-5 mr-3" />
+                          Registrar Venta Directa
+                        </Link>
+                      </Button>
+                      <Button className="w-full justify-start h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-xl shadow-primary/10 font-bold" asChild>
                         <Link href="/credits/new">
                           <PlusCircle className="w-5 h-5 mr-3" />
-                          Nueva Solicitud
+                          Nueva Solicitud Crédito
                         </Link>
                       </Button>
                       <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
                         <Link href="/inventory">
                           <Package className="w-5 h-5 mr-3 text-primary" />
-                          Gestionar Equipos
-                        </Link>
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
-                        <Link href="/quotations">
-                          <Calculator className="w-5 h-5 mr-3 text-accent" />
-                          Cotizador Rápido
+                          Inventario
                         </Link>
                       </Button>
                     </CardContent>
                   </Card>
                 </div>
               </>
+            )}
+
+            {activeTab === 'sales' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center gap-4">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      placeholder="Buscar venta..." 
+                      className="pl-10 rounded-xl"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button asChild className="rounded-2xl font-bold bg-green-600 hover:bg-green-700">
+                    <Link href="/sales/new"><ShoppingCart className="mr-2 h-4 w-4" /> Registrar Venta</Link>
+                  </Button>
+                </div>
+                <Card className="border-none shadow-sm rounded-[2rem] overflow-hidden bg-white border border-slate-100">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50/50 text-[10px] uppercase font-black tracking-widest text-slate-400">
+                          <tr>
+                            <th className="px-8 py-5">Fecha</th>
+                            <th className="px-4 py-5">Cliente / Concepto</th>
+                            <th className="px-4 py-5">Equipo / IMEI</th>
+                            <th className="px-4 py-5">Monto Cobrado</th>
+                            <th className="px-8 py-5 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {sales && sales.length > 0 ? (
+                            sales.map((s: any) => (
+                              <tr key={s.id} className="hover:bg-slate-50/30 transition-colors">
+                                <td className="px-8 py-5 font-bold text-slate-400 text-xs">
+                                  {s.date?.toDate ? s.date.toDate().toLocaleDateString('es-CO') : '---'}
+                                </td>
+                                <td className="px-4 py-5 font-black text-slate-900">{s.customerName}</td>
+                                <td className="px-4 py-5">
+                                  <div className="font-bold text-primary">{s.deviceModel}</div>
+                                  <div className="text-[10px] font-mono text-slate-400">{s.imei}</div>
+                                </td>
+                                <td className="px-4 py-5 font-black text-green-600 text-lg">{formatCurrency(s.amount)}</td>
+                                <td className="px-8 py-5 text-right">
+                                  {role === 'admin' && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive rounded-xl">
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>¿Eliminar Venta?</AlertDialogTitle>
+                                          <AlertDialogDescription>Esto borrará el registro de ingreso de forma permanente.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteSale(s.id)} className="bg-destructive text-white">Eliminar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="text-center py-20 text-slate-400">Sin ventas a contado.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {activeTab === 'customers' && (
