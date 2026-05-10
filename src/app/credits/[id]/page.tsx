@@ -433,7 +433,7 @@ export default function CreditDetailPage() {
                       </div>
                       <div className="text-center space-y-2">
                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nequi Tecnicell</p>
-                        <p className="text-2xl font-black text-white">300 982 3029</p>
+                        <p className="text-2xl font-black text-white">311 625 1841</p>
                         <p className="text-[10px] text-accent font-bold">DEINER FERNANDEZ</p>
                       </div>
                     </TabsContent>
