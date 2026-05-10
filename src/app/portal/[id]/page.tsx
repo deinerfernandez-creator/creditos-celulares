@@ -29,7 +29,11 @@ import {
   QrCode,
   Copy,
   ExternalLink,
-  DollarSign
+  DollarSign,
+  Building2,
+  MapPin,
+  MessageCircle,
+  SmartphoneNfc
 } from 'lucide-react';
 import { 
   Dialog,
@@ -39,6 +43,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import { summarizeCreditStatus } from '@/ai/flows/ai-credit-summary-tool';
@@ -269,53 +279,122 @@ export default function CustomerPortalDashboard() {
               <QrCode className="w-10 h-10 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-black">¿Pagar con Nequi?</h3>
-              <p className="text-xs text-slate-400 font-medium mt-1">Usa nuestro QR oficial para tus abonos {credit.paymentFrequency || 'quincenal'}es.</p>
+              <h3 className="text-lg font-black">Medios de Pago</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">Consulta nuestras opciones para realizar tus abonos.</p>
             </div>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="w-full rounded-xl font-black bg-primary hover:bg-primary/90 text-xs tracking-widest uppercase h-12">
-                  Ver QR de Pago
+                  Ver Opciones de Pago
                 </Button>
               </DialogTrigger>
-              <DialogContent className="rounded-[2.5rem] sm:max-w-[420px] bg-slate-900 border-slate-800 p-0 overflow-hidden">
-                <div className="bg-gradient-to-b from-primary/20 to-slate-900 p-8">
-                  <DialogHeader className="text-center space-y-2">
-                    <DialogTitle className="text-2xl font-black text-white">Pago vía Nequi</DialogTitle>
-                    <div className="space-y-0.5">
-                      <p className="font-black text-accent uppercase text-[12px] tracking-widest">Tecnicell Rio Verde</p>
-                      <p className="font-bold text-slate-400 text-[10px] tracking-widest uppercase">Deiner Fernandez</p>
-                    </div>
-                  </DialogHeader>
-                  <div className="flex flex-col items-center justify-center space-y-6 py-6">
-                    <div className="relative w-64 h-80 bg-white rounded-2xl shadow-2xl p-4 overflow-hidden flex flex-col items-center">
-                       <div className="relative w-full h-full">
-                          <Image 
-                            src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/600/800"} 
-                            alt="Nequi QR Tecnicell" 
-                            fill 
-                            className="object-contain" 
-                            data-ai-hint="nequi qr code"
-                          />
-                       </div>
-                    </div>
-                    <div className="w-full space-y-4">
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center">Instrucciones de Pago</p>
-                        <ul className="text-xs font-medium text-slate-300 space-y-2">
-                          <li className="flex gap-3"><span className="text-primary font-black">1.</span> Escanea el código desde tu app Nequi.</li>
-                          <li className="flex gap-3"><span className="text-primary font-black">2.</span> Realiza el abono de tu cuota {credit.paymentFrequency || 'quincenal'}.</li>
-                          <li className="flex gap-3"><span className="text-primary font-black">3.</span> Envía el comprobante al WhatsApp oficial.</li>
-                        </ul>
-                      </div>
-                    </div>
+              <DialogContent className="rounded-[2.5rem] sm:max-w-[500px] bg-slate-900 border-slate-800 p-0 overflow-hidden">
+                <Tabs defaultValue="nequi" className="w-full">
+                  <div className="p-6 bg-slate-900 border-b border-slate-800">
+                    <DialogHeader className="mb-4">
+                      <DialogTitle className="text-2xl font-black text-white text-center">Formas de Pago</DialogTitle>
+                    </DialogHeader>
+                    <TabsList className="grid w-full grid-cols-3 bg-slate-800 rounded-xl p-1">
+                      <TabsTrigger value="nequi" className="rounded-lg font-bold data-[state=active]:bg-primary">Nequi</TabsTrigger>
+                      <TabsTrigger value="bancolombia" className="rounded-lg font-bold data-[state=active]:bg-primary">Banco</TabsTrigger>
+                      <TabsTrigger value="efectivo" className="rounded-lg font-bold data-[state=active]:bg-primary">Efectivo</TabsTrigger>
+                    </TabsList>
                   </div>
-                  <Button className="w-full rounded-2xl h-16 font-black text-lg gap-3 bg-green-500 hover:bg-green-600 text-white shadow-xl shadow-green-500/20" asChild>
-                    <a href="https://wa.me/573009823029" target="_blank">
-                      <ExternalLink className="w-6 h-6" /> Enviar Comprobante
-                    </a>
-                  </Button>
-                </div>
+
+                  <div className="p-8 bg-slate-900">
+                    <TabsContent value="nequi" className="mt-0 space-y-6 flex flex-col items-center">
+                      <div className="relative w-64 h-64 bg-white rounded-2xl shadow-2xl p-4 flex items-center justify-center overflow-hidden">
+                        <Image 
+                          src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/600/800"} 
+                          alt="Nequi QR" 
+                          fill 
+                          className="object-contain p-4"
+                        />
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nequi Tecnicell</p>
+                        <p className="text-2xl font-black text-white">300 982 3029</p>
+                        <p className="text-[10px] text-accent font-bold">DEINER FERNANDEZ</p>
+                      </div>
+                      <Button className="w-full rounded-2xl h-14 bg-green-500 hover:bg-green-600 font-black gap-2" asChild>
+                        <a href="https://wa.me/573009823029" target="_blank">
+                          <MessageCircle className="w-5 h-5" /> Notificar Pago WhatsApp
+                        </a>
+                      </Button>
+                    </TabsContent>
+
+                    <TabsContent value="bancolombia" className="mt-0 space-y-6">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-primary/20 rounded-xl">
+                            <Building2 className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entidad Bancaria</p>
+                            <p className="text-lg font-black text-white">Bancolombia</p>
+                          </div>
+                        </div>
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo de Cuenta</p>
+                            <p className="font-bold text-white">Ahorros</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Número de Cuenta</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xl font-black text-white tracking-wider">558-000123-45</p>
+                              <Button variant="ghost" size="icon" className="text-primary" onClick={() => {
+                                navigator.clipboard.writeText('55800012345');
+                                toast({ title: "Número copiado" });
+                              }}>
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Titular</p>
+                            <p className="font-bold text-white">TECNICELL SERVICIO TÉCNICO</p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-400 text-center italic">Por favor envía el comprobante de transferencia al WhatsApp oficial.</p>
+                    </TabsContent>
+
+                    <TabsContent value="efectivo" className="mt-0 space-y-6">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-primary/20 rounded-xl shrink-0">
+                            <MapPin className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Punto Físico</p>
+                            <p className="text-sm font-bold text-white leading-relaxed">
+                              Corregimiento Santa Fé Las Claras (Rio Verde)<br/>
+                              Frente a la plaza principal
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-accent/20 rounded-xl shrink-0">
+                            <Clock className="w-6 h-6 text-accent" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Horarios de Atención</p>
+                            <p className="text-sm font-bold text-white">
+                              Lunes a Sábado: 8:00 AM - 7:00 PM<br/>
+                              Domingos: 9:00 AM - 1:00 PM
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="outline" className="w-full rounded-2xl h-14 border-slate-700 text-white font-bold gap-2 hover:bg-slate-800" asChild>
+                        <a href="https://maps.google.com" target="_blank">
+                          <ExternalLink className="w-5 h-5" /> Ver en Google Maps
+                        </a>
+                      </Button>
+                    </TabsContent>
+                  </div>
+                </Tabs>
               </DialogContent>
             </Dialog>
           </Card>

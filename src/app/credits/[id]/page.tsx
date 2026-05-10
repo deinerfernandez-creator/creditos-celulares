@@ -34,7 +34,13 @@ import {
   Camera,
   X,
   RefreshCw,
-  FileSignature
+  FileSignature,
+  Building2,
+  MapPin,
+  MessageCircle,
+  QrCode,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -81,6 +87,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
@@ -168,6 +180,7 @@ export default function CreditDetailPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
 
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
+  const qrNequi = PlaceHolderImages.find(img => img.id === 'qr-nequi');
 
   useEffect(() => {
     setMounted(true);
@@ -390,6 +403,107 @@ export default function CreditDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="rounded-xl font-bold border-accent/20 text-accent bg-white hover:bg-accent/5">
+                  <QrCode className="w-4 h-4 mr-2" /> Medios de Pago
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-[2.5rem] sm:max-w-[500px] bg-slate-900 border-slate-800 p-0 overflow-hidden">
+                <Tabs defaultValue="nequi" className="w-full">
+                  <div className="p-6 bg-slate-900 border-b border-slate-800">
+                    <DialogHeader className="mb-4">
+                      <DialogTitle className="text-2xl font-black text-white text-center">Opciones de Pago</DialogTitle>
+                    </DialogHeader>
+                    <TabsList className="grid w-full grid-cols-3 bg-slate-800 rounded-xl p-1">
+                      <TabsTrigger value="nequi" className="rounded-lg font-bold data-[state=active]:bg-primary">Nequi</TabsTrigger>
+                      <TabsTrigger value="bancolombia" className="rounded-lg font-bold data-[state=active]:bg-primary">Banco</TabsTrigger>
+                      <TabsTrigger value="efectivo" className="rounded-lg font-bold data-[state=active]:bg-primary">Efectivo</TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <div className="p-8 bg-slate-900">
+                    <TabsContent value="nequi" className="mt-0 space-y-6 flex flex-col items-center">
+                      <div className="relative w-64 h-64 bg-white rounded-2xl shadow-2xl p-4 flex items-center justify-center overflow-hidden">
+                        <Image 
+                          src={qrNequi?.imageUrl || "https://picsum.photos/seed/tecnicell-nequi-qr/600/800"} 
+                          alt="Nequi QR" 
+                          fill 
+                          className="object-contain p-4"
+                        />
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Nequi Tecnicell</p>
+                        <p className="text-2xl font-black text-white">300 982 3029</p>
+                        <p className="text-[10px] text-accent font-bold">DEINER FERNANDEZ</p>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="bancolombia" className="mt-0 space-y-6">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-primary/20 rounded-xl">
+                            <Building2 className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entidad Bancaria</p>
+                            <p className="text-lg font-black text-white">Bancolombia</p>
+                          </div>
+                        </div>
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo de Cuenta</p>
+                            <p className="font-bold text-white">Ahorros</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Número de Cuenta</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xl font-black text-white tracking-wider">558-000123-45</p>
+                              <Button variant="ghost" size="icon" className="text-primary" onClick={() => {
+                                navigator.clipboard.writeText('55800012345');
+                                toast({ title: "Número copiado" });
+                              }}>
+                                <Copy className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="efectivo" className="mt-0 space-y-6">
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-primary/20 rounded-xl shrink-0">
+                            <MapPin className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Punto Físico</p>
+                            <p className="text-sm font-bold text-white leading-relaxed">
+                              Corregimiento Santa Fé Las Claras (Rio Verde)<br/>
+                              Frente a la plaza principal
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-accent/20 rounded-xl shrink-0">
+                            <Clock className="w-6 h-6 text-accent" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Horarios de Atención</p>
+                            <p className="text-sm font-bold text-white">
+                              Lunes a Sábado: 8:00 AM - 7:00 PM<br/>
+                              Domingos: 9:00 AM - 1:00 PM
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </DialogContent>
+            </Dialog>
+
             <Dialog open={openContract} onOpenChange={setOpenContract}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-xl font-bold border-primary/20 text-primary bg-white hover:bg-primary/5">
