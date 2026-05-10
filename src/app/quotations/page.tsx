@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -291,7 +290,7 @@ export default function QuotationPage() {
                   <div className="p-4 bg-white/10 rounded-2xl border border-white/10 flex items-start gap-3">
                     <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
                     <p className="text-[9px] leading-relaxed opacity-80 font-bold uppercase tracking-wider">
-                      Entrega inmediata en Rio Verde, Quindío. Solo necesitas tu cédula y la cuota inicial.
+                      Entrega inmediata en SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA. Solo necesitas tu cédula y la cuota inicial.
                     </p>
                   </div>
                 </div>

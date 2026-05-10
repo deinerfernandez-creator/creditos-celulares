@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -137,7 +136,7 @@ export default function WelcomePage() {
               </div>
               <span className="font-black text-slate-400 tracking-tighter uppercase">Tecnicell Créditos</span>
             </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Rio Verde, Quindío, Colombia</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA</p>
           </div>
           
           <div className="flex gap-4">

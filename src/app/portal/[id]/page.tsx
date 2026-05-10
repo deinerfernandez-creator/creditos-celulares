@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -369,8 +368,7 @@ export default function CustomerPortalDashboard() {
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Punto Físico</p>
                             <p className="text-sm font-bold text-white leading-relaxed">
-                              Corregimiento Santa Fé Las Claras (Rio Verde)<br/>
-                              Frente a la plaza principal
+                              SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA
                             </p>
                           </div>
                         </div>

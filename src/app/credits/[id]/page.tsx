@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -113,7 +112,7 @@ const formatCurrency = (value: any) => {
 // Función auxiliar para convertir números a letras (Pesos Colombianos)
 function numeroALetras(num: number): string {
   const unidades = ["", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
-  const decenas = ["DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
+  const decenas = ["DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CUARENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
   const especiales = ["ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISEIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
   const centenas = ["", "CIENTO", "DOSCIENTOS", "TRESCIENTOS", "CUATROCIENTOS", "QUINIENTOS", "SEISCIENTOS", "SETECIENTOS", "OCHOCIENTOS", "NOVECIENTOS"];
 
@@ -480,8 +479,7 @@ export default function CreditDetailPage() {
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Punto Físico</p>
                             <p className="text-sm font-bold text-white leading-relaxed">
-                              Corregimiento Santa Fé Las Claras (Rio Verde)<br/>
-                              Frente a la plaza principal
+                              SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA
                             </p>
                           </div>
                         </div>
@@ -525,7 +523,7 @@ export default function CreditDetailPage() {
                   </div>
                   
                   <section className="space-y-4">
-                    <p>En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente contrato entre <strong>TECNICELL CRÉDITOS</strong> (El Acreedor) y <strong>{customer?.name}</strong> identificado con cédula <strong>{customer?.cedula}</strong> (El Cliente).</p>
+                    <p>En el municipio <strong>SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA</strong>, a los <strong>{contractDate}</strong>, se celebra el presente contrato entre <strong>TECNICELL CRÉDITOS</strong> (El Acreedor) y <strong>{customer?.name}</strong> identificado con cédula <strong>{customer?.cedula}</strong> (El Cliente).</p>
                     
                     <div className="p-4 bg-slate-50 rounded-xl space-y-2">
                        <p className="font-black text-slate-900 border-b pb-1">DATOS DEL EQUIPO Y CRÉDITO</p>
@@ -594,7 +592,7 @@ export default function CreditDetailPage() {
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase font-black text-slate-400">Lugar y Fecha</p>
-                      <p>Santa Fé Las Claras, {contractDate}</p>
+                      <p>SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA, {contractDate}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] uppercase font-black text-slate-400">Por Valor de:</p>
@@ -923,7 +921,7 @@ export default function CreditDetailPage() {
 
            <div className="space-y-6 text-sm leading-relaxed">
               <p className="text-justify">
-                 En el corregimiento <strong>Santa Fé Las Claras (rioverde)</strong>, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
+                 En el municipio de <strong>SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA</strong>, a los <strong>{contractDate}</strong>, se celebra el presente CONTRATO DE COMPRAVENTA CON RESERVA DE DOMINIO Y FINANCIACIÓN, entre el establecimiento comercial <strong>TECNICELL CRÉDITOS</strong>, representado por Deiner Fernandez, en adelante "EL VENDEDOR", y el señor(a) <strong>{customer?.name}</strong>, identificado(a) con cédula de ciudadanía No. <strong>{customer?.cedula}</strong>, domiciliado(a) en <strong>{customer?.address || 'N/A'}</strong> y contacto <strong>{customer?.phone}</strong>, en adelante "EL CLIENTE", bajo las siguientes cláusulas:
               </p>
 
               <div className="border-2 border-slate-200 rounded-2xl p-6 bg-slate-50 space-y-2">
@@ -995,7 +993,7 @@ export default function CreditDetailPage() {
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400">Lugar de Expedición</p>
-                <p className="font-bold">Santa Fé Las Claras (rioverde), Quindío</p>
+                <p className="font-bold">SANTA FE LAS CLARAS (RIO VERDE) CORDOBA COLOMBIA</p>
               </div>
             </div>
             <div className="text-right space-y-4">
