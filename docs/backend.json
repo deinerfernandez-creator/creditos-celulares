@@ -35,13 +35,26 @@
         "installmentAmount": { "type": "number" },
         "remainingBalance": { "type": "number" },
         "status": { "type": "string", "enum": ["activo", "pagado", "bloqueado"] },
-        "customerPhoto": { "type": "string", "description": "Base64 string of the customer photo." },
-        "idFrontPhoto": { "type": "string", "description": "Base64 string of the ID front photo." },
-        "idBackPhoto": { "type": "string", "description": "Base64 string of the ID back photo." },
-        "deliveryPhoto": { "type": "string", "description": "Base64 string of the customer holding the new phone." },
+        "customerPhoto": { "type": "string" },
+        "idFrontPhoto": { "type": "string" },
+        "idBackPhoto": { "type": "string" },
+        "deliveryPhoto": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status", "customerPhoto", "idFrontPhoto", "idBackPhoto", "paymentFrequency"]
+      "required": ["customerId", "deviceModel", "imei", "initialAmount", "downPayment", "status"]
+    },
+    "PhoneModel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PhoneModel",
+      "type": "object",
+      "description": "Available phone models for sale and financing.",
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["brand", "model"]
     },
     "Payment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -83,6 +96,10 @@
     "/credits/{creditId}": {
       "schema": "Credit",
       "description": "Root collection for all credit applications."
+    },
+    "/phones/{phoneId}": {
+      "schema": "PhoneModel",
+      "description": "Catalog of available phone models."
     },
     "/payments/{paymentId}": {
       "schema": "Payment",
