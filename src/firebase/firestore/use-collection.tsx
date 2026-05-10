@@ -74,7 +74,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (fireError: FirestoreError) => {
-        // Solo emitimos el error contextual si el código es realmente de permisos
         if (fireError.code === 'permission-denied') {
           const path: string =
             memoizedTargetRefOrQuery.type === 'collection'
@@ -89,9 +88,7 @@ export function useCollection<T = any>(
           setError(contextualError)
           errorEmitter.emit('permission-error', contextualError);
         } else {
-          // Para otros errores (como índices faltantes), pasamos el error original
           setError(fireError);
-          console.error("Firestore error in useCollection:", fireError.code, fireError.message);
         }
         
         setData(null);

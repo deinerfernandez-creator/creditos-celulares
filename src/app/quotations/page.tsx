@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -39,7 +38,7 @@ export default function QuotationPage() {
 
   const phonesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'phones'), orderBy('brand', 'asc'), orderBy('model', 'asc'));
+    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
   }, [db]);
   const { data: inventoryPhones } = useCollection(phonesQuery);
 
@@ -264,5 +263,3 @@ export default function QuotationPage() {
         </div>
       </div>
     </div>
-  );
-}

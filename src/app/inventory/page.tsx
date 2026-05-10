@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -50,19 +49,28 @@ export default function InventoryPage() {
 
   const phonesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'phones'), orderBy('brand', 'asc'), orderBy('model', 'asc'));
+    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
   }, [db]);
 
   const { data: phones, isLoading } = useCollection(phonesQuery);
 
-  const filteredPhones = useMemo(() => {
+  const sortedPhones = useMemo(() => {
     if (!phones) return [];
-    if (!searchTerm) return phones;
-    return phones.filter(p => 
+    return [...phones].sort((a, b) => {
+      const brandCmp = a.brand.localeCompare(b.brand);
+      if (brandCmp !== 0) return brandCmp;
+      return a.model.localeCompare(b.model);
+    });
+  }, [phones]);
+
+  const filteredPhones = useMemo(() => {
+    if (!sortedPhones) return [];
+    if (!searchTerm) return sortedPhones;
+    return sortedPhones.filter(p => 
       p.brand.toLowerCase().includes(searchTerm.toLowerCase()) || 
       p.model.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [phones, searchTerm]);
+  }, [sortedPhones, searchTerm]);
 
   const handleAddPhone = async (e: React.FormEvent) => {
     e.preventDefault();

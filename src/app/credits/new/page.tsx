@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -51,7 +50,7 @@ export default function NewCreditPage() {
 
   const phonesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'phones'), orderBy('brand', 'asc'), orderBy('model', 'asc'));
+    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
   }, [db]);
   const { data: inventoryPhones } = useCollection(phonesQuery);
 

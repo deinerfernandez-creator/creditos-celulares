@@ -70,7 +70,6 @@ export function useDoc<T = any>(
           errorEmitter.emit('permission-error', contextualError);
         } else {
           setError(fireError);
-          console.error("Firestore error in useDoc:", fireError.code, fireError.message);
         }
         
         setData(null);
