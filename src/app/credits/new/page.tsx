@@ -44,7 +44,6 @@ export default function NewCreditPage() {
   const [loading, setLoading] = useState(false);
   const [customerId, setCustomerId] = useState('');
   const [selectedInventoryId, setSelectedInventoryId] = useState<string | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<string | 'all'>('all');
   const [deviceModel, setDeviceModel] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [imei, setImei] = useState('');
@@ -80,21 +79,6 @@ export default function NewCreditPage() {
   }, [db]);
   const { data: inventoryPhones } = useCollection(phonesQuery);
 
-  const availableBrands = useMemo(() => {
-    if (!inventoryPhones) return [];
-    const brands = new Set(inventoryPhones.map(p => p.brand).filter(Boolean));
-    return Array.from(brands).sort();
-  }, [inventoryPhones]);
-
-  const filteredModelsData = useMemo(() => {
-    if (!inventoryPhones) return [];
-    let list = inventoryPhones;
-    if (selectedBrand !== 'all') {
-      list = list.filter(p => p.brand === selectedBrand);
-    }
-    return list.filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [inventoryPhones, selectedBrand, searchTerm]);
-
   const handleInventorySelect = (id: string) => {
     const foundPhone = inventoryPhones?.find(p => p.id === id);
     if (foundPhone) {
@@ -102,9 +86,6 @@ export default function NewCreditPage() {
       setDeviceModel(`${foundPhone.brand} ${foundPhone.model}`);
       setInitialAmount(foundPhone.salePrice.toString());
       setImei(''); 
-      // Sugerir el 30% automáticamente
-      const suggested = Math.round(foundPhone.salePrice * 0.3);
-      setDownPayment(suggested.toString());
     }
   };
 
@@ -186,14 +167,6 @@ export default function NewCreditPage() {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
-    }
-  };
-
-  const handleSetDownPaymentPercentage = (percentage: number) => {
-    const total = parseFloat(initialAmount) || 0;
-    if (total > 0) {
-      const calculated = Math.round(total * (percentage / 100));
-      setDownPayment(calculated.toString());
     }
   };
 
@@ -338,17 +311,8 @@ export default function NewCreditPage() {
                     />
                   </div>
 
-                  <div className="space-y-3 col-span-1 md:col-span-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
-                      <div className="flex gap-2">
-                        {[30, 40, 50].map(p => (
-                          <Button key={p} type="button" variant="outline" size="sm" className="h-7 text-[10px] font-black rounded-full hover:bg-primary hover:text-white" onClick={() => handleSetDownPaymentPercentage(p)}>
-                            {p}%
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="space-y-2 col-span-1 md:col-span-2">
+                    <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
                     <Input 
                       type="number" 
                       className="rounded-xl h-12 text-lg font-black text-green-700 bg-green-50/30"

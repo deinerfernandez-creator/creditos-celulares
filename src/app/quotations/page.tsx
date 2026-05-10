@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,19 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Smartphone, 
   ChevronLeft, 
-  Search,
   Calculator,
   MessageCircle,
-  Package,
-  AlertCircle,
   Home,
   CheckCircle2,
   Tag
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
 const formatCurrency = (value: number) => {
@@ -35,17 +30,8 @@ const formatCurrency = (value: number) => {
 
 export default function QuotationPage() {
   const { toast } = useToast();
-  const db = useFirestore();
 
-  const phonesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'phones'), orderBy('brand', 'asc'));
-  }, [db]);
-  const { data: allPhones, isLoading } = useCollection(phonesQuery);
-
-  const [selectedBrand, setSelectedBrand] = useState<string | 'all'>('all');
   const [deviceModel, setDeviceModel] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [initialAmount, setInitialAmount] = useState('');
   const [downPayment, setDownPayment] = useState('');
   const [planType, setPlanType] = useState<'6' | '12' | '24'>('6');
@@ -56,41 +42,6 @@ export default function QuotationPage() {
     totalAmount: 0,
     installmentAmount: 0
   });
-
-  // Solo marcas con equipos con stock real
-  const availableBrands = useMemo(() => {
-    if (!allPhones) return [];
-    const brandsInStock = allPhones
-      .filter(p => p.imeis && p.imeis.length > 0)
-      .map(p => p.brand)
-      .filter(Boolean);
-    return Array.from(new Set(brandsInStock)).sort();
-  }, [allPhones]);
-
-  // Modelos con existencias reales
-  const modelsInStock = useMemo(() => {
-    if (!allPhones) return [];
-    let list = allPhones.filter(p => p.imeis && p.imeis.length > 0);
-    
-    if (selectedBrand !== 'all') {
-      list = list.filter(p => p.brand === selectedBrand);
-    }
-    
-    return list
-      .filter(p => p.model.toLowerCase().includes(searchTerm.toLowerCase()))
-      .sort((a, b) => a.model.localeCompare(b.model));
-  }, [allPhones, selectedBrand, searchTerm]);
-
-  const handleModelSelect = (val: string) => {
-    setDeviceModel(val);
-    const phone = allPhones?.find(p => `${p.brand} ${p.model}` === val);
-    if (phone?.salePrice) {
-      setInitialAmount(phone.salePrice.toString());
-      // Sugerimos el 30% por defecto
-      const initialDown = Math.round(phone.salePrice * 0.3);
-      setDownPayment(initialDown.toString());
-    }
-  };
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -115,14 +66,6 @@ export default function QuotationPage() {
       setCalculation({ financedAmount: 0, totalAmount: 0, installmentAmount: 0 });
     }
   }, [initialAmount, downPayment, planType]);
-
-  const handleSetDownPaymentPercentage = (percentage: number) => {
-    const total = parseFloat(initialAmount) || 0;
-    if (total > 0) {
-      const calculated = Math.round(total * (percentage / 100));
-      setDownPayment(calculated.toString());
-    }
-  };
 
   const handleShareWhatsApp = () => {
     if (!deviceModel || !initialAmount || !downPayment) {
@@ -153,7 +96,7 @@ export default function QuotationPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Cotizador Tecnicell</h1>
-              <p className="text-[10px] uppercase font-black text-primary tracking-widest">Catálogo de Equipos en Stock</p>
+              <p className="text-[10px] uppercase font-black text-primary tracking-widest">Simula tu plan de pagos</p>
             </div>
           </div>
           <div className="p-3 bg-primary/10 rounded-2xl">
@@ -164,135 +107,74 @@ export default function QuotationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="lg:col-span-2 border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white border border-slate-100">
             <CardHeader className="bg-slate-900 text-white p-8">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg font-black flex items-center gap-2">
-                  <Package className="w-5 h-5 text-accent" /> Selección de Equipo
-                </CardTitle>
-              </div>
-              <CardDescription className="text-slate-400 font-medium">Elige uno de nuestros equipos disponibles en vitrina.</CardDescription>
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-accent" /> Datos del Equipo
+              </CardTitle>
+              <CardDescription className="text-slate-400 font-medium">Ingresa el modelo y el valor del celular que deseas.</CardDescription>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Filtrar por Marca</Label>
-                  <Select onValueChange={setSelectedBrand} value={selectedBrand}>
-                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200 font-bold">
-                      <SelectValue placeholder="Todas las marcas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las marcas</SelectItem>
-                      {availableBrands.map(brand => (
-                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="col-span-1 md:col-span-2 space-y-4">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Modelo del Celular</Label>
+                  <Input 
+                    placeholder="Ej: iPhone 15 Pro Max, Samsung S24..." 
+                    className="rounded-xl h-14 text-lg font-bold bg-slate-50 border-slate-200"
+                    value={deviceModel}
+                    onChange={(e) => setDeviceModel(e.target.value)}
+                  />
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Buscar Modelo</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Precio del Equipo (COP)</Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
                     <Input 
-                      placeholder="iPhone, Samsung, Xiaomi..." 
-                      className="pl-10 rounded-xl h-12 bg-slate-50 border-slate-200"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      type="number"
+                      placeholder="Ej: 3500000"
+                      className="pl-10 rounded-xl h-14 text-xl font-black bg-slate-50 border-slate-200"
+                      value={initialAmount}
+                      onChange={(e) => setInitialAmount(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="col-span-1 md:col-span-2 space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Equipos Disponibles</Label>
-                  <Select onValueChange={handleModelSelect} value={deviceModel}>
-                    <SelectTrigger className="rounded-2xl h-16 bg-primary/5 border-primary/20 font-black text-lg text-primary">
-                      <SelectValue placeholder="Toca aquí para elegir tu equipo..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                      {isLoading ? (
-                        <div className="p-4 text-center text-xs text-slate-400">Cargando catálogo...</div>
-                      ) : modelsInStock.length > 0 ? (
-                        modelsInStock.map((p) => (
-                          <SelectItem key={p.id} value={`${p.brand} ${p.model}`} className="py-3 font-bold">
-                            <div className="flex flex-col">
-                              <span>{p.brand} {p.model}</span>
-                              <span className="text-[10px] text-green-600">{formatCurrency(p.salePrice)}</span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-bold uppercase italic">Sin stock para este filtro.</div>
-                      )}
+                <div className="space-y-4">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tu Cuota Inicial</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="Ej: 1000000"
+                    className="rounded-xl h-14 text-xl font-black text-green-700 bg-green-50/30 border-green-100"
+                    value={downPayment}
+                    onChange={(e) => setDownPayment(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Frecuencia de Pago</Label>
+                  <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)}>
+                    <SelectTrigger className="rounded-xl h-14 bg-slate-50 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semanal" className="font-bold">Semanal</SelectItem>
+                      <SelectItem value="quincenal" className="font-bold">Quincenal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {deviceModel && (
-                  <>
-                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Precio de Venta</Label>
-                      <div className="relative">
-                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-                        <Input 
-                          type="text" 
-                          readOnly
-                          className="pl-10 rounded-xl h-14 text-xl font-black bg-slate-100 border-slate-200 text-slate-900"
-                          value={formatCurrency(parseFloat(initialAmount))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tu Cuota Inicial</Label>
-                        <div className="flex gap-1">
-                          {[30, 40, 50].map(pct => (
-                            <button 
-                              key={pct} 
-                              type="button"
-                              onClick={() => handleSetDownPaymentPercentage(pct)}
-                              className="text-[10px] font-black bg-primary/10 text-primary hover:bg-primary hover:text-white px-2.5 py-1.5 rounded-lg transition-all"
-                            >
-                              {pct}%
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <Input 
-                        type="number" 
-                        className="rounded-xl h-14 text-xl font-black text-green-700 bg-green-50/30 border-green-100"
-                        value={downPayment}
-                        onChange={(e) => setDownPayment(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-400">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Frecuencia de Pago</Label>
-                      <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)}>
-                        <SelectTrigger className="rounded-xl h-14 bg-slate-50 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="semanal" className="font-bold">Semanal</SelectItem>
-                          <SelectItem value="quincenal" className="font-bold">Quincenal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-400">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tiempo del Crédito</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['6', '12', '24'].map(num => (
-                          <button 
-                            key={num} 
-                            type="button"
-                            onClick={() => setPlanType(num as any)} 
-                            className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
-                          >
-                            {num} Meses
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div className="space-y-4">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tiempo del Crédito</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['6', '12', '24'].map(num => (
+                      <button 
+                        key={num} 
+                        type="button"
+                        onClick={() => setPlanType(num as any)} 
+                        className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                      >
+                        {num} Meses
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
