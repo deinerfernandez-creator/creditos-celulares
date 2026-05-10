@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -9,13 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   Smartphone, 
   ChevronLeft, 
-  DollarSign, 
   Search,
   Calculator,
-  CalendarClock,
-  ArrowRight,
-  TrendingUp,
-  ReceiptText,
   MessageCircle,
   Package
 } from 'lucide-react';
@@ -263,3 +259,5 @@ export default function QuotationPage() {
         </div>
       </div>
     </div>
+  );
+}
