@@ -16,7 +16,8 @@ import {
   CalendarClock,
   ArrowRight,
   TrendingUp,
-  ReceiptText
+  ReceiptText,
+  MessageCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -105,6 +106,30 @@ export default function QuotationPage() {
         description: `Calculado: ${formatCurrency(calculated)}`,
       });
     }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!deviceModel || !initialAmount || !downPayment) {
+      toast({
+        title: "Datos incompletos",
+        description: "Completa la cotización antes de compartir.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const message = `¡Hola! Te comparto tu cotización de *Tecnicell Créditos*:
+    
+📱 *Equipo:* ${deviceModel}
+💰 *Precio:* ${formatCurrency(parseFloat(initialAmount))}
+✅ *Cuota Inicial:* ${formatCurrency(parseFloat(downPayment))}
+📅 *Plan:* ${planType} cuotas ${paymentFrequency}es
+💵 *Valor Cuota:* ${formatCurrency(calculation.installmentAmount)}
+
+_Cotización válida por 48 horas._`;
+
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
   return (
@@ -285,8 +310,14 @@ export default function QuotationPage() {
                   <p className="text-xs font-bold text-accent mt-2">Por {planType} meses</p>
                 </div>
                 
-                <div className="pt-8">
-                  <Button className="w-full h-14 rounded-2xl bg-white text-primary font-black hover:bg-slate-100 shadow-xl shadow-black/20" asChild>
+                <div className="pt-8 space-y-3">
+                  <Button 
+                    onClick={handleShareWhatsApp}
+                    className="w-full h-14 rounded-2xl bg-green-500 text-white font-black hover:bg-green-600 shadow-xl shadow-green-500/20 border-none"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" /> Compartir por WhatsApp
+                  </Button>
+                  <Button variant="ghost" className="w-full h-14 rounded-2xl bg-white text-primary font-black hover:bg-slate-100 shadow-xl shadow-black/10" asChild>
                     <Link href="/credits/new">
                       Crear Crédito Ahora <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
