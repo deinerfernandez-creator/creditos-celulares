@@ -57,7 +57,7 @@ export default function QuotationPage() {
     installmentAmount: 0
   });
 
-  // Solo mostramos marcas que tengan equipos con stock
+  // Solo marcas con equipos con stock real
   const availableBrands = useMemo(() => {
     if (!allPhones) return [];
     const brandsInStock = allPhones
@@ -67,7 +67,7 @@ export default function QuotationPage() {
     return Array.from(new Set(brandsInStock)).sort();
   }, [allPhones]);
 
-  // Solo mostramos modelos que tengan existencias reales (IMEIs disponibles)
+  // Modelos con existencias reales
   const modelsInStock = useMemo(() => {
     if (!allPhones) return [];
     let list = allPhones.filter(p => p.imeis && p.imeis.length > 0);
@@ -86,16 +86,11 @@ export default function QuotationPage() {
     const phone = allPhones?.find(p => `${p.brand} ${p.model}` === val);
     if (phone?.salePrice) {
       setInitialAmount(phone.salePrice.toString());
-      // Sugerimos el 30% de inicial automáticamente al seleccionar
+      // Sugerimos el 30% por defecto
       const initialDown = Math.round(phone.salePrice * 0.3);
       setDownPayment(initialDown.toString());
     }
   };
-
-  const selectedPhoneInfo = useMemo(() => {
-    if (!deviceModel || !allPhones) return null;
-    return allPhones.find(p => `${p.brand} ${p.model}` === deviceModel);
-  }, [deviceModel, allPhones]);
 
   useEffect(() => {
     const total_price = parseFloat(initialAmount) || 0;
@@ -137,12 +132,12 @@ export default function QuotationPage() {
 
     const message = `¡Hola! Tu cotización de *Tecnicell Créditos*:
 📱 *Equipo:* ${deviceModel}
-💰 *Precio Oficial:* ${formatCurrency(parseFloat(initialAmount))}
+💰 *Precio:* ${formatCurrency(parseFloat(initialAmount))}
 ✅ *Cuota Inicial:* ${formatCurrency(parseFloat(downPayment))}
 📅 *Plazo:* ${planType} meses
 💵 *Valor Cuota ${paymentFrequency}:* ${formatCurrency(calculation.installmentAmount)}
 
-*Requisitos:* Cédula original y cuota inicial. ¡Entrega inmediata!`;
+*Requisitos:* Cédula y cuota inicial. ¡Entrega inmediata!`;
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
@@ -173,33 +168,24 @@ export default function QuotationPage() {
                 <CardTitle className="text-lg font-black flex items-center gap-2">
                   <Package className="w-5 h-5 text-accent" /> Selección de Equipo
                 </CardTitle>
-                {deviceModel && (
-                  <Badge className="bg-green-500 text-white border-none rounded-full px-4 py-1 font-black text-[10px] tracking-widest">
-                    DISPONIBLE: {selectedPhoneInfo?.imeis?.length || 0}
-                  </Badge>
-                )}
               </div>
-              <CardDescription className="text-slate-400 font-medium">Elige uno de nuestros equipos disponibles para ver su precio y plan de pagos.</CardDescription>
+              <CardDescription className="text-slate-400 font-medium">Elige uno de nuestros equipos disponibles en vitrina.</CardDescription>
             </CardHeader>
             <CardContent className="p-8 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Filtrar por Marca</Label>
-                  <div className="flex gap-2">
-                    <div className="w-full">
-                      <Select onValueChange={setSelectedBrand} value={selectedBrand}>
-                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200 font-bold">
-                          <SelectValue placeholder="Todas las marcas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas las marcas</SelectItem>
-                          {availableBrands.map(brand => (
-                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <Select onValueChange={setSelectedBrand} value={selectedBrand}>
+                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200 font-bold">
+                      <SelectValue placeholder="Todas las marcas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas las marcas</SelectItem>
+                      {availableBrands.map(brand => (
+                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-4">
@@ -208,7 +194,7 @@ export default function QuotationPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <Input 
                       placeholder="iPhone, Samsung, Xiaomi..." 
-                      className="pl-10 rounded-xl h-12 bg-slate-50 border-slate-200 font-medium"
+                      className="pl-10 rounded-xl h-12 bg-slate-50 border-slate-200"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -216,14 +202,14 @@ export default function QuotationPage() {
                 </div>
 
                 <div className="col-span-1 md:col-span-2 space-y-4">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Equipos en Vitrina</Label>
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Equipos Disponibles</Label>
                   <Select onValueChange={handleModelSelect} value={deviceModel}>
                     <SelectTrigger className="rounded-2xl h-16 bg-primary/5 border-primary/20 font-black text-lg text-primary">
                       <SelectValue placeholder="Toca aquí para elegir tu equipo..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
                       {isLoading ? (
-                        <div className="p-4 text-center text-xs text-slate-400">Cargando existencias...</div>
+                        <div className="p-4 text-center text-xs text-slate-400">Cargando catálogo...</div>
                       ) : modelsInStock.length > 0 ? (
                         modelsInStock.map((p) => (
                           <SelectItem key={p.id} value={`${p.brand} ${p.model}`} className="py-3 font-bold">
@@ -234,7 +220,7 @@ export default function QuotationPage() {
                           </SelectItem>
                         ))
                       ) : (
-                        <div className="p-4 text-center text-xs text-slate-400 font-bold uppercase italic">No hay equipos con stock para este filtro.</div>
+                        <div className="p-4 text-center text-xs text-slate-400 font-bold uppercase italic">Sin stock para este filtro.</div>
                       )}
                     </SelectContent>
                   </Select>
@@ -255,15 +241,16 @@ export default function QuotationPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-4 col-span-1 md:col-span-1 animate-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tu Cuota Inicial</Label>
                         <div className="flex gap-1">
                           {[30, 40, 50].map(pct => (
                             <button 
                               key={pct} 
+                              type="button"
                               onClick={() => handleSetDownPaymentPercentage(pct)}
-                              className="text-[9px] font-black bg-slate-100 hover:bg-primary hover:text-white px-2 py-1 rounded-md transition-colors"
+                              className="text-[10px] font-black bg-primary/10 text-primary hover:bg-primary hover:text-white px-2.5 py-1.5 rounded-lg transition-all"
                             >
                               {pct}%
                             </button>
@@ -272,7 +259,6 @@ export default function QuotationPage() {
                       </div>
                       <Input 
                         type="number" 
-                        placeholder="Monto a pagar hoy"
                         className="rounded-xl h-14 text-xl font-black text-green-700 bg-green-50/30 border-green-100"
                         value={downPayment}
                         onChange={(e) => setDownPayment(e.target.value)}
@@ -280,12 +266,12 @@ export default function QuotationPage() {
                     </div>
 
                     <div className="space-y-4 animate-in slide-in-from-top-2 duration-400">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">¿Cada cuánto pagarás?</Label>
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Frecuencia de Pago</Label>
                       <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)}>
                         <SelectTrigger className="rounded-xl h-14 bg-slate-50 border-slate-200 font-bold"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="semanal" className="font-bold">Pago Semanal</SelectItem>
-                          <SelectItem value="quincenal" className="font-bold">Pago Quincenal</SelectItem>
+                          <SelectItem value="semanal" className="font-bold">Semanal</SelectItem>
+                          <SelectItem value="quincenal" className="font-bold">Quincenal</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -296,6 +282,7 @@ export default function QuotationPage() {
                         {['6', '12', '24'].map(num => (
                           <button 
                             key={num} 
+                            type="button"
                             onClick={() => setPlanType(num as any)} 
                             className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
                           >
@@ -326,11 +313,11 @@ export default function QuotationPage() {
                 
                 <div className="space-y-4 pt-4">
                   <div className="flex justify-between items-center text-sm border-b border-white/10 pb-3">
-                    <span className="font-bold opacity-70">Precio del Celular</span>
+                    <span className="font-bold opacity-70">Precio Oficial</span>
                     <span className="font-black">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm border-b border-white/10 pb-3 text-accent">
-                    <span className="font-bold">Pago Inicial Hoy (-)</span>
+                    <span className="font-bold">Pago Inicial (-)</span>
                     <span className="font-black">{formatCurrency(parseFloat(downPayment) || 0)}</span>
                   </div>
                 </div>
@@ -341,7 +328,7 @@ export default function QuotationPage() {
                     disabled={!deviceModel}
                     className="w-full h-16 rounded-2xl bg-green-500 font-black text-base hover:bg-green-600 shadow-xl shadow-green-500/20 gap-3"
                   >
-                    <MessageCircle className="w-6 h-6" /> Enviar a WhatsApp
+                    <MessageCircle className="w-6 h-6" /> Compartir Cotización
                   </Button>
                   
                   <div className="p-4 bg-white/10 rounded-2xl border border-white/10 flex items-start gap-3">

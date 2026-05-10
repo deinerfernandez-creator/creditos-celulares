@@ -102,6 +102,9 @@ export default function NewCreditPage() {
       setDeviceModel(`${foundPhone.brand} ${foundPhone.model}`);
       setInitialAmount(foundPhone.salePrice.toString());
       setImei(''); 
+      // Sugerir el 30% automáticamente
+      const suggested = Math.round(foundPhone.salePrice * 0.3);
+      setDownPayment(suggested.toString());
     }
   };
 
@@ -227,10 +230,8 @@ export default function NewCreditPage() {
     };
 
     try {
-      // Registrar el crédito
       await addDoc(collection(db, 'credits'), creditData);
 
-      // Si se seleccionó de un stock existente, descontar el IMEI
       if (selectedInventoryId) {
         await updateDoc(doc(db, 'phones', selectedInventoryId), {
           imeis: arrayRemove(imei),
@@ -285,47 +286,19 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Selección de Equipo</Label>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="flex gap-2">
-                        <div className="w-1/3">
-                          <Select onValueChange={setSelectedBrand} value={selectedBrand} disabled={loading}>
-                            <SelectTrigger className="rounded-xl h-12">
-                              <SelectValue placeholder="Marca" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todas</SelectItem>
-                              {availableBrands.map(brand => (
-                                <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1 relative">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input 
-                            placeholder="Buscar modelo..." 
-                            className="pl-10 rounded-xl h-12"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            disabled={loading}
-                          />
-                        </div>
-                      </div>
-                      
-                      <Select onValueChange={handleInventorySelect} disabled={loading} required>
-                        <SelectTrigger className="rounded-xl h-12 font-bold">
-                          <SelectValue placeholder="Elegir del inventario..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {filteredModelsData.map((p) => (
-                            <SelectItem key={p.id} value={p.id} disabled={!p.imeis || p.imeis.length === 0}>
-                              {p.brand} {p.model} - Stock: {p.imeis?.length || 0}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Label className="font-bold">Equipo del Inventario</Label>
+                    <Select onValueChange={handleInventorySelect} disabled={loading} required>
+                      <SelectTrigger className="rounded-xl h-12 font-bold">
+                        <SelectValue placeholder="Elegir del stock..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {inventoryPhones?.filter(p => p.imeis?.length > 0).map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.brand} {p.model} (Stock: {p.imeis.length})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -343,7 +316,7 @@ export default function NewCreditPage() {
                       </Select>
                     ) : (
                       <Input 
-                        placeholder="Ingresa IMEI manualmente" 
+                        placeholder="IMEI manual" 
                         className="rounded-xl h-12 font-mono"
                         value={imei}
                         onChange={(e) => setImei(e.target.value)}
@@ -354,10 +327,9 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Precio del Equipo (COP)</Label>
+                    <Label className="font-bold">Precio de Venta (COP)</Label>
                     <Input 
                       type="number" 
-                      placeholder="Ej: 3500000" 
                       className="rounded-xl h-12 text-lg font-bold"
                       value={initialAmount}
                       onChange={(e) => setInitialAmount(e.target.value)}
@@ -371,7 +343,7 @@ export default function NewCreditPage() {
                       <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
                       <div className="flex gap-2">
                         {[30, 40, 50].map(p => (
-                          <Button key={p} type="button" variant="outline" size="sm" className="h-7 text-[10px] font-black rounded-full" onClick={() => handleSetDownPaymentPercentage(p)}>
+                          <Button key={p} type="button" variant="outline" size="sm" className="h-7 text-[10px] font-black rounded-full hover:bg-primary hover:text-white" onClick={() => handleSetDownPaymentPercentage(p)}>
                             {p}%
                           </Button>
                         ))}
@@ -403,7 +375,7 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="font-bold">Plazo de Financiación</Label>
+                    <Label className="font-bold">Plazo del Crédito</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {['6', '12', '24'].map(num => (
                         <button key={num} type="button" onClick={() => setPlanType(num as any)} className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}>
@@ -418,7 +390,7 @@ export default function NewCreditPage() {
                   <Label className="text-lg font-black">Expediente Fotográfico</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     {[
-                      { label: 'Rostro Cliente', type: 'customer', data: capturedPhoto },
+                      { label: 'Cliente', type: 'customer', data: capturedPhoto },
                       { label: 'Cédula (Frontal)', type: 'idFront', data: idFrontPhoto },
                       { label: 'Cédula (Posterior)', type: 'idBack', data: idBackPhoto }
                     ].map((btn) => (
@@ -446,8 +418,8 @@ export default function NewCreditPage() {
                       <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20">
                         <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
                         <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
-                           <Button onClick={capturePhoto} className="rounded-full w-20 h-20 bg-white border-8 border-primary shadow-2xl" />
-                           <Button variant="secondary" onClick={() => { stopCamera(); setShowCamera(false); }} className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md">
+                           <Button type="button" onClick={capturePhoto} className="rounded-full w-20 h-20 bg-white border-8 border-primary shadow-2xl" />
+                           <Button type="button" variant="secondary" onClick={() => { stopCamera(); setShowCamera(false); }} className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md">
                              <X className="w-6 h-6" />
                            </Button>
                         </div>
@@ -457,13 +429,13 @@ export default function NewCreditPage() {
                 </div>
 
                 <Button type="submit" disabled={loading || !capturedPhoto} className="w-full h-16 rounded-2xl text-xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
-                  {loading ? "Registrando Expediente..." : "Habilitar Crédito"}
+                  {loading ? "Procesando..." : "Habilitar Crédito"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-2xl bg-primary text-white rounded-[2rem] h-fit">
+          <Card className="border-none shadow-2xl bg-primary text-white rounded-[2.5rem] h-fit">
             <CardHeader><CardTitle className="font-black">Resumen del Plan</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between border-b border-white/10 pb-2">
@@ -478,12 +450,6 @@ export default function NewCreditPage() {
                 <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Valor Cuota {paymentFrequency}</p>
                 <h2 className="text-4xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
                 <p className="text-xs font-bold text-accent mt-2">{planType} Meses (+{calculation.interestRate}%)</p>
-              </div>
-              <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/10 flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-accent shrink-0" />
-                <p className="text-[10px] leading-relaxed opacity-70 italic font-medium">
-                  El sistema descontará automáticamente el equipo del inventario una vez sea registrado el crédito.
-                </p>
               </div>
             </CardContent>
           </Card>
