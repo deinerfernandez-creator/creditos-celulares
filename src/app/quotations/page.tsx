@@ -191,6 +191,9 @@ _Cotización válida por 48 horas._`;
                       {filteredModels.map((m) => (
                         <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
+                      {searchTerm && !filteredModels.includes(searchTerm) && (
+                        <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
