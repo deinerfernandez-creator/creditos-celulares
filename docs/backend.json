@@ -52,7 +52,6 @@
         "id": { "type": "string" },
         "brand": { "type": "string" },
         "model": { "type": "string" },
-        "color": { "type": "string" },
         "costPrice": { "type": "number" },
         "salePrice": { "type": "number" },
         "imeis": { "type": "array", "items": { "type": "string" } },

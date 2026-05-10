@@ -197,7 +197,7 @@ export default function QuotationPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {filteredModels.map((p) => (
-                        <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model} {p.color ? `(${p.color})` : ''}</SelectItem>
+                        <SelectItem key={p.id} value={`${p.brand} ${p.model}`}>{p.brand} {p.model}</SelectItem>
                       ))}
                       {searchTerm && !filteredModels.some(p => `${p.brand} ${p.model}` === searchTerm) && (
                         <SelectItem value={searchTerm}>Usar: "{searchTerm}"</SelectItem>

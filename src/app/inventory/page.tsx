@@ -22,8 +22,6 @@ import {
   Trash2, 
   Package,
   Loader2,
-  Hash,
-  Palette,
   TrendingUp,
   AlertCircle
 } from 'lucide-react';
@@ -66,7 +64,6 @@ export default function InventoryPage() {
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newImeisText, setNewImeisText] = useState('');
-  const [newColor, setNewColor] = useState('');
   const [newCostPrice, setNewCostPrice] = useState('');
   const [newSalePrice, setNewSalePrice] = useState('');
 
@@ -93,8 +90,7 @@ export default function InventoryPage() {
     return sortedPhones.filter(p => 
       (p.brand || '').toLowerCase().includes(term) || 
       (p.model || '').toLowerCase().includes(term) ||
-      (p.imeis && p.imeis.some((i: string) => i.toLowerCase().includes(term))) ||
-      (p.color || '').toLowerCase().includes(term)
+      (p.imeis && p.imeis.some((i: string) => i.toLowerCase().includes(term)))
     );
   }, [sortedPhones, searchTerm]);
 
@@ -114,7 +110,6 @@ export default function InventoryPage() {
         model: newModel,
         imeis: imeis,
         quantity: imeis.length,
-        color: newColor,
         costPrice: parseFloat(newCostPrice) || 0,
         salePrice: parseFloat(newSalePrice) || 0,
         createdAt: serverTimestamp()
@@ -125,7 +120,6 @@ export default function InventoryPage() {
       setNewBrand('');
       setNewModel('');
       setNewImeisText('');
-      setNewColor('');
       setNewCostPrice('');
       setNewSalePrice('');
     } catch (err: any) {
@@ -164,28 +158,14 @@ export default function InventoryPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddPhone} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold text-xs">Marca</Label>
-                    <Input 
-                      placeholder="Apple, Samsung" 
-                      value={newBrand}
-                      onChange={(e) => setNewBrand(e.target.value)}
-                      className="rounded-xl h-10"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold text-xs">Color</Label>
-                    <div className="relative">
-                      <Palette className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                      <Input 
-                        placeholder="Negro, Azul" 
-                        value={newColor}
-                        onChange={(e) => setNewColor(e.target.value)}
-                        className="rounded-xl h-10 pl-9"
-                      />
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="font-bold text-xs">Marca</Label>
+                  <Input 
+                    placeholder="Apple, Samsung" 
+                    value={newBrand}
+                    onChange={(e) => setNewBrand(e.target.value)}
+                    className="rounded-xl h-10"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -284,7 +264,6 @@ export default function InventoryPage() {
                             <td className="px-6 py-5">
                               <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-0.5">{phone.brand}</p>
                               <p className="font-black text-slate-900 leading-none">{phone.model}</p>
-                              <p className="text-[10px] font-bold text-slate-400 mt-1 capitalize">{phone.color || 'Sin color'}</p>
                             </td>
                             <td className="px-4 py-5 text-center">
                               <Badge variant={isOutOfStock ? "destructive" : "default"} className={`rounded-full px-3 font-black ${!isOutOfStock ? 'bg-green-500' : ''}`}>

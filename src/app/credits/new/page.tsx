@@ -101,7 +101,7 @@ export default function NewCreditPage() {
       setSelectedInventoryId(id);
       setDeviceModel(`${foundPhone.brand} ${foundPhone.model}`);
       setInitialAmount(foundPhone.salePrice.toString());
-      setImei(''); // Reset IMEI to force picking from the selected phone's list
+      setImei(''); 
     }
   };
 
@@ -320,7 +320,7 @@ export default function NewCreditPage() {
                         <SelectContent className="max-h-[300px]">
                           {filteredModelsData.map((p) => (
                             <SelectItem key={p.id} value={p.id} disabled={!p.imeis || p.imeis.length === 0}>
-                              {p.brand} {p.model} {p.color ? `(${p.color})` : ''} - Stock: {p.imeis?.length || 0}
+                              {p.brand} {p.model} - Stock: {p.imeis?.length || 0}
                             </SelectItem>
                           ))}
                         </SelectContent>
