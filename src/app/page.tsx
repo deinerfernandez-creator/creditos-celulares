@@ -33,7 +33,8 @@ import {
   Shield,
   DollarSign as DollarIcon,
   Receipt,
-  Search
+  Search,
+  Calculator
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -228,6 +229,12 @@ export default function DashboardPage() {
                 <Receipt className="w-5 h-5 mr-3" />
                 <span>Recaudos Iniciales</span>
               </SidebarMenuButton>
+              <SidebarMenuButton asChild className="rounded-xl h-11 font-bold mb-1">
+                <Link href="/quotations">
+                  <Calculator className="w-5 h-5 mr-3" />
+                  <span>Cotizador</span>
+                </Link>
+              </SidebarMenuButton>
               
               {role === 'admin' && (
                 <SidebarMenuButton isActive={activeTab === 'staff'} onClick={() => { setActiveTab('staff'); setSearchTerm(''); }} className="rounded-xl h-11 font-bold mb-1">
@@ -374,8 +381,14 @@ export default function DashboardPage() {
                         </Link>
                       </Button>
                       <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
+                        <Link href="/quotations">
+                          <Calculator className="w-5 h-5 mr-3 text-accent" />
+                          Cotizador Rápido
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start h-14 border-slate-200 hover:bg-slate-50 rounded-2xl font-bold text-slate-600" asChild>
                         <Link href="/customers/new">
-                          <Users className="w-5 h-5 mr-3 text-accent" />
+                          <Users className="w-5 h-5 mr-3 text-slate-400" />
                           Registrar Cliente
                         </Link>
                       </Button>
