@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -90,7 +91,7 @@ export default function QuotationPage() {
     const amountToFinance = Math.max(0, total_price - down_pay);
     
     if (amountToFinance > 0) {
-      let interest = 0.5; // 50% for 6 months
+      let interest = 0.5; // 50% for 6 installments
       if (planType === '12') interest = 1.0; // 100% for 12 months
       else if (planType === '24') interest = 1.5; // 150% for 24 months
 
@@ -115,11 +116,12 @@ export default function QuotationPage() {
       return;
     }
 
+    const plazoLabel = paymentFrequency === 'semanal' ? 'semanas' : 'quincenas';
     const message = `¡Hola! Mi cotización de *Tecnicell Créditos*:
 📱 *Equipo:* ${deviceModel}
 💰 *Precio:* ${formatCurrency(parseFloat(initialAmount))}
 ✅ *Cuota Inicial:* ${formatCurrency(parseFloat(downPayment))}
-📅 *Plazo:* ${planType} meses
+📅 *Plazo:* ${planType} ${plazoLabel}
 💵 *Valor Cuota ${paymentFrequency}:* ${formatCurrency(calculation.installmentAmount)}
 
 *Requisitos:* Cédula y cuota inicial. ¡Entrega inmediata!`;
@@ -231,7 +233,7 @@ export default function QuotationPage() {
                         onClick={() => setPlanType(num as any)} 
                         className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
                       >
-                        {num} Meses
+                        {num} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
                       </button>
                     ))}
                   </div>
@@ -262,7 +264,7 @@ export default function QuotationPage() {
                   </h2>
                   {calculation.interestRate > 0 && (
                     <Badge className="bg-accent text-white mt-4 rounded-full px-4 font-black text-[10px] uppercase">
-                      Plan a {planType} meses
+                      Plan a {planType} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
                     </Badge>
                   )}
                 </div>

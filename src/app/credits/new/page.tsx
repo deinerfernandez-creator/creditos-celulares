@@ -342,8 +342,13 @@ export default function NewCreditPage() {
                     <Label className="font-bold">Plazo del Crédito</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {['6', '12', '24'].map(num => (
-                        <button key={num} type="button" onClick={() => setPlanType(num as any)} className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}>
-                          {num} Meses
+                        <button 
+                          key={num} 
+                          type="button" 
+                          onClick={() => setPlanType(num as any)} 
+                          className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}
+                        >
+                          {num} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
                         </button>
                       ))}
                     </div>
@@ -413,7 +418,7 @@ export default function NewCreditPage() {
               <div className="pt-4 text-center">
                 <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Valor Cuota {paymentFrequency}</p>
                 <h2 className="text-4xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
-                <p className="text-xs font-bold text-accent mt-2">{planType} Meses (+{calculation.interestRate}%)</p>
+                <p className="text-xs font-bold text-accent mt-2">{planType} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'} (+{calculation.interestRate}%)</p>
               </div>
             </CardContent>
           </Card>
