@@ -293,9 +293,8 @@ export default function CustomerPortalDashboard() {
                     <DialogHeader className="mb-4">
                       <DialogTitle className="text-2xl font-black text-white text-center">Formas de Pago</DialogTitle>
                     </DialogHeader>
-                    <TabsList className="grid w-full grid-cols-3 bg-slate-800 rounded-xl p-1">
+                    <TabsList className="grid w-full grid-cols-2 bg-slate-800 rounded-xl p-1">
                       <TabsTrigger value="nequi" className="rounded-lg font-bold data-[state=active]:bg-primary">Nequi</TabsTrigger>
-                      <TabsTrigger value="bancolombia" className="rounded-lg font-bold data-[state=active]:bg-primary">Banco</TabsTrigger>
                       <TabsTrigger value="efectivo" className="rounded-lg font-bold data-[state=active]:bg-primary">Efectivo</TabsTrigger>
                     </TabsList>
                   </div>
@@ -322,43 +321,6 @@ export default function CustomerPortalDashboard() {
                       </Button>
                     </TabsContent>
 
-                    <TabsContent value="bancolombia" className="mt-0 space-y-6">
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 bg-primary/20 rounded-xl">
-                            <Building2 className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Entidad Bancaria</p>
-                            <p className="text-lg font-black text-white">Bancolombia</p>
-                          </div>
-                        </div>
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                          <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo de Cuenta</p>
-                            <p className="font-bold text-white">Ahorros</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Número de Cuenta</p>
-                            <div className="flex items-center justify-between">
-                              <p className="text-xl font-black text-white tracking-wider">558-000123-45</p>
-                              <Button variant="ghost" size="icon" className="text-primary" onClick={() => {
-                                navigator.clipboard.writeText('55800012345');
-                                toast({ title: "Número copiado" });
-                              }}>
-                                <Copy className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Titular</p>
-                            <p className="font-bold text-white">TECNICELL SERVICIO TÉCNICO</p>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-slate-400 text-center italic">Por favor envía el comprobante de transferencia al WhatsApp oficial.</p>
-                    </TabsContent>
-
                     <TabsContent value="efectivo" className="mt-0 space-y-6">
                       <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-6">
                         <div className="flex items-start gap-4">
@@ -378,9 +340,9 @@ export default function CustomerPortalDashboard() {
                           </div>
                           <div>
                             <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Horarios de Atención</p>
-                            <p className="text-sm font-bold text-white">
-                              Lunes a Sábado: 8:00 AM - 7:00 PM<br/>
-                              Domingos: 9:00 AM - 1:00 PM
+                            <p className="text-sm font-bold text-white leading-relaxed">
+                              Lunes a Domingo: 8:00 AM - 12:30 PM<br/>
+                              Y de 2:00 PM - 6:00 PM
                             </p>
                           </div>
                         </div>
