@@ -277,10 +277,6 @@ export default function QuotationPage() {
                     <span className="text-xs font-bold text-accent uppercase tracking-widest">Cuota Inicial (-)</span>
                     <span className="text-lg font-black text-accent">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
                   </div>
-                  <div className="flex justify-between items-center border-b border-white/10 pb-4">
-                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest">Monto a Financiar</span>
-                    <span className="text-lg font-black">{formatCurrency(calculation.totalAmount)}</span>
-                  </div>
                 </div>
 
                 <div className="pt-6 text-center">
