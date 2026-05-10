@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -90,18 +91,16 @@ export default function QuotationPage() {
     const amountToFinance = Math.max(0, total_price - down_pay);
     
     if (amountToFinance > 0) {
-      let interest = 0.5; // 50% for 6 installments
-      if (planType === '12') interest = 1.0; // 100% for 12 units
-      else if (planType === '24') interest = 1.5; // 150% for 24 units
+      let interest = 0.5; // 50% for stage 6
+      if (planType === '12') interest = 1.0; // 100% for stage 12
+      else if (planType === '24') interest = 1.5; // 150% for stage 24
 
-      // Reduce interest by 20% if frequency is weekly (10% more reduction)
-      if (paymentFrequency === 'semanal') {
-        interest = Math.max(0, interest - 0.2);
-      }
-
+      // Weekly payment is half of quincenal payment:
+      // To achieve this, we double the number of installments for weekly frequency
+      // while keeping the interest tied to the original plan stages (6, 12, 24).
       const totalFinanced = amountToFinance * (1 + interest);
-      const installments = parseInt(planType);
-      const installment = totalFinanced / installments;
+      const actualInstallmentsCount = paymentFrequency === 'semanal' ? parseInt(planType) * 2 : parseInt(planType);
+      const installment = totalFinanced / actualInstallmentsCount;
 
       setCalculation({
         financedAmount: amountToFinance,
@@ -120,12 +119,13 @@ export default function QuotationPage() {
       return;
     }
 
+    const actualCount = paymentFrequency === 'semanal' ? parseInt(planType) * 2 : parseInt(planType);
     const plazoLabel = paymentFrequency === 'semanal' ? 'semanas' : 'quincenas';
     const message = `¡Hola! Mi cotización de *Tecnicell Créditos*:
 📱 *Equipo:* ${deviceModel}
 💰 *Precio:* ${formatCurrency(parseFloat(initialAmount))}
 ✅ *Cuota Inicial:* ${formatCurrency(parseFloat(downPayment))}
-📅 *Plazo:* ${planType} ${plazoLabel}
+📅 *Plazo:* ${actualCount} ${plazoLabel}
 💵 *Valor Cuota ${paymentFrequency}:* ${formatCurrency(calculation.installmentAmount)}
 
 *Requisitos:* Cédula y cuota inicial. ¡Entrega inmediata!`;
@@ -230,16 +230,20 @@ export default function QuotationPage() {
                 <div className="space-y-4">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Plazo del Crédito</Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {['6', '12', '24'].map(num => (
-                      <button 
-                        key={num} 
-                        type="button"
-                        onClick={() => setPlanType(num as any)} 
-                        className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
-                      >
-                        {num} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
-                      </button>
-                    ))}
+                    {['6', '12', '24'].map(num => {
+                      const displayNum = paymentFrequency === 'semanal' ? parseInt(num) * 2 : parseInt(num);
+                      const label = paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas';
+                      return (
+                        <button 
+                          key={num} 
+                          type="button"
+                          onClick={() => setPlanType(num as any)} 
+                          className={`h-14 rounded-xl border-2 font-black text-xs transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                        >
+                          {displayNum} {label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -268,7 +272,7 @@ export default function QuotationPage() {
                   </h2>
                   {calculation.interestRate > 0 && (
                     <Badge className="bg-accent text-white mt-4 rounded-full px-4 font-black text-[10px] uppercase">
-                      Plan a {planType} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
+                      Plan a {paymentFrequency === 'semanal' ? parseInt(planType) * 2 : planType} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
                     </Badge>
                   )}
                 </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -63,7 +64,8 @@ export default function NewCreditPage() {
     interestRate: 0,
     financedAmount: 0,
     totalAmount: 0,
-    installmentAmount: 0
+    installmentAmount: 0,
+    actualInstallmentsCount: 0
   });
 
   const customersQuery = useMemoFirebase(() => {
@@ -99,27 +101,24 @@ export default function NewCreditPage() {
     const amountToFinance = Math.max(0, total_price - down_pay);
     
     if (amountToFinance > 0) {
-      let interest = 0.5; 
-      if (planType === '12') interest = 1.0;
-      else if (planType === '24') interest = 1.5;
-
-      // Reduce interest by 20% if frequency is weekly (10% + 10% more)
-      if (paymentFrequency === 'semanal') {
-        interest = Math.max(0, interest - 0.2);
-      }
+      let interest = 0.5; // 50% interest base for 6-unit stage
+      if (planType === '12') interest = 1.0; // 100% for 12-unit stage
+      else if (planType === '24') interest = 1.5; // 150% for 24-unit stage
 
       const totalFinanced = amountToFinance * (1 + interest);
-      const installments = parseInt(planType);
-      const installment = totalFinanced / installments;
+      // To make weekly payment half of bi-weekly, we double the installment count
+      const actualInstallmentsCount = paymentFrequency === 'semanal' ? parseInt(planType) * 2 : parseInt(planType);
+      const installment = totalFinanced / actualInstallmentsCount;
 
       setCalculation({
         interestRate: interest * 100,
         financedAmount: amountToFinance,
         totalAmount: totalFinanced,
-        installmentAmount: Math.round(installment)
+        installmentAmount: Math.round(installment),
+        actualInstallmentsCount
       });
     } else {
-      setCalculation({ interestRate: 0, financedAmount: 0, totalAmount: 0, installmentAmount: 0 });
+      setCalculation({ interestRate: 0, financedAmount: 0, totalAmount: 0, installmentAmount: 0, actualInstallmentsCount: 0 });
     }
   }, [initialAmount, downPayment, planType, paymentFrequency]);
 
@@ -195,7 +194,7 @@ export default function NewCreditPage() {
       initialAmount: parseFloat(initialAmount),
       downPayment: parseFloat(downPayment),
       totalAmount: calculation.totalAmount,
-      planType: parseInt(planType),
+      planType: calculation.actualInstallmentsCount,
       paymentFrequency,
       installmentAmount: calculation.installmentAmount,
       remainingBalance: calculation.totalAmount,
@@ -317,6 +316,23 @@ export default function NewCreditPage() {
 
                   <div className="space-y-2 col-span-1 md:col-span-2">
                     <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
+                    <div className="flex gap-2 mb-2">
+                       {[30, 40, 50].map(p => (
+                         <Button 
+                          key={p} 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="rounded-full text-[10px] font-black"
+                          onClick={() => {
+                            const price = parseFloat(initialAmount) || 0;
+                            setDownPayment(Math.round(price * (p/100)).toString());
+                          }}
+                         >
+                           {p}%
+                         </Button>
+                       ))}
+                    </div>
                     <Input 
                       type="number" 
                       className="rounded-xl h-12 text-lg font-black text-green-700 bg-green-50/30"
@@ -345,16 +361,20 @@ export default function NewCreditPage() {
                   <div className="space-y-4">
                     <Label className="font-bold">Plazo del Crédito</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      {['6', '12', '24'].map(num => (
-                        <button 
-                          key={num} 
-                          type="button" 
-                          onClick={() => setPlanType(num as any)} 
-                          className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}
-                        >
-                          {num} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'}
-                        </button>
-                      ))}
+                      {['6', '12', '24'].map(num => {
+                        const displayNum = paymentFrequency === 'semanal' ? parseInt(num) * 2 : parseInt(num);
+                        const label = paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas';
+                        return (
+                          <button 
+                            key={num} 
+                            type="button" 
+                            onClick={() => setPlanType(num as any)} 
+                            className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}
+                          >
+                            {displayNum} {label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -422,7 +442,7 @@ export default function NewCreditPage() {
               <div className="pt-4 text-center">
                 <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Valor Cuota {paymentFrequency}</p>
                 <h2 className="text-4xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
-                <p className="text-xs font-bold text-accent mt-2">{planType} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'} (+{calculation.interestRate}%)</p>
+                <p className="text-xs font-bold text-accent mt-2">{calculation.actualInstallmentsCount} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'} (+{calculation.interestRate}%)</p>
               </div>
             </CardContent>
           </Card>
