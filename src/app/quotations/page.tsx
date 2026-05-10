@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -95,6 +94,11 @@ export default function QuotationPage() {
       if (planType === '12') interest = 1.0; // 100% for 12 months
       else if (planType === '24') interest = 1.5; // 150% for 24 months
 
+      // Reduce interest by 10% if frequency is weekly
+      if (paymentFrequency === 'semanal') {
+        interest = Math.max(0, interest - 0.1);
+      }
+
       const totalFinanced = amountToFinance * (1 + interest);
       const installments = parseInt(planType);
       const installment = totalFinanced / installments;
@@ -108,7 +112,7 @@ export default function QuotationPage() {
     } else {
       setCalculation({ financedAmount: 0, totalAmount: 0, installmentAmount: 0, interestRate: 0 });
     }
-  }, [initialAmount, downPayment, planType]);
+  }, [initialAmount, downPayment, planType, paymentFrequency]);
 
   const handleShareWhatsApp = () => {
     if (!deviceModel || !initialAmount || !downPayment) {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -104,6 +103,11 @@ export default function NewCreditPage() {
       if (planType === '12') interest = 1.0;
       else if (planType === '24') interest = 1.5;
 
+      // Reduce interest by 10% if frequency is weekly
+      if (paymentFrequency === 'semanal') {
+        interest = Math.max(0, interest - 0.1);
+      }
+
       const totalFinanced = amountToFinance * (1 + interest);
       const installments = parseInt(planType);
       const installment = totalFinanced / installments;
@@ -117,7 +121,7 @@ export default function NewCreditPage() {
     } else {
       setCalculation({ interestRate: 0, financedAmount: 0, totalAmount: 0, installmentAmount: 0 });
     }
-  }, [initialAmount, downPayment, planType]);
+  }, [initialAmount, downPayment, planType, paymentFrequency]);
 
   const startCamera = async (type: PhotoType) => {
     setCurrentPhotoType(type);
