@@ -14,7 +14,8 @@ import {
   Calculator,
   MessageCircle,
   Package,
-  AlertCircle
+  AlertCircle,
+  Home
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -204,9 +205,6 @@ export default function QuotationPage() {
                       )}
                     </SelectContent>
                   </Select>
-                  <Link href="/inventory" className="text-[10px] font-black text-primary uppercase text-right hover:underline flex items-center justify-end gap-1">
-                    <Package className="w-3 h-3" /> Ver catálogo completo
-                  </Link>
                 </div>
 
                 <div className="space-y-3">

@@ -239,7 +239,7 @@ export default function NewCreditPage() {
       }
 
       toast({ title: "Crédito Registrado", description: "El expediente ha sido creado y el stock actualizado." });
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setLoading(false);
@@ -257,7 +257,7 @@ export default function NewCreditPage() {
       <div className="w-full max-w-5xl space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="rounded-full">
-            <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+            <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Solicitud de Crédito</h1>
         </div>

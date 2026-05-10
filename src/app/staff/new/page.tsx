@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -34,7 +35,7 @@ export default function NewStaffPage() {
         description: "Solo administradores pueden acceder a esta sección.",
         variant: "destructive"
       });
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [role, authLoading, router, toast]);
 
@@ -66,7 +67,7 @@ export default function NewStaffPage() {
           title: "Usuario Registrado",
           description: `Se han asignado permisos de ${formData.role} a ${formData.email}.`,
         });
-        router.push('/');
+        router.push('/dashboard');
       })
       .catch((error: any) => {
         toast({
@@ -85,7 +86,7 @@ export default function NewStaffPage() {
       <div className="w-full max-w-xl space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="rounded-full">
-            <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+            <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">Habilitar Nuevo Usuario</h1>
         </div>

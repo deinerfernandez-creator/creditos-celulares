@@ -68,7 +68,7 @@ export default function NewCustomerPage() {
       description: "El cliente ha sido registrado correctamente.",
     });
     
-    router.push('/');
+    router.push('/dashboard');
   };
 
   return (
@@ -76,7 +76,7 @@ export default function NewCustomerPage() {
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="rounded-full">
-            <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+            <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">Registro de Nuevo Cliente</h1>
         </div>

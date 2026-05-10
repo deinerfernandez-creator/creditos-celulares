@@ -339,7 +339,7 @@ export default function CreditDetailPage() {
     if (!id || !db) return;
     deleteDocumentNonBlocking(doc(db, 'credits', id));
     toast({ title: "Expediente Eliminado", description: "El crédito ha sido removido satisfactoriamente." });
-    router.push('/');
+    router.push('/dashboard');
   };
 
   const handlePrint = (type: 'contract' | 'promissory') => {
@@ -380,7 +380,7 @@ export default function CreditDetailPage() {
       <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center bg-slate-50">
         <AlertCircle className="w-16 h-16 text-destructive/20 mb-6" />
         <h2 className="text-2xl font-black text-slate-900">Crédito no encontrado</h2>
-        <Button asChild className="mt-8 rounded-xl"><Link href="/">Volver</Link></Button>
+        <Button asChild className="mt-8 rounded-xl"><Link href="/dashboard">Volver</Link></Button>
       </div>
     );
   }
@@ -395,7 +395,7 @@ export default function CreditDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" asChild className="rounded-xl bg-white shadow-sm">
-              <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+              <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
             </Button>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Expediente Financiero</h1>

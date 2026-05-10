@@ -99,7 +99,7 @@ export default function NewSalePage() {
       }
 
       toast({ title: "Venta Registrada", description: "La venta a contado se ha guardado y el stock actualizado." });
-      router.push('/');
+      router.push('/dashboard');
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo registrar la venta.", variant: "destructive" });
     } finally {
@@ -112,7 +112,7 @@ export default function NewSalePage() {
       <div className="w-full max-w-2xl space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="rounded-full bg-white shadow-sm">
-            <Link href="/"><ChevronLeft className="w-5 h-5" /></Link>
+            <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Venta Directa a Contado</h1>

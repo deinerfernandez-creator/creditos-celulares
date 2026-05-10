@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -45,7 +46,7 @@ export default function LoginPage() {
         title: "Sesión iniciada",
         description: "Bienvenido al panel administrativo de Tecnicell.",
       });
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       console.error("Login Error:", error.code, error.message);
       
@@ -74,7 +75,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
         <Button variant="ghost" asChild className="rounded-xl text-slate-500 hover:text-primary">
-          <Link href="/portal"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Portal de Clientes</Link>
+          <Link href="/"><ArrowLeft className="w-4 h-4 mr-2" /> Volver al Inicio</Link>
         </Button>
 
         {isConfigMissing && (
