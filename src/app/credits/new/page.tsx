@@ -104,9 +104,9 @@ export default function NewCreditPage() {
       if (planType === '12') interest = 1.0; // 100% for 12-unit stage
       else if (planType === '24') interest = 1.5; // 150% for 24-unit stage
 
-      // Recargo del 10% si el equipo vale menos de 501,000
+      // Recargo del 5% si el equipo vale menos de 501,000
       if (total_price < 501000) {
-        interest += 0.1;
+        interest += 0.05;
       }
 
       const totalFinanced = amountToFinance * (1 + interest);
