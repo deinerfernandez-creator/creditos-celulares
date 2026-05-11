@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -18,12 +19,14 @@ import {
   User as UserIcon,
   X,
   CreditCard as IdCardIcon,
-  AlertCircle
+  AlertCircle,
+  SwitchCamera
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -51,10 +54,14 @@ export default function NewCreditPage() {
   const [planType, setPlanType] = useState<'6' | '12' | '24'>('6');
   const [paymentFrequency, setPaymentFrequency] = useState<'semanal' | 'quincenal'>('quincenal');
   
+  // Camera States
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [currentPhotoType, setCurrentPhotoType] = useState<PhotoType | null>(null);
+  
+  // Photos Data
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [idFrontPhoto, setIdFrontPhoto] = useState<string | null>(null);
   const [idBackPhoto, setIdBackPhoto] = useState<string | null>(null);
@@ -100,17 +107,15 @@ export default function NewCreditPage() {
     const amountToFinance = Math.max(0, total_price - down_pay);
     
     if (amountToFinance > 0) {
-      let interest = 0.5; // 50% interest base for 6-unit stage
-      if (planType === '12') interest = 1.0; // 100% for 12-unit stage
-      else if (planType === '24') interest = 1.5; // 150% for 24-unit stage
+      let interest = 0.5; 
+      if (planType === '12') interest = 1.0; 
+      else if (planType === '24') interest = 1.5; 
 
-      // Recargo del 5% si el equipo vale menos de 501,000
       if (total_price < 501000) {
         interest += 0.05;
       }
 
       const totalFinanced = amountToFinance * (1 + interest);
-      // To make weekly payment half of bi-weekly, we double the installment count
       const actualInstallmentsCount = paymentFrequency === 'semanal' ? parseInt(planType) * 2 : parseInt(planType);
       const installment = totalFinanced / actualInstallmentsCount;
 
@@ -126,23 +131,46 @@ export default function NewCreditPage() {
     }
   }, [initialAmount, downPayment, planType, paymentFrequency]);
 
-  const startCamera = async (type: PhotoType) => {
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const startCamera = async (type: PhotoType, mode: 'user' | 'environment' = facingMode) => {
+    stopCamera();
     setCurrentPhotoType(type);
+    setFacingMode(mode);
     setShowCamera(true);
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+        video: { 
+          facingMode: mode, 
+          width: { ideal: 1920 }, 
+          height: { ideal: 1080 } 
+        } 
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
     } catch (error) {
+      console.error('Error camera:', error);
       setShowCamera(false);
       toast({
         variant: 'destructive',
         title: 'Error de Cámara',
-        description: 'No se pudo acceder a la cámara.',
+        description: 'No se pudo acceder a la cámara seleccionada.',
       });
+    }
+  };
+
+  const handleToggleCamera = () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    if (currentPhotoType) {
+      startCamera(currentPhotoType, nextMode);
     }
   };
 
@@ -153,10 +181,46 @@ export default function NewCreditPage() {
       const context = canvas.getContext('2d');
 
       if (context && video.videoWidth > 0) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const photoData = canvas.toDataURL('image/jpeg', 0.8);
+        const vW = video.videoWidth;
+        const vH = video.videoHeight;
+        
+        let targetW, targetH;
+        let startX, startY;
+
+        if (currentPhotoType === 'customer') {
+          // Relación Retrato 3:4
+          targetH = vH;
+          targetW = (targetH * 3) / 4;
+          if (targetW > vW) {
+             targetW = vW;
+             targetH = (targetW * 4) / 3;
+          }
+        } else {
+          // Relación Cédula (ID-1) 85.6 x 53.98 (~1.58:1)
+          targetW = vW * 0.8; // Usar el 80% del ancho del video
+          targetH = (targetW * 53.98) / 85.6;
+          if (targetH > vH) {
+             targetH = vH * 0.8;
+             targetW = (targetH * 85.6) / 53.98;
+          }
+        }
+
+        startX = (vW - targetW) / 2;
+        startY = (vH - targetH) / 2;
+
+        canvas.width = targetW;
+        canvas.height = targetH;
+        
+        // Espejo si es cámara frontal
+        if (facingMode === 'user') {
+          context.translate(targetW, 0);
+          context.scale(-1, 1);
+          context.drawImage(video, startX, startY, targetW, targetH, 0, 0, targetW, targetH);
+        } else {
+          context.drawImage(video, startX, startY, targetW, targetH, 0, 0, targetW, targetH);
+        }
+
+        const photoData = canvas.toDataURL('image/jpeg', 0.85);
         
         if (currentPhotoType === 'customer') setCapturedPhoto(photoData);
         if (currentPhotoType === 'idFront') setIdFrontPhoto(photoData);
@@ -164,16 +228,8 @@ export default function NewCreditPage() {
 
         stopCamera();
         setShowCamera(false);
-        toast({ title: "Foto Capturada" });
+        toast({ title: "Foto Guardada" });
       }
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
     }
   };
 
@@ -232,7 +288,7 @@ export default function NewCreditPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8 flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex items-center justify-center font-body">
       <canvas ref={canvasRef} className="hidden" />
 
       <div className="w-full max-w-5xl space-y-6">
@@ -240,41 +296,43 @@ export default function NewCreditPage() {
           <Button variant="ghost" size="icon" asChild className="rounded-full">
             <Link href="/dashboard"><ChevronLeft className="w-5 h-5" /></Link>
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Solicitud de Crédito</h1>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">Nueva Solicitud de Crédito</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-2 border-none shadow-xl">
-            <CardHeader className="border-b bg-slate-50/50">
-              <CardTitle className="text-lg font-black">Información del Crédito</CardTitle>
+          <Card className="lg:col-span-2 border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-white">
+            <CardHeader className="border-b bg-slate-900 text-white p-6">
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <IdCardIcon className="w-5 h-5 text-accent" /> Información del Crédito
+              </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <CardContent className="pt-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="font-bold">Cliente</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Cliente Titular</Label>
                     <Select onValueChange={setCustomerId} disabled={loading} required>
-                      <SelectTrigger className="rounded-xl h-12">
+                      <SelectTrigger className="rounded-xl h-12 border-slate-200">
                         <SelectValue placeholder="Selecciona un cliente" />
                       </SelectTrigger>
                       <SelectContent>
                         {customers?.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name} ({c.cedula})</SelectItem>
+                          <SelectItem key={c.id} value={c.id} className="font-bold">{c.name} ({c.cedula})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Equipo del Inventario</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Equipo del Inventario</Label>
                     <Select onValueChange={handleInventorySelect} disabled={loading} required>
-                      <SelectTrigger className="rounded-xl h-12 font-bold">
+                      <SelectTrigger className="rounded-xl h-12 font-bold border-slate-200">
                         <SelectValue placeholder="Elegir del stock..." />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px]">
                         {inventoryPhones?.filter(p => p.imeis?.length > 0).map((p) => (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.brand} {p.model} (Stock: {p.imeis.length})
+                            {p.brand} {p.model} (Disponibles: {p.imeis.length})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -282,10 +340,10 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">IMEI del Equipo</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">IMEI del Equipo</Label>
                     {selectedPhoneData && selectedPhoneData.imeis?.length > 0 ? (
                       <Select onValueChange={setImei} value={imei} disabled={loading} required>
-                        <SelectTrigger className="rounded-xl h-12 font-mono">
+                        <SelectTrigger className="rounded-xl h-12 font-mono border-slate-200">
                           <SelectValue placeholder="Elegir IMEI disponible..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -296,8 +354,8 @@ export default function NewCreditPage() {
                       </Select>
                     ) : (
                       <Input 
-                        placeholder="IMEI manual" 
-                        className="rounded-xl h-12 font-mono"
+                        placeholder="Ingreso manual de IMEI" 
+                        className="rounded-xl h-12 font-mono border-slate-200"
                         value={imei}
                         onChange={(e) => setImei(e.target.value)}
                         disabled={loading}
@@ -307,10 +365,10 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-bold">Precio de Venta (COP)</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Precio de Venta (COP)</Label>
                     <Input 
                       type="number" 
-                      className="rounded-xl h-12 text-lg font-bold"
+                      className="rounded-xl h-12 text-lg font-black bg-slate-50 border-slate-200"
                       value={initialAmount}
                       onChange={(e) => setInitialAmount(e.target.value)}
                       disabled={loading}
@@ -319,27 +377,27 @@ export default function NewCreditPage() {
                   </div>
 
                   <div className="space-y-2 col-span-1 md:col-span-2">
-                    <Label className="font-bold text-green-700">Cuota Inicial (Abono)</Label>
-                    <div className="flex gap-2 mb-2">
-                       {[30, 40, 50].map(p => (
-                         <Button 
-                          key={p} 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="rounded-full text-[10px] font-black"
-                          onClick={() => {
-                            const price = parseFloat(initialAmount) || 0;
-                            setDownPayment(Math.round(price * (p/100)).toString());
-                          }}
-                         >
-                           {p}%
-                         </Button>
-                       ))}
+                    <div className="flex justify-between items-center mb-1">
+                      <Label className="font-bold text-xs uppercase tracking-widest text-green-700">Abono Inicial Pactado</Label>
+                      <div className="flex gap-1">
+                        {[30, 40, 50].map(p => (
+                          <button 
+                            key={p} 
+                            type="button" 
+                            className="text-[9px] font-black bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
+                            onClick={() => {
+                              const price = parseFloat(initialAmount) || 0;
+                              setDownPayment(Math.round(price * (p/100)).toString());
+                            }}
+                          >
+                            {p}%
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <Input 
                       type="number" 
-                      className="rounded-xl h-12 text-lg font-black text-green-700 bg-green-50/30"
+                      className="rounded-xl h-12 text-lg font-black text-green-700 bg-green-50 border-green-100"
                       value={downPayment}
                       onChange={(e) => setDownPayment(e.target.value)}
                       disabled={loading}
@@ -348,22 +406,22 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100">
                   <div className="space-y-4">
-                    <Label className="font-bold">Frecuencia de Pago</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Frecuencia de Cobro</Label>
                     <Select value={paymentFrequency} onValueChange={(val: any) => setPaymentFrequency(val)} disabled={loading}>
-                      <SelectTrigger className="rounded-xl h-12">
+                      <SelectTrigger className="rounded-xl h-12 border-slate-200 font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="semanal">Semanal</SelectItem>
-                        <SelectItem value="quincenal">Quincenal</SelectItem>
+                        <SelectItem value="semanal" className="font-bold">Plan Semanal</SelectItem>
+                        <SelectItem value="quincenal" className="font-bold">Plan Quincenal</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="font-bold">Plazo del Crédito</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest text-slate-400">Plazo del Financiamiento</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {['6', '12', '24'].map(num => {
                         const displayNum = paymentFrequency === 'semanal' ? parseInt(num) * 2 : parseInt(num);
@@ -373,7 +431,7 @@ export default function NewCreditPage() {
                             key={num} 
                             type="button" 
                             onClick={() => setPlanType(num as any)} 
-                            className={`p-3 rounded-xl border-2 font-black text-xs ${planType === num ? 'border-primary bg-primary/5' : 'border-slate-100'}`}
+                            className={`p-3 rounded-xl border-2 font-black text-[10px] transition-all ${planType === num ? 'border-primary bg-primary text-white' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
                           >
                             {displayNum} {label}
                           </button>
@@ -383,25 +441,39 @@ export default function NewCreditPage() {
                   </div>
                 </div>
 
-                <div className="space-y-6 border-t pt-8">
-                  <Label className="text-lg font-black">Expediente Fotográfico</Label>
+                <div className="space-y-6 pt-8 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Camera className="w-5 h-5 text-primary" />
+                    <Label className="text-lg font-black">Expediente Fotográfico</Label>
+                  </div>
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                     {[
-                      { label: 'Cliente', type: 'customer', data: capturedPhoto },
-                      { label: 'Cédula (Frontal)', type: 'idFront', data: idFrontPhoto },
-                      { label: 'Cédula (Posterior)', type: 'idBack', data: idBackPhoto }
+                      { label: 'Cliente (Retrato)', type: 'customer', data: capturedPhoto, icon: UserIcon },
+                      { label: 'Cédula (Frontal)', type: 'idFront', data: idFrontPhoto, icon: IdCardIcon },
+                      { label: 'Cédula (Posterior)', type: 'idBack', data: idBackPhoto, icon: IdCardIcon }
                     ].map((btn) => (
-                      <div key={btn.type} className="space-y-2 text-center">
-                        <p className="text-[10px] font-black uppercase text-slate-400">{btn.label}</p>
+                      <div key={btn.type} className="space-y-2">
+                        <p className="text-[10px] font-black uppercase text-slate-400 text-center tracking-widest">{btn.label}</p>
                         {!btn.data ? (
-                          <Button type="button" onClick={() => startCamera(btn.type as PhotoType)} className="w-full h-32 rounded-2xl border-2 border-dashed bg-primary/5 text-primary flex-col gap-2">
-                            <Camera className="w-6 h-6" />
-                            <span className="text-[10px] font-bold">Capturar</span>
+                          <Button 
+                            type="button" 
+                            onClick={() => startCamera(btn.type as PhotoType)} 
+                            className={cn(
+                              "w-full rounded-2xl border-2 border-dashed bg-slate-50 text-slate-400 flex-col gap-3 hover:bg-primary/5 hover:border-primary/30 transition-all",
+                              btn.type === 'customer' ? 'aspect-[3/4]' : 'aspect-[85/54]'
+                            )}
+                          >
+                            <btn.icon className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Abrir Cámara</span>
                           </Button>
                         ) : (
-                          <div className="relative rounded-2xl overflow-hidden aspect-[3/4] border-2 border-green-500">
+                          <div className={cn(
+                            "relative rounded-2xl overflow-hidden border-2 border-green-500 shadow-lg",
+                            btn.type === 'customer' ? 'aspect-[3/4]' : 'aspect-[85/54]'
+                          )}>
                             <img src={btn.data} className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => startCamera(btn.type as PhotoType)} className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-lg text-primary">
+                            <button type="button" onClick={() => startCamera(btn.type as PhotoType)} className="absolute bottom-2 right-2 p-2 bg-white rounded-full shadow-xl text-primary hover:scale-110 transition-transform">
                               <RefreshCw className="w-4 h-4" />
                             </button>
                           </div>
@@ -411,47 +483,95 @@ export default function NewCreditPage() {
                   </div>
 
                   {showCamera && (
-                    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
-                      <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20">
-                        <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
-                        <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
-                           <Button type="button" onClick={capturePhoto} className="rounded-full w-20 h-20 bg-white border-8 border-primary shadow-2xl" />
-                           <Button type="button" variant="secondary" onClick={() => { stopCamera(); setShowCamera(false); }} className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md">
+                    <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4">
+                      <div className="relative w-full max-w-2xl bg-slate-900 rounded-[2.5rem] overflow-hidden border-4 border-white/10 shadow-2xl">
+                        <video ref={videoRef} autoPlay muted playsInline className="w-full h-auto aspect-video object-cover" />
+                        
+                        {/* Overlay Guía */}
+                        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                          <div className={cn(
+                            "border-2 border-white/50 border-dashed rounded-2xl relative",
+                            currentPhotoType === 'customer' ? "w-[60%] aspect-[3/4]" : "w-[85%] aspect-[85/54]"
+                          )}>
+                            <div className="absolute -top-10 left-0 right-0 text-center">
+                               <span className="bg-black/60 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full backdrop-blur-md border border-white/10 tracking-widest">
+                                 Encuadra {currentPhotoType === 'customer' ? 'el Rostro' : 'la Cédula'} aquí
+                               </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between">
+                          <Button type="button" variant="outline" onClick={handleToggleCamera} className="rounded-full w-14 h-14 bg-white/10 border-white/20 text-white backdrop-blur-md">
+                            <SwitchCamera className="w-6 h-6" />
+                          </Button>
+
+                          <Button 
+                            type="button" 
+                            onClick={capturePhoto} 
+                            className="rounded-full w-20 h-20 bg-white border-8 border-primary shadow-2xl flex items-center justify-center"
+                          >
+                             <div className="w-12 h-12 rounded-full bg-primary" />
+                          </Button>
+
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            onClick={() => { stopCamera(); setShowCamera(false); }} 
+                            className="rounded-full w-14 h-14 backdrop-blur-md"
+                          >
                              <X className="w-6 h-6" />
-                           </Button>
+                          </Button>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <Button type="submit" disabled={loading || !capturedPhoto} className="w-full h-16 rounded-2xl text-xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20">
-                  {loading ? "Procesando..." : "Habilitar Crédito"}
+                <Button type="submit" disabled={loading || !capturedPhoto} className="w-full h-16 rounded-2xl text-xl font-black bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 mt-4">
+                  {loading ? "Registrando expediente..." : "Habilitar Crédito Tecnicell"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-2xl bg-primary text-white rounded-[2.5rem] h-fit">
-            <CardHeader><CardTitle className="font-black">Resumen del Plan</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-xs font-bold opacity-70">Precio del Equipo</span>
-                <span className="font-black">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-2 text-accent">
-                <span className="text-xs font-bold">Abono Inicial (-)</span>
-                <span className="font-black">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
-              </div>
-              <div className="pt-4 text-center">
-                <p className="text-[10px] opacity-60 font-black uppercase tracking-widest">Valor Cuota {paymentFrequency}</p>
-                <h2 className="text-4xl font-black">{formatCurrency(calculation.installmentAmount)}</h2>
-                <p className="text-xs font-bold text-accent mt-2">{calculation.actualInstallmentsCount} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'} (+{calculation.interestRate}%)</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card className="border-none shadow-2xl bg-primary text-white rounded-[2.5rem] h-fit sticky top-8">
+              <CardHeader className="bg-white/10 border-b border-white/10 pb-6">
+                <CardTitle className="font-black uppercase tracking-tighter">Resumen del Plan</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div className="flex justify-between border-b border-white/10 pb-3">
+                  <span className="text-xs font-bold opacity-70">Valor Equipo</span>
+                  <span className="font-black">{formatCurrency(parseFloat(initialAmount) || 0)}</span>
+                </div>
+                <div className="flex justify-between border-b border-white/10 pb-3 text-accent">
+                  <span className="text-xs font-bold uppercase tracking-widest">Cuota Inicial (-)</span>
+                  <span className="font-black">-{formatCurrency(parseFloat(downPayment) || 0)}</span>
+                </div>
+                
+                <div className="py-6 text-center bg-white/5 rounded-3xl border border-white/10">
+                  <p className="text-[10px] opacity-60 font-black uppercase tracking-widest mb-1">Valor Cuota {paymentFrequency}</p>
+                  <h2 className="text-5xl font-black tracking-tighter">{formatCurrency(calculation.installmentAmount)}</h2>
+                  <div className="mt-4">
+                    <Badge className="bg-accent text-white rounded-full px-4 font-black text-[10px] uppercase tracking-widest">
+                      {calculation.actualInstallmentsCount} {paymentFrequency === 'semanal' ? 'Semanas' : 'Quincenas'} (+{calculation.interestRate}%)
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-900/50 rounded-2xl border border-white/5 space-y-2">
+                   <div className="flex justify-between items-center text-[10px] font-bold opacity-60">
+                      <span>Total Financiado (C/ Recargo)</span>
+                      <span>{formatCurrency(calculation.totalAmount)}</span>
+                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
