@@ -25,8 +25,9 @@ import {
   TrendingUp,
   AlertCircle
 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, initializeFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -75,12 +76,14 @@ export default function InventoryPage() {
   const [newImeisText, setNewImeisText] = useState('');
   const [newCostPrice, setNewCostPrice] = useState('');
   const [newSalePrice, setNewSalePrice] = useState('');
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
 
   // Add stock states
   const [addingStockId, setAddingStockId] = useState<string | null>(null);
   const [additionalImeisText, setAdditionalImeisText] = useState('');
   const [editCostPrice, setEditCostPrice] = useState('');
   const [editSalePrice, setEditSalePrice] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [isAddingStock, setIsAddingStock] = useState(false);
 
   const phonesQuery = useMemoFirebase(() => {
@@ -121,6 +124,14 @@ export default function InventoryPage() {
 
     setLoading(true);
     try {
+      let imageUrl = '';
+      if (newImageFile) {
+        const storage = initializeFirebase().storage;
+        const storageRef = ref(storage, `inventory/${Date.now()}_${newImageFile.name}`);
+        await uploadBytes(storageRef, newImageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
       await addDoc(collection(db, 'phones'), {
         brand: newBrand,
         model: newModel,
@@ -128,6 +139,7 @@ export default function InventoryPage() {
         quantity: imeis.length,
         costPrice: parseFloat(newCostPrice) || 0,
         salePrice: parseFloat(newSalePrice) || 0,
+        ...(imageUrl && { imageUrl }),
         createdAt: serverTimestamp()
       });
       toast({ title: "Stock Registrado", description: `${newBrand} ${newModel} (${imeis.length} unidades) añadidas.` });
@@ -138,6 +150,7 @@ export default function InventoryPage() {
       setNewImeisText('');
       setNewCostPrice('');
       setNewSalePrice('');
+      setNewImageFile(null);
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo registrar el stock.", variant: "destructive" });
     } finally {
@@ -161,16 +174,26 @@ export default function InventoryPage() {
       const newCost = parseFloat(editCostPrice);
       const newSale = parseFloat(editSalePrice);
 
+      let newImageUrl = phone.imageUrl || '';
+      if (editImageFile) {
+        const storage = initializeFirebase().storage;
+        const storageRef = ref(storage, `inventory/${Date.now()}_${editImageFile.name}`);
+        await uploadBytes(storageRef, editImageFile);
+        newImageUrl = await getDownloadURL(storageRef);
+      }
+
       await updateDoc(doc(db, 'phones', phone.id), {
         imeis: updatedImeis,
         quantity: updatedImeis.length,
         ...( !isNaN(newCost) && { costPrice: newCost } ),
-        ...( !isNaN(newSale) && { salePrice: newSale } )
+        ...( !isNaN(newSale) && { salePrice: newSale } ),
+        ...( newImageUrl && { imageUrl: newImageUrl } )
       });
       
       toast({ title: "Stock Actualizado", description: `Se han actualizado los datos de ${phone.brand} ${phone.model}.` });
       setAddingStockId(null);
       setAdditionalImeisText('');
+      setEditImageFile(null);
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo actualizar el stock.", variant: "destructive" });
     } finally {
@@ -234,6 +257,19 @@ export default function InventoryPage() {
                     className="rounded-xl font-mono text-xs min-h-[120px] resize-none"
                   />
                   <p className="text-[9px] text-slate-400 font-bold italic">Se registrarán {newImeisText.split('\n').filter(i => i.trim() !== '').length} equipos en total.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label className="font-bold text-xs">Foto del Equipo</Label>
+                    <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">OPCIONAL</span>
+                  </div>
+                  <Input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
+                    className="rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer h-auto text-xs"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -306,8 +342,19 @@ export default function InventoryPage() {
                         return (
                           <tr key={phone.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-6 py-5">
-                              <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-0.5">{phone.brand}</p>
-                              <p className="font-black text-slate-900 leading-none">{phone.model}</p>
+                              <div className="flex items-center gap-3">
+                                {phone.imageUrl ? (
+                                  <img src={phone.imageUrl} alt={phone.model} className="w-10 h-10 rounded-xl object-cover bg-slate-100 shadow-sm shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shrink-0">
+                                    <Smartphone className="w-5 h-5" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="text-[9px] font-black text-primary uppercase tracking-widest mb-0.5">{phone.brand}</p>
+                                  <p className="font-black text-slate-900 leading-none">{phone.model}</p>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-4 py-5 text-center">
                               <Badge variant={isOutOfStock ? "destructive" : "default"} className={`rounded-full px-3 font-black ${!isOutOfStock ? 'bg-green-500' : ''}`}>
@@ -331,6 +378,7 @@ export default function InventoryPage() {
                                     setAdditionalImeisText('');
                                     setEditCostPrice(phone.costPrice?.toString() || '');
                                     setEditSalePrice(phone.salePrice?.toString() || '');
+                                    setEditImageFile(null);
                                   } else {
                                     setAddingStockId(null);
                                   }
@@ -385,6 +433,44 @@ export default function InventoryPage() {
                                             className="rounded-xl h-10 bg-primary/5 border-primary/20 font-bold"
                                           />
                                         </div>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <Label className="font-bold text-xs">Actualizar Foto del Equipo</Label>
+                                        <Input 
+                                          type="file" 
+                                          accept="image/*"
+                                          onChange={(e) => setEditImageFile(e.target.files?.[0] || null)}
+                                          className="rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer h-auto text-xs"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2 mt-4 pt-4 border-t">
+                                        <Label className="font-bold text-xs">IMEIs Actuales ({phone.imeis?.length || 0})</Label>
+                                        {phone.imeis && phone.imeis.length > 0 ? (
+                                          <div className="max-h-32 overflow-y-auto space-y-1 bg-slate-50 p-2 rounded-xl border">
+                                            {phone.imeis.map((imei: string, index: number) => (
+                                              <div key={index} className="flex justify-between items-center text-xs font-mono bg-white p-1.5 rounded-lg shadow-sm">
+                                                <span>{imei}</span>
+                                                <Button 
+                                                  type="button" 
+                                                  variant="ghost" 
+                                                  size="icon" 
+                                                  className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                                  onClick={async () => {
+                                                    const updated = phone.imeis.filter((_: any, i: number) => i !== index);
+                                                    await updateDoc(doc(db, 'phones', phone.id), { imeis: updated, quantity: updated.length });
+                                                    toast({ title: "IMEI Eliminado", description: `Se ha retirado el IMEI ${imei} del inventario.` });
+                                                  }}
+                                                >
+                                                  <Trash2 className="w-3 h-3" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs text-slate-400 italic">No hay IMEIs registrados.</p>
+                                        )}
                                       </div>
                                     </div>
                                     <DialogFooter>
