@@ -3,30 +3,30 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Card, 
-  CardHeader, 
-  CardTitle, 
-  CardContent, 
-  CardDescription 
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { 
-  Smartphone, 
-  ChevronLeft, 
-  PlusCircle, 
-  Search, 
-  Trash2, 
+import {
+  Smartphone,
+  ChevronLeft,
+  PlusCircle,
+  Search,
+  Trash2,
   Package,
   Loader2,
   TrendingUp,
   AlertCircle
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -39,6 +39,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 
@@ -56,16 +65,23 @@ export default function InventoryPage() {
   const router = useRouter();
   const db = useFirestore();
   const { toast } = useToast();
-  
+
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Form states
   const [newBrand, setNewBrand] = useState('');
   const [newModel, setNewModel] = useState('');
   const [newImeisText, setNewImeisText] = useState('');
   const [newCostPrice, setNewCostPrice] = useState('');
   const [newSalePrice, setNewSalePrice] = useState('');
+
+  // Add stock states
+  const [addingStockId, setAddingStockId] = useState<string | null>(null);
+  const [additionalImeisText, setAdditionalImeisText] = useState('');
+  const [editCostPrice, setEditCostPrice] = useState('');
+  const [editSalePrice, setEditSalePrice] = useState('');
+  const [isAddingStock, setIsAddingStock] = useState(false);
 
   const phonesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -87,8 +103,8 @@ export default function InventoryPage() {
     if (!sortedPhones) return [];
     if (!searchTerm) return sortedPhones;
     const term = searchTerm.toLowerCase();
-    return sortedPhones.filter(p => 
-      (p.brand || '').toLowerCase().includes(term) || 
+    return sortedPhones.filter(p =>
+      (p.brand || '').toLowerCase().includes(term) ||
       (p.model || '').toLowerCase().includes(term) ||
       (p.imeis && p.imeis.some((i: string) => i.toLowerCase().includes(term)))
     );
@@ -97,7 +113,7 @@ export default function InventoryPage() {
   const handleAddPhone = async (e: React.FormEvent) => {
     e.preventDefault();
     const imeis = newImeisText.split('\n').map(i => i.trim()).filter(i => i !== '');
-    
+
     if (!newBrand || !newModel || imeis.length === 0) {
       toast({ title: "Error", description: "Marca, Modelo y al menos un IMEI son requeridos.", variant: "destructive" });
       return;
@@ -115,7 +131,7 @@ export default function InventoryPage() {
         createdAt: serverTimestamp()
       });
       toast({ title: "Stock Registrado", description: `${newBrand} ${newModel} (${imeis.length} unidades) añadidas.` });
-      
+
       // Reset form
       setNewBrand('');
       setNewModel('');
@@ -132,6 +148,34 @@ export default function InventoryPage() {
   const handleDeletePhone = (id: string) => {
     deleteDocumentNonBlocking(doc(db, 'phones', id));
     toast({ title: "Registro Eliminado", description: "El lote ha sido removido del catálogo." });
+  };
+
+  const handleAddStockToExisting = async (phone: any) => {
+    const newImeis = additionalImeisText.split('\n').map(i => i.trim()).filter(i => i !== '');
+
+    setIsAddingStock(true);
+    try {
+      const existingImeis = phone.imeis || [];
+      const updatedImeis = [...existingImeis, ...newImeis];
+      
+      const newCost = parseFloat(editCostPrice);
+      const newSale = parseFloat(editSalePrice);
+
+      await updateDoc(doc(db, 'phones', phone.id), {
+        imeis: updatedImeis,
+        quantity: updatedImeis.length,
+        ...( !isNaN(newCost) && { costPrice: newCost } ),
+        ...( !isNaN(newSale) && { salePrice: newSale } )
+      });
+      
+      toast({ title: "Stock Actualizado", description: `Se han actualizado los datos de ${phone.brand} ${phone.model}.` });
+      setAddingStockId(null);
+      setAdditionalImeisText('');
+    } catch (err: any) {
+      toast({ title: "Error", description: "No se pudo actualizar el stock.", variant: "destructive" });
+    } finally {
+      setIsAddingStock(false);
+    }
   };
 
   return (
@@ -160,8 +204,8 @@ export default function InventoryPage() {
               <form onSubmit={handleAddPhone} className="space-y-4">
                 <div className="space-y-2">
                   <Label className="font-bold text-xs">Marca</Label>
-                  <Input 
-                    placeholder="Apple, Samsung" 
+                  <Input
+                    placeholder="Apple, Samsung"
                     value={newBrand}
                     onChange={(e) => setNewBrand(e.target.value)}
                     className="rounded-xl h-10"
@@ -170,8 +214,8 @@ export default function InventoryPage() {
 
                 <div className="space-y-2">
                   <Label className="font-bold text-xs">Modelo Comercial</Label>
-                  <Input 
-                    placeholder="iPhone 15 Pro Max" 
+                  <Input
+                    placeholder="iPhone 15 Pro Max"
                     value={newModel}
                     onChange={(e) => setNewModel(e.target.value)}
                     className="rounded-xl h-10"
@@ -183,8 +227,8 @@ export default function InventoryPage() {
                     <Label className="font-bold text-xs">Listado de IMEIs</Label>
                     <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">UNO POR LÍNEA</span>
                   </div>
-                  <Textarea 
-                    placeholder="Ingresa cada IMEI en una línea diferente..." 
+                  <Textarea
+                    placeholder="Ingresa cada IMEI en una línea diferente..."
                     value={newImeisText}
                     onChange={(e) => setNewImeisText(e.target.value)}
                     className="rounded-xl font-mono text-xs min-h-[120px] resize-none"
@@ -195,9 +239,9 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="font-bold text-xs">Costo Unitario (COP)</Label>
-                    <Input 
+                    <Input
                       type="number"
-                      placeholder="0" 
+                      placeholder="0"
                       value={newCostPrice}
                       onChange={(e) => setNewCostPrice(e.target.value)}
                       className="rounded-xl h-10 bg-slate-50"
@@ -205,9 +249,9 @@ export default function InventoryPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="font-bold text-xs">Venta Unitario (COP)</Label>
-                    <Input 
+                    <Input
                       type="number"
-                      placeholder="0" 
+                      placeholder="0"
                       value={newSalePrice}
                       onChange={(e) => setNewSalePrice(e.target.value)}
                       className="rounded-xl h-10 bg-primary/5 border-primary/20 font-bold"
@@ -231,8 +275,8 @@ export default function InventoryPage() {
                 </CardTitle>
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    placeholder="Buscar por marca, modelo o IMEI..." 
+                  <Input
+                    placeholder="Buscar por marca, modelo o IMEI..."
                     className="pl-10 rounded-xl h-10 text-xs"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -281,6 +325,82 @@ export default function InventoryPage() {
                             </td>
                             <td className="px-6 py-5 text-right">
                               <div className="flex items-center justify-end gap-2">
+                                <Dialog open={addingStockId === phone.id} onOpenChange={(open) => {
+                                  if (open) {
+                                    setAddingStockId(phone.id);
+                                    setAdditionalImeisText('');
+                                    setEditCostPrice(phone.costPrice?.toString() || '');
+                                    setEditSalePrice(phone.salePrice?.toString() || '');
+                                  } else {
+                                    setAddingStockId(null);
+                                  }
+                                }}>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-primary hover:bg-primary/10 rounded-xl">
+                                      <PlusCircle className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="rounded-2xl">
+                                    <DialogHeader>
+                                      <DialogTitle className="font-black">Editar / Añadir Stock: {phone.brand} {phone.model}</DialogTitle>
+                                      <DialogDescription>
+                                        Ingresa los nuevos IMEIs y/o actualiza los precios.
+                                      </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4 space-y-4">
+                                      <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                          <Label className="font-bold text-xs">Nuevos IMEIs</Label>
+                                          <span className="text-[9px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">OPCIONAL</span>
+                                        </div>
+                                        <Textarea 
+                                          placeholder="Ingresa cada nuevo IMEI en una línea diferente..." 
+                                          value={additionalImeisText}
+                                          onChange={(e) => setAdditionalImeisText(e.target.value)}
+                                          className="rounded-xl font-mono text-xs min-h-[80px] resize-none"
+                                        />
+                                        <p className="text-[9px] text-slate-400 font-bold italic mt-2">
+                                          Se añadirán {additionalImeisText.split('\n').filter(i => i.trim() !== '').length} equipos. Stock actual: {phone.imeis?.length || 0}
+                                        </p>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                          <Label className="font-bold text-xs">Costo Unitario (COP)</Label>
+                                          <Input 
+                                            type="number"
+                                            placeholder="0" 
+                                            value={editCostPrice}
+                                            onChange={(e) => setEditCostPrice(e.target.value)}
+                                            className="rounded-xl h-10 bg-slate-50"
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label className="font-bold text-xs">Venta Unitario (COP)</Label>
+                                          <Input 
+                                            type="number"
+                                            placeholder="0" 
+                                            value={editSalePrice}
+                                            onChange={(e) => setEditSalePrice(e.target.value)}
+                                            className="rounded-xl h-10 bg-primary/5 border-primary/20 font-bold"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <DialogFooter>
+                                      <Button variant="outline" onClick={() => setAddingStockId(null)} className="rounded-xl font-bold">Cancelar</Button>
+                                      <Button 
+                                        onClick={() => handleAddStockToExisting(phone)} 
+                                        disabled={isAddingStock}
+                                        className="rounded-xl font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                                      >
+                                        {isAddingStock ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <PlusCircle className="w-4 h-4 mr-2" />}
+                                        Guardar
+                                      </Button>
+                                    </DialogFooter>
+                                  </DialogContent>
+                                </Dialog>
+
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-xl">
@@ -320,7 +440,7 @@ export default function InventoryPage() {
         <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-4">
           <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
           <p className="text-xs text-amber-800 font-medium leading-relaxed">
-            <strong>Tip Pro:</strong> Al registrar un crédito o una venta a contado, podrás elegir uno de los IMEIs que hayas cargado aquí. 
+            <strong>Tip Pro:</strong> Al registrar un crédito o una venta a contado, podrás elegir uno de los IMEIs que hayas cargado aquí.
             El sistema restará automáticamente una unidad del stock una vez se complete la operación.
           </p>
         </div>
