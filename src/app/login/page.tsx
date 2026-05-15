@@ -49,9 +49,9 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error("Login Error:", error.code, error.message);
-      
+
       let message = "Credenciales inválidas. Verifica tu correo y contraseña.";
-      
+
       if (error.code === 'auth/invalid-api-key' || error.code === 'auth/network-request-failed') {
         message = "Error técnico: La API Key de Firebase no es válida o no hay conexión.";
       } else if (error.code === 'auth/user-not-found') {
@@ -88,10 +88,10 @@ export default function LoginPage() {
         <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
           <CardHeader className="bg-primary text-white text-center pb-8 pt-10">
             <div className="mx-auto bg-white p-2 rounded-2xl w-24 h-24 mb-6 flex items-center justify-center shadow-xl">
-              <Image 
-                src={logo?.imageUrl || '/logo.png'} 
-                alt="Tecnicell Logo" 
-                width={70} 
+              <Image
+                src={logo?.imageUrl || '/logo.png'}
+                alt="Tecnicell Logo"
+                width={70}
                 height={70}
                 className="object-contain"
               />
@@ -105,9 +105,9 @@ export default function LoginPage() {
                 <Label htmlFor="email" className="text-xs font-black uppercase tracking-widest text-slate-400">Correo Electrónico</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    id="email" 
-                    type="email" 
+                  <Input
+                    id="email"
+                    type="email"
                     placeholder="ejemplo@correo.com"
                     className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200"
                     value={email}
@@ -121,9 +121,9 @@ export default function LoginPage() {
                 <Label htmlFor="password" id="pass-label" className="text-xs font-black uppercase tracking-widest text-slate-400">Contraseña</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input 
-                    id="password" 
-                    type="password" 
+                  <Input
+                    id="password"
+                    type="password"
                     placeholder="••••••••"
                     className="pl-10 h-12 rounded-xl bg-slate-50 border-slate-200"
                     value={password}
