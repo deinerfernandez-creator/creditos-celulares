@@ -28,30 +28,45 @@ async function getAccessToken() {
 
   const { data } = await httpsRequest(options, postData);
   const json = JSON.parse(data);
-  if (json.error) throw new Error(json.error);
   return json.access_token;
 }
 
-async function testEnroll() {
+async function testLock() {
   try {
     const token = await getAccessToken();
-    const url = process.env.MANAGEENGINE_URL.replace('https://', '');
-    const hostname = url.split('/')[0];
-    const path = '/' + url.split('/').slice(1).join('/') + '/enrollment';
+    const urlStr = process.env.MANAGEENGINE_URL.replace('https://', '');
+    const hostname = urlStr.split('/')[0];
+    const basePath = '/' + urlStr.split('/').slice(1).join('/');
 
-    console.log(`Sending POST to: ${hostname}${path}`);
+    const searchPath = `${basePath}/devices`;
+    const getOptions = {
+      hostname,
+      path: searchPath,
+      method: 'GET',
+      headers: {
+        'Authorization': `Zoho-oauthtoken ${token}`,
+        'Accept': 'application/vnd.manageengine.mdm.v1+json'
+      }
+    };
+    const getRes = await httpsRequest(getOptions);
+    const devicesData = JSON.parse(getRes.data);
+    const deviceId = devicesData.devices[0].device_id;
+    console.log(`Using Device ID: ${deviceId}`);
+
+    // Try new actions endpoint
+    const commandName = "EnableLostMode"; // or "LostMode"
+    const commandPath = `${basePath}/actions/LostMode`;
+    console.log(`Sending POST to: ${hostname}${commandPath}`);
     
     const postData = JSON.stringify({
-      user_name: "Test User",
-      user_email: "test@tecnicell.com",
-      phone_number: "3001234567",
-      platform_type: 2,
-      owned_by: 2
+      device_ids: [deviceId],
+      lock_message: "Prueba de bloqueo",
+      phone_number: "3000000000"
     });
 
-    const options = {
+    const postOptions = {
       hostname,
-      path,
+      path: commandPath,
       method: 'POST',
       headers: {
         'Authorization': `Zoho-oauthtoken ${token}`,
@@ -61,12 +76,12 @@ async function testEnroll() {
       }
     };
 
-    const res = await httpsRequest(options, postData);
-    console.log(`Status: ${res.status}`);
-    console.log(`Response: ${res.data}`);
+    const postRes = await httpsRequest(postOptions, postData);
+    console.log(`Post Command Status: ${postRes.status}`);
+    console.log(`Post Command Response: ${postRes.data}`);
   } catch (e) {
     console.error("Script error:", e);
   }
 }
 
-testEnroll();
+testLock();

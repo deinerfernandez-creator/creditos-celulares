@@ -90,7 +90,7 @@ export async function getDeviceByImei(imei: string): Promise<MDMDevice | null> {
 }
 
 export async function lockDevice(deviceId: number, message: string = 'Equipo bloqueado por mora en el pago. Por favor contacte a Tecnicell Créditos al 311 625 1841.', phone: string = '3116251841'): Promise<boolean> {
-  const url = `${getManageEngineUrl()}/devices/${deviceId}/commands`;
+  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/enable_lost_mode`;
   
   try {
     const headers = await getAuthHeaders();
@@ -98,11 +98,8 @@ export async function lockDevice(deviceId: number, message: string = 'Equipo blo
       method: 'POST',
       headers,
       body: JSON.stringify({
-        command_name: "EnableLostMode",
-        command_parameters: {
-          contact_number: phone,
-          lock_message: message
-        }
+        lock_message: message,
+        phone_number: phone
       })
     });
 
@@ -119,16 +116,14 @@ export async function lockDevice(deviceId: number, message: string = 'Equipo blo
 }
 
 export async function unlockDevice(deviceId: number): Promise<boolean> {
-  const url = `${getManageEngineUrl()}/devices/${deviceId}/commands`;
+  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/disable_lost_mode`;
   
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        command_name: "DisableLostMode"
-      })
+      body: JSON.stringify({})
     });
 
     if (!res.ok) {
