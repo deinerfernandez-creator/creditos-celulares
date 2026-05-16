@@ -65,23 +65,47 @@ async function getAuthHeaders() {
   };
 }
 
-export async function getDeviceByImei(imei: string): Promise<MDMDevice | null> {
-  // La API de ManageEngine usa ?imei= para filtrar por IMEI directamente
-  const url = `${getManageEngineUrl()}/devices?imei=${imei}`;
+export async function getDeviceByImei(imei: string): Promise<any | null> {
+  // Primero intentamos la búsqueda global de ManageEngine con "search"
+  const url = `${getManageEngineUrl()}/devices?search=${imei}`;
   
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(url, { headers });
 
-    if (!res.ok) {
-      console.error('MDM API Error getting device:', await res.text());
-      return null;
+    if (res.ok) {
+      const text = await res.text();
+      if (text) {
+        const data = JSON.parse(text);
+        if (data.devices && data.devices.length > 0) {
+          // Filtrar por IMEI para asegurar que es el correcto (ya que search busca por nombre/serial/etc)
+          const device = data.devices.find((d: any) => 
+            d.imei === imei || 
+            (Array.isArray(d.imei) && d.imei.includes(imei))
+          );
+          if (device) return device;
+        }
+      }
     }
 
-    const data = await res.json();
-    if (data.devices && data.devices.length > 0) {
-      return data.devices[0];
+    // FALLBACK: Si no lo encuentra por parámetro de búsqueda, traemos los dispositivos y buscamos manualmente
+    const fallbackUrl = `${getManageEngineUrl()}/devices`;
+    const fallbackRes = await fetch(fallbackUrl, { headers });
+    
+    if (fallbackRes.ok) {
+      const text = await fallbackRes.text();
+      if (text) {
+        const data = JSON.parse(text);
+        if (data.devices && data.devices.length > 0) {
+          const device = data.devices.find((d: any) => 
+            d.imei === imei || 
+            (Array.isArray(d.imei) && d.imei.includes(imei))
+          );
+          if (device) return device;
+        }
+      }
     }
+
     return null;
   } catch (err) {
     console.error('Failed to get device by IMEI:', err);
