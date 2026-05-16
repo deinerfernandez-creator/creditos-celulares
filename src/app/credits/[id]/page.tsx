@@ -98,6 +98,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { setDeviceLockStatus } from '@/app/actions/mdm';
 
 const formatCurrency = (value: any) => {
   const num = Number(value);
@@ -166,6 +167,7 @@ export default function CreditDetailPage() {
 
   const [mounted, setMounted] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [isMdmUpdating, setIsMdmUpdating] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [openPayment, setOpenPayment] = useState(false);
   const [openContract, setOpenContract] = useState(false);
@@ -241,6 +243,33 @@ export default function CreditDetailPage() {
       toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleMdmAction = async (action: 'lock' | 'unlock') => {
+    if (!credit?.imei || !id) return;
+    setIsMdmUpdating(true);
+    
+    try {
+      const result = await setDeviceLockStatus(credit.imei, action === 'lock');
+      
+      if (result.success) {
+        await updateDoc(doc(db, 'credits', id), { isMdmLocked: action === 'lock' });
+        toast({ 
+          title: "MDM Actualizado", 
+          description: action === 'lock' ? "El dispositivo ha sido bloqueado exitosamente." : "El dispositivo ha sido desbloqueado." 
+        });
+      } else {
+        toast({ 
+          title: "Error MDM", 
+          description: result.error || "Hubo un problema al comunicar con ManageEngine.", 
+          variant: "destructive" 
+        });
+      }
+    } catch (err) {
+      toast({ title: "Error", description: "Ocurrió un error inesperado.", variant: "destructive" });
+    } finally {
+      setIsMdmUpdating(false);
     }
   };
 
@@ -737,6 +766,46 @@ export default function CreditDetailPage() {
                   <p className="text-xl font-black text-primary">{Math.round(progress)}%</p>
                 </div>
               </div>
+              
+              {role === 'admin' && (
+                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className={`w-5 h-5 ${credit.isMdmLocked ? 'text-destructive' : 'text-slate-400'}`} />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-0.5">Control MDM Remoto</p>
+                      {credit.isMdmLocked ? (
+                        <Badge variant="destructive" className="font-bold text-[10px]">Bloqueado</Badge>
+                      ) : (
+                        <Badge variant="outline" className="font-bold text-[10px] text-green-600 border-green-200 bg-green-50">Normal</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {!credit.isMdmLocked ? (
+                      <Button 
+                        size="sm" 
+                        variant="destructive" 
+                        className="rounded-xl font-bold w-full sm:w-auto"
+                        onClick={() => handleMdmAction('lock')}
+                        disabled={isMdmUpdating || updating}
+                      >
+                        {isMdmUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldAlert className="w-4 h-4 mr-2" />}
+                        Bloquear Equipo
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        className="rounded-xl font-bold bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                        onClick={() => handleMdmAction('unlock')}
+                        disabled={isMdmUpdating || updating}
+                      >
+                        {isMdmUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                        Desbloquear Equipo
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
