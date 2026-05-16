@@ -90,17 +90,15 @@ export async function getDeviceByImei(imei: string): Promise<MDMDevice | null> {
 }
 
 export async function lockDevice(deviceId: number, message: string = 'Equipo bloqueado por mora en el pago. Por favor contacte a Tecnicell Créditos al 311 625 1841.', phone: string = '3116251841'): Promise<boolean> {
-  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/enable_lost_mode`;
+  // Para bloquear con Modo Kiosco, reanudamos el kiosco para atrapar al usuario en la app de bloqueo
+  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/resume_kiosk`;
   
   try {
     const headers = await getAuthHeaders();
     const res = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        lock_message: message,
-        phone_number: phone
-      })
+      body: JSON.stringify({}) // Kiosk commands usually don't need body, just the endpoint
     });
 
     if (!res.ok) {
@@ -116,7 +114,8 @@ export async function lockDevice(deviceId: number, message: string = 'Equipo blo
 }
 
 export async function unlockDevice(deviceId: number): Promise<boolean> {
-  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/disable_lost_mode`;
+  // Para desbloquear con Modo Kiosco, pausamos el kiosco para que puedan usar el equipo
+  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/pause_kiosk`;
   
   try {
     const headers = await getAuthHeaders();
