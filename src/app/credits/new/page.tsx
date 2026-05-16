@@ -27,7 +27,6 @@ import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, arrayRemove, increment } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
-import { registerUserInMDM } from '@/app/actions/mdm';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-CO', {
@@ -276,15 +275,7 @@ export default function NewCreditPage() {
         });
       }
 
-      // Sync customer to ManageEngine MDM in the background
-      const selectedCustomer = customers?.find((c: any) => c.id === customerId);
-      if (selectedCustomer) {
-        const cEmail = selectedCustomer.email || '';
-        const cPhone = selectedCustomer.phone || selectedCustomer.whatsapp || '';
-        registerUserInMDM(selectedCustomer.name, cEmail, cPhone).catch(console.error);
-      }
-
-      toast({ title: "Crédito Registrado", description: "El expediente ha sido creado y el usuario sincronizado con MDM." });
+      toast({ title: "Crédito Registrado", description: "El expediente ha sido creado y el stock actualizado." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
