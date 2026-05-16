@@ -141,3 +141,33 @@ export async function unlockDevice(deviceId: number): Promise<boolean> {
     return false;
   }
 }
+
+export async function enrollUserInMDM(name: string, email: string, phone: string): Promise<boolean> {
+  const url = `${getManageEngineUrl()}/enrollment`;
+  
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        user_name: name,
+        user_email: email || `${phone}@tecnicell.com`,
+        phone_number: phone,
+        platform_type: 2, // 2 = Android
+        owned_by: 2, // 2 = Corporate
+      })
+    });
+
+    if (!res.ok) {
+      console.error('MDM API Error enrolling user:', await res.text());
+      // Even if it fails, we don't want to crash the credit creation
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Failed to enroll user in MDM:', err);
+    return false;
+  }
+}

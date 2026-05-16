@@ -1,6 +1,6 @@
 "use server";
 
-import { getDeviceByImei, lockDevice, unlockDevice } from '@/lib/manageengine';
+import { getDeviceByImei, lockDevice, unlockDevice, enrollUserInMDM } from '@/lib/manageengine';
 
 export async function setDeviceLockStatus(imei: string, lock: boolean) {
   if (!imei) {
@@ -29,5 +29,19 @@ export async function setDeviceLockStatus(imei: string, lock: boolean) {
   } catch (err) {
     console.error('MDM Action Error:', err);
     return { success: false, error: 'Error interno de comunicación con MDM.' };
+  }
+}
+
+export async function registerUserInMDM(name: string, email: string, phone: string) {
+  if (!name || !phone) {
+    return { success: false, error: 'Datos incompletos para registrar el usuario.' };
+  }
+
+  try {
+    const result = await enrollUserInMDM(name, email, phone);
+    return { success: result };
+  } catch (err) {
+    console.error('MDM Enrollment Action Error:', err);
+    return { success: false, error: 'Error al enviar invitación a MDM.' };
   }
 }
