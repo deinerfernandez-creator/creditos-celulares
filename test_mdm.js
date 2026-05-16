@@ -38,28 +38,12 @@ async function testLock() {
     const hostname = urlStr.split('/')[0];
     const basePath = '/' + urlStr.split('/').slice(1).join('/');
 
-    const searchPath = `${basePath}/devices`;
-    const getOptions = {
-      hostname,
-      path: searchPath,
-      method: 'GET',
-      headers: {
-        'Authorization': `Zoho-oauthtoken ${token}`,
-        'Accept': 'application/vnd.manageengine.mdm.v1+json'
-      }
-    };
-    const getRes = await httpsRequest(getOptions);
-    const devicesData = JSON.parse(getRes.data);
-    const deviceId = devicesData.devices[0].device_id;
-    console.log(`Using Device ID: ${deviceId}`);
-
-    // Try new actions endpoint
-    const commandName = "EnableLostMode"; // or "LostMode"
-    const commandPath = `${basePath}/actions/LostMode`;
+    const deviceId = '180925000000275041'; // The Android phone LUIS ALFONSO
+    
+    const commandPath = `${basePath}/devices/${deviceId}/actions/enable_lost_mode`;
     console.log(`Sending POST to: ${hostname}${commandPath}`);
     
     const postData = JSON.stringify({
-      device_ids: [deviceId],
       lock_message: "Prueba de bloqueo",
       phone_number: "3000000000"
     });
