@@ -5,27 +5,72 @@ export interface MDMDevice {
 }
 
 export const getManageEngineUrl = () => process.env.MANAGEENGINE_URL || 'https://mdm.manageengine.com/api/v1/mdm';
-export const getManageEngineKey = () => process.env.MANAGEENGINE_API_KEY || '';
 
-const getAuthHeaders = () => {
-  const key = getManageEngineKey();
-  // ManageEngine Cloud typically uses Zoho-oauthtoken
-  const authHeader = key.startsWith('Zoho-oauthtoken') ? key : `Zoho-oauthtoken ${key}`;
+// Cache for the OAuth access token to avoid fetching it on every single request
+let cachedAccessToken: string | null = null;
+let tokenExpirationTime: number = 0;
+
+/**
+ * Gets a valid access token using the Refresh Token.
+ */
+async function getAccessToken(): Promise<string> {
+  // Return cached token if it's still valid (leaving 1 min buffer)
+  if (cachedAccessToken && Date.now() < tokenExpirationTime - 60000) {
+    return cachedAccessToken;
+  }
+
+  const clientId = process.env.MANAGEENGINE_CLIENT_ID;
+  const clientSecret = process.env.MANAGEENGINE_CLIENT_SECRET;
+  const refreshToken = process.env.MANAGEENGINE_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("ManageEngine OAuth credentials are not properly configured in environment variables.");
+  }
+
+  // Zoho Accounts URL for obtaining the access token
+  const tokenUrl = `https://accounts.zoho.com/oauth/v2/token?refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}&grant_type=refresh_token`;
+
+  try {
+    const res = await fetch(tokenUrl, {
+      method: 'POST'
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to refresh token: ${await res.text()}`);
+    }
+
+    const data = await res.json();
+    
+    if (data.error) {
+      throw new Error(`OAuth Error: ${data.error}`);
+    }
+
+    cachedAccessToken = data.access_token;
+    // Zoho tokens typically expire in 3600 seconds (1 hour)
+    tokenExpirationTime = Date.now() + (data.expires_in * 1000);
+
+    return cachedAccessToken as string;
+  } catch (error) {
+    console.error("Error fetching ManageEngine access token:", error);
+    throw error;
+  }
+}
+
+async function getAuthHeaders() {
+  const token = await getAccessToken();
   return {
-    'Authorization': authHeader,
+    'Authorization': `Zoho-oauthtoken ${token}`,
     'Accept': 'application/vnd.manageengine.mdm.v1+json',
     'Content-Type': 'application/json'
   };
-};
+}
 
 export async function getDeviceByImei(imei: string): Promise<MDMDevice | null> {
   const url = `${getManageEngineUrl()}/devices?search_name=${imei}`;
-  // Nota: Algunas versiones de la API usan ?search_name=IMEI o ?imei=IMEI
   
   try {
-    const res = await fetch(url, {
-      headers: getAuthHeaders()
-    });
+    const headers = await getAuthHeaders();
+    const res = await fetch(url, { headers });
 
     if (!res.ok) {
       console.error('MDM API Error getting device:', await res.text());
@@ -47,9 +92,10 @@ export async function lockDevice(deviceId: number, message: string = 'Equipo blo
   const url = `${getManageEngineUrl()}/devices/${deviceId}/commands`;
   
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(url, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers,
       body: JSON.stringify({
         command_name: "EnableLostMode",
         command_parameters: {
@@ -75,9 +121,10 @@ export async function unlockDevice(deviceId: number): Promise<boolean> {
   const url = `${getManageEngineUrl()}/devices/${deviceId}/commands`;
   
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(url, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers,
       body: JSON.stringify({
         command_name: "DisableLostMode"
       })
