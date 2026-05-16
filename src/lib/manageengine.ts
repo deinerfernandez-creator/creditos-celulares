@@ -112,14 +112,18 @@ export async function getDeviceByImei(imei: string): Promise<any | null> {
             (Array.isArray(d.imei) && d.imei.includes(imei))
           );
           if (device) return device;
+          
+          // DEBUG: If not found, throw error with exactly what we got
+          const foundImeis = data.devices.map((d: any) => JSON.stringify(d.imei)).join(' | ');
+          throw new Error(`Fallback trajo ${data.devices.length} equipos, pero ninguno coincide con ${imei}. IMEIs recibidos: ${foundImeis.substring(0, 150)}...`);
         }
       }
     }
 
-    return null;
+    throw new Error("No se obtuvieron dispositivos de la API (Respuesta vacía)");
   } catch (err) {
     console.error('Failed to get device by IMEI:', err);
-    return null;
+    throw err; // PROPAGAR el error para que la UI lo pueda mostrar
   }
 }
 
