@@ -129,7 +129,7 @@ export async function getDeviceByImei(imei: string): Promise<any | null> {
 
 export async function lockDevice(deviceId: number, message: string = 'Equipo bloqueado por mora en el pago. Por favor contacte a Tecnicell Créditos al 311 625 1841.', phone: string = '3116251841'): Promise<boolean> {
   // Para bloquear con Modo Kiosco, reanudamos el kiosco para atrapar al usuario en la app de bloqueo
-  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/resume_kiosk`;
+  const url = `${getManageEngineUrl()}/devices/${deviceId}/actions/re_apply_kiosk`;
   
   try {
     const headers = await getAuthHeaders();

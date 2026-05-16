@@ -18,35 +18,40 @@ async function getAccessToken() {
   const clientId = process.env.MANAGEENGINE_CLIENT_ID;
   const clientSecret = process.env.MANAGEENGINE_CLIENT_SECRET;
   const refreshToken = process.env.MANAGEENGINE_REFRESH_TOKEN;
-
-  const postData = '';
+  const postData = `grant_type=refresh_token&client_id=${clientId}&client_secret=${clientSecret}&refresh_token=${refreshToken}`;
   const options = {
     hostname: 'accounts.zoho.com',
-    path: `/oauth/v2/token?refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}&grant_type=refresh_token`,
-    method: 'POST'
+    path: '/oauth/v2/token',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(postData)
+    }
   };
-
-  const { data } = await httpsRequest(options, postData);
-  const json = JSON.parse(data);
-  return json.access_token;
+  const res = await httpsRequest(options, postData);
+  return JSON.parse(res.data).access_token;
 }
 
 async function testLock() {
   try {
     const token = await getAccessToken();
-    const urlStr = process.env.MANAGEENGINE_URL.replace('https://', '');
-    const hostname = urlStr.split('/')[0];
-    const basePath = '/' + urlStr.split('/').slice(1).join('/');
+    const hostname = 'mdm.manageengine.com';
 
-    const deviceId = '180925000000275041'; // The Android phone LUIS ALFONSO
+    const deviceId = '180925000000426006'; // PRUEBA234
     
-    const commandPath = `${basePath}/devices/${deviceId}/actions/enable_lost_mode`;
-    console.log(`Sending POST to: ${hostname}${commandPath}`);
-    
-    const postData = JSON.stringify({
-      lock_message: "Prueba de bloqueo",
-      phone_number: "3000000000"
-    });
+    console.log("Checking applicable actions for device...");
+    const actionPath = `/api/v1/mdm/devices/${deviceId}/actions`;
+    const actionOptions = {
+      hostname, path: actionPath, method: 'GET',
+      headers: { 'Authorization': `Zoho-oauthtoken ${token}`, 'Accept': 'application/vnd.manageengine.mdm.v1+json' }
+    };
+    const actionRes = await httpsRequest(actionOptions);
+    console.log("Applicable Actions:", actionRes.data);
+
+    console.log("---");
+    console.log("Testing resume_kiosk POST...");
+    const commandPath = `/api/v1/mdm/devices/${deviceId}/actions/resume_kiosk`;
+    const postData = JSON.stringify({});
 
     const postOptions = {
       hostname,
