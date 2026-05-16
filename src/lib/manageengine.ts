@@ -66,6 +66,8 @@ async function getAuthHeaders() {
 }
 
 export async function getDeviceByImei(imei: string): Promise<any | null> {
+  // Eliminar espacios y saltos de linea
+  imei = imei.trim();
   // Primero intentamos la búsqueda global de ManageEngine con "search"
   const url = `${getManageEngineUrl()}/devices?search=${imei}`;
   

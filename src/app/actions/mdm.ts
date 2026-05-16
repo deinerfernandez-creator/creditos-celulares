@@ -8,7 +8,7 @@ export async function setDeviceLockStatus(imei: string, lock: boolean) {
   }
 
   try {
-    const device = await getDeviceByImei(imei);
+    const device = await getDeviceByImei(imei.trim());
     
     if (!device) {
       return { success: false, error: 'Dispositivo no encontrado en ManageEngine MDM usando el IMEI proporcionado.' };
