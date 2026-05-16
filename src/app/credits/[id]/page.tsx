@@ -57,7 +57,8 @@ import {
   where, 
   addDoc, 
   serverTimestamp, 
-  increment 
+  increment,
+  Timestamp
 } from 'firebase/firestore';
 import {
   Select,
@@ -173,6 +174,8 @@ export default function CreditDetailPage() {
   const [openContract, setOpenContract] = useState(false);
   const [openPromissory, setOpenPromissory] = useState(false);
   const [activePrintDoc, setActivePrintDoc] = useState<'contract' | 'promissory' | null>(null);
+  const [openDateEdit, setOpenDateEdit] = useState(false);
+  const [newDateStr, setNewDateStr] = useState('');
 
   // Camera state for Delivery Photo
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -241,6 +244,23 @@ export default function CreditDetailPage() {
       toast({ title: "Estado actualizado", description: `El crédito ahora está ${newStatus}.` });
     } catch (err: any) {
       toast({ title: "Error", description: "No se pudo actualizar el estado.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleUpdateDate = async () => {
+    if (!id || !db || !newDateStr) return;
+    setUpdating(true);
+    try {
+      const selectedDate = new Date(newDateStr);
+      await updateDoc(doc(db, 'credits', id), {
+        createdAt: Timestamp.fromDate(selectedDate)
+      });
+      toast({ title: "Fecha actualizada", description: "La fecha del crédito ha sido modificada." });
+      setOpenDateEdit(false);
+    } catch (err: any) {
+      toast({ title: "Error", description: "No se pudo actualizar la fecha.", variant: "destructive" });
     } finally {
       setUpdating(false);
     }
@@ -427,7 +447,43 @@ export default function CreditDetailPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">Expediente Financiero</h1>
-              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Crédito #{id.slice(0, 8)}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                  Crédito #{id.slice(0, 8)} • Fecha: {credit.createdAt?.toDate ? credit.createdAt.toDate().toLocaleDateString('es-CO') : '---'}
+                </p>
+                {role === 'admin' && (
+                  <Dialog open={openDateEdit} onOpenChange={setOpenDateEdit}>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full text-slate-400 hover:text-primary bg-slate-100/50 hover:bg-slate-200">
+                        <CalendarDays className="w-3 h-3" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="rounded-2xl sm:max-w-[400px]">
+                      <DialogHeader>
+                        <DialogTitle className="font-black">Editar Fecha del Crédito</DialogTitle>
+                        <DialogDescription>
+                          Modifica la fecha de creación para ajustar los cortes de pagos o hacer pruebas.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Label>Nueva Fecha y Hora</Label>
+                        <Input 
+                          type="datetime-local" 
+                          className="mt-2 rounded-xl"
+                          value={newDateStr}
+                          onChange={(e) => setNewDateStr(e.target.value)}
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setOpenDateEdit(false)} className="rounded-xl">Cancelar</Button>
+                        <Button onClick={handleUpdateDate} disabled={updating || !newDateStr} className="bg-primary rounded-xl">
+                          Guardar Fecha
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">

@@ -66,7 +66,8 @@ async function getAuthHeaders() {
 }
 
 export async function getDeviceByImei(imei: string): Promise<MDMDevice | null> {
-  const url = `${getManageEngineUrl()}/devices?search_name=${imei}`;
+  // La API de ManageEngine usa ?imei= para filtrar por IMEI directamente
+  const url = `${getManageEngineUrl()}/devices?imei=${imei}`;
   
   try {
     const headers = await getAuthHeaders();
