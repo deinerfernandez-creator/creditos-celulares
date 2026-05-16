@@ -75,6 +75,10 @@ export async function getDeviceByImei(imei: string): Promise<any | null> {
     const headers = await getAuthHeaders();
     const res = await fetch(url, { headers });
 
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(`Error de Autenticación con ManageEngine (Status ${res.status}). Token inválido.`);
+    }
+
     if (res.ok) {
       const text = await res.text();
       if (text) {
@@ -94,6 +98,10 @@ export async function getDeviceByImei(imei: string): Promise<any | null> {
     const fallbackUrl = `${getManageEngineUrl()}/devices`;
     const fallbackRes = await fetch(fallbackUrl, { headers });
     
+    if (fallbackRes.status === 401 || fallbackRes.status === 403) {
+      throw new Error(`Error de Autenticación con ManageEngine (Status ${fallbackRes.status}). Token inválido.`);
+    }
+
     if (fallbackRes.ok) {
       const text = await fallbackRes.text();
       if (text) {

@@ -26,9 +26,9 @@ export async function setDeviceLockStatus(imei: string, lock: boolean) {
     } else {
       return { success: false, error: 'Fallo al ejecutar el comando en ManageEngine MDM.' };
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error('MDM Action Error:', err);
-    return { success: false, error: 'Error interno de comunicación con MDM.' };
+    return { success: false, error: err.message || 'Error interno de comunicación con MDM.' };
   }
 }
 
