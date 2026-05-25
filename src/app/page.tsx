@@ -44,7 +44,7 @@ export default function WelcomePage() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" asChild className="rounded-full font-bold text-cyan-600 border-cyan-200 hover:bg-cyan-50">
-            <a href="https://controlisp.tecnicellrioverde.com">Acceso Ultranet</a>
+            <a href="http://157.250.207.133">Acceso Ultranet</a>
           </Button>
           <Button variant="ghost" size="sm" asChild className="rounded-full font-bold text-slate-500">
             <Link href="/login">Acceso Staff</Link>
@@ -132,7 +132,7 @@ export default function WelcomePage() {
                 <p className="text-xs text-cyan-200/60 font-medium">Paga tu Internet Ultranet, descarga tu factura y reporta fallas de soporte.</p>
               </div>
               <Button asChild className="w-full h-12 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20">
-                <a href="https://controlisp.tecnicellrioverde.com">Entrar a Ultranet <ChevronRight className="w-4 h-4 ml-1" /></a>
+                <a href="http://157.250.207.133">Entrar a Ultranet <ChevronRight className="w-4 h-4 ml-1" /></a>
               </Button>
             </CardContent>
           </Card>
