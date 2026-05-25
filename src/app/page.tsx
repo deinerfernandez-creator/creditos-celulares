@@ -44,7 +44,7 @@ export default function WelcomePage() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" asChild className="rounded-full font-bold text-cyan-600 border-cyan-200 hover:bg-cyan-50">
-            <a href="https://controlisp.tecnicellrioverde.com">Pagar Internet</a>
+            <a href="https://controlisp.tecnicellrioverde.com">Acceso Ultranet</a>
           </Button>
           <Button variant="ghost" size="sm" asChild className="rounded-full font-bold text-slate-500">
             <Link href="/login">Acceso Staff</Link>
@@ -128,7 +128,7 @@ export default function WelcomePage() {
                 <Wifi className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-black tracking-tight">Internet Ultranet</h3>
+                <h3 className="text-xl font-black tracking-tight">Acceso Ultranet</h3>
                 <p className="text-xs text-cyan-200/60 font-medium">Paga tu Internet Ultranet, descarga tu factura y reporta fallas de soporte.</p>
               </div>
               <Button asChild className="w-full h-12 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-cyan-500/20">
