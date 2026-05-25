@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Adquiere los mejores smartphones a crédito con aprobación inmediata en Ríoverde. Tecnología y financiamiento a tu alcance.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
