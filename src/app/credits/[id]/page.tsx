@@ -39,7 +39,9 @@ import {
   MessageCircle,
   QrCode,
   Copy,
-  ExternalLink
+  ExternalLink,
+  SwitchCamera,
+  Upload
 } from 'lucide-react';
 import { 
   useFirestore, 
@@ -182,6 +184,7 @@ export default function CreditDetailPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
   const logo = PlaceHolderImages.find(img => img.id === 'logo-tecnicell');
   const qrNequi = PlaceHolderImages.find(img => img.id === 'qr-nequi');
@@ -325,11 +328,18 @@ export default function CreditDetailPage() {
     }
   };
 
-  const startCamera = async () => {
+  const startCamera = async (mode: 'user' | 'environment' = facingMode) => {
     setShowCamera(true);
+    setFacingMode(mode);
     try {
+      // Stop existing tracks first
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } } 
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -345,6 +355,11 @@ export default function CreditDetailPage() {
         description: 'No se pudo acceder a la cámara para la foto de entrega.',
       });
     }
+  };
+
+  const handleToggleCamera = () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    startCamera(nextMode);
   };
 
   const stopCamera = () => {
@@ -379,6 +394,42 @@ export default function CreditDetailPage() {
           setUpdating(false);
         }
       }
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !id || !db) return;
+
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      setUpdating(true);
+      try {
+        await updateDoc(doc(db, 'credits', id), { deliveryPhoto: base64String });
+        toast({ title: "Foto Cargada", description: "La foto de entrega ha sido subida con éxito." });
+      } catch (err: any) {
+        toast({ title: "Error", description: "No se pudo subir la foto.", variant: "destructive" });
+      } finally {
+        setUpdating(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const deleteDeliveryPhoto = async () => {
+    if (!id || !db) return;
+    if (!confirm('¿Estás seguro de que deseas eliminar la foto de evidencia?')) return;
+    
+    setUpdating(true);
+    try {
+      await updateDoc(doc(db, 'credits', id), { deliveryPhoto: null });
+      toast({ title: "Foto Eliminada", description: "La evidencia de entrega ha sido removida." });
+    } catch (err: any) {
+      toast({ title: "Error", description: "No se pudo eliminar la foto.", variant: "destructive" });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -875,29 +926,50 @@ export default function CreditDetailPage() {
               </CardTitle>
               <CardDescription className="text-xs uppercase font-black text-slate-400 tracking-widest">Foto del cliente con su nuevo celular</CardDescription>
             </div>
-            {!credit.deliveryPhoto && !showCamera && (
-              <Button onClick={startCamera} className="rounded-xl font-bold bg-primary hover:bg-primary/90">
-                <Camera className="w-4 h-4 mr-2" /> Tomar Foto de Entrega
-              </Button>
-            )}
           </CardHeader>
           <CardContent className="p-8 flex justify-center">
              {credit.deliveryPhoto ? (
-               <div className="relative group max-w-xl w-full">
-                 <img src={credit.deliveryPhoto} alt="Foto de Entrega" className="w-full rounded-2xl border-4 border-slate-100 shadow-xl" />
-                 <Button 
-                   onClick={startCamera} 
-                   variant="secondary" 
-                   size="sm" 
-                   className="absolute bottom-4 right-4 rounded-xl font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-                 >
-                   <RefreshCw className="w-4 h-4 mr-2" /> Actualizar Foto
-                 </Button>
+               <div className="relative group max-w-xl w-full flex flex-col items-center gap-4">
+                 <div className="relative w-full">
+                   <img src={credit.deliveryPhoto} alt="Foto de Entrega" className="w-full rounded-2xl border-4 border-slate-100 shadow-xl" />
+                 </div>
+                 <div className="flex flex-wrap items-center gap-4 justify-center w-full mt-2">
+                   <Button 
+                     onClick={() => startCamera(facingMode)} 
+                     variant="outline" 
+                     className="rounded-xl font-bold border-primary/20 text-primary bg-white hover:bg-primary/5"
+                   >
+                     <Camera className="w-4 h-4 mr-2" /> Tomar con Cámara
+                   </Button>
+
+                   <label className="cursor-pointer">
+                     <Button 
+                       variant="outline" 
+                       className="rounded-xl font-bold border-accent/20 text-accent bg-white hover:bg-accent/5 pointer-events-none"
+                     >
+                       <Upload className="w-4 h-4 mr-2" /> Subir Archivo
+                     </Button>
+                     <input 
+                       type="file" 
+                       accept="image/*" 
+                       onChange={handleFileUpload} 
+                       className="hidden" 
+                     />
+                   </label>
+
+                   <Button 
+                     onClick={deleteDeliveryPhoto} 
+                     variant="destructive" 
+                     className="rounded-xl font-bold"
+                   >
+                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar Evidencia
+                   </Button>
+                 </div>
                </div>
              ) : showCamera ? (
                 <div className="relative w-full max-w-2xl rounded-3xl overflow-hidden border-4 border-primary/20 shadow-2xl">
                   <video ref={videoRef} autoPlay muted playsInline className="w-full aspect-video object-cover" />
-                  <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
+                  <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-4">
                      <Button 
                       type="button" 
                       onClick={captureDeliveryPhoto} 
@@ -905,6 +977,16 @@ export default function CreditDetailPage() {
                       className="rounded-full w-20 h-20 bg-white hover:bg-slate-100 border-8 border-primary shadow-2xl flex items-center justify-center p-0"
                     >
                        <div className="w-12 h-12 rounded-full bg-primary" />
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="secondary"
+                      size="icon"
+                      onClick={handleToggleCamera}
+                      className="rounded-full w-12 h-12 bg-white/20 text-white backdrop-blur-md"
+                      title="Girar Cámara"
+                    >
+                       <SwitchCamera className="w-6 h-6" />
                     </Button>
                     <Button 
                       type="button" 
@@ -923,6 +1005,22 @@ export default function CreditDetailPage() {
                     <Smartphone className="w-10 h-10" />
                   </div>
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Sin foto de entrega registrada.</p>
+                  <div className="flex justify-center gap-4 mt-2">
+                    <Button onClick={() => startCamera(facingMode)} className="rounded-xl font-bold bg-primary hover:bg-primary/90">
+                      <Camera className="w-4 h-4 mr-2" /> Tomar Foto con Cámara
+                    </Button>
+                    <label className="cursor-pointer">
+                      <Button variant="outline" className="rounded-xl font-bold border-accent/20 text-accent bg-white hover:bg-accent/5 pointer-events-none">
+                        <Upload className="w-4 h-4 mr-2" /> Subir Foto de Entrega
+                      </Button>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleFileUpload} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
                 </div>
              )}
           </CardContent>
